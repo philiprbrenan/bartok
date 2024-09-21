@@ -392,9 +392,13 @@ public class Test                                                               
    {final double delta = (System.nanoTime() - start) / (double)(1<<30);         // Run time in seconds
     final String d = String.format("tests in %5.2f seconds.", delta);           // Format run time
     if (false) {}                                                               // Analyze results of tests
-    else if (testsPassed == 0 && testsFailed == 0) say("No",    d);
-    else if (testsFailed == 0)   say("PASSed ALL", testsPassed, d);
-    else say("Passed "+testsPassed+",    FAILed:", testsFailed, d);
+    else if (testsPassed == 0 && testsFailed == 0) say("No",    d);             // No tests
+    else if (testsFailed == 0)   say("PASSed ALL", testsPassed, d);             // Passed all tests
+    else say("Passed "+testsPassed+",    FAILed:", testsFailed, d);             // Failed some tests
+   }
+
+  static void testExit()                                                        // Exit with a return code showing the number of failed tests
+   {System.exit(testsFailed);
    }
 
 //D0                                                                            // Tests
