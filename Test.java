@@ -397,8 +397,10 @@ public class Test                                                               
     else say("Passed "+testsPassed+",    FAILed:", testsFailed, d);             // Failed some tests
    }
 
-  static void testExit()                                                        // Exit with a return code showing the number of failed tests
-   {System.exit(testsFailed);
+  static void testExit(int expectedFailures)                                    // Exit with a return code showing the number of failed tests if there were an unexpected number of failures
+   {if (expectedFailures == testsFailed) System.exit(0);
+    say("Expected to fail", expectedFailures,
+        "tests, but actually failed", testsFailed);
    }
 
 //D0                                                                            // Tests
@@ -444,5 +446,6 @@ CCCCC
      {System.err.println(e);
       System.err.println(fullTraceBack(e));
      }
+    testExit(1);                                                                // Exit with a return code if there was an unexpected number of failures
    }
  }
