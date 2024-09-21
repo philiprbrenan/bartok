@@ -29,6 +29,8 @@ public class Chip extends Test                                                  
 
   class Bit                                                                     // Bits are connected by gates
    {final String name;                                                          // Name of the bit.
+    final Set<Gate> drivenBy = new TreeSet<>();                                 // Driven by these gates. If a bit is driven by multiple gates we assume that the inputs are combined using "or"
+    final Set<Gate> drives   = new TreeSet<>();                                 // Drives these gates. The order of the input pins for a gate matters  so this can only be used to find which gates drive this bit but the actual pin will have to be found by examining the gate.
 
     Bit(String Name)                                                            // Named bit
      {name = validateName(Name);
@@ -72,13 +74,56 @@ public class Chip extends Test                                                  
    {return new Bit(Name1, Name2, Index);
    }
 
-  class Bits                                                                    // Bits are connected by gates
-   {final Stack<Bit> bits;                                                      // Collection of bits in order so we can convert them tointegers
-
-    Bits() {bits = new Stack<>();}                                              // Collect bits
+  class Bits extends Stack<Bit>                                                 // Collection of bits in order so we can convert them to integers
+   {private static final long serialVersionUID = 1L;
+    Bits(Bit...Bits) {for (int i = 0; i < Bits.length; i++) push(Bits[i]);}     // Add bits to a collection of bits
    }
 
-  Bits bits() {return new Bits();}                                              // Get a named bit or define such a bit if it does not already exist
+  Bits bits(Bit...bits) {return new Bits(bits);}                                // Get a named bit or define such a bit if it does not already exist
+
+// Gates                                                                        // Gates connect and combine bits
+
+  final Map<String,Gate> gate = new TreeMap<>();                                // Gates have unique names
+
+  class Gate implements Comparable<Gate>                                        // Gates connect and combine bits
+   {final Bit  output;                                                          // A gate has one output bit
+    final Bits inputs;                                                          // A gate has zero or more input bits whose order matters
+    Gate(Bit Output, Bit...bits)                                                // A gate has one output and several input bits
+     {output = Output;
+      inputs = new Bits(bits);
+      output.drivenBy.add(this);
+      for (Bit i : inputs) i.drives.add(this);
+     }
+
+    public int compareTo(Gate a)  {return toString().compareTo(a.toString());}  // Gates can be added to sets
+
+    public String toString()
+     {final StringBuilder s = new StringBuilder();
+      s.append("Gate("+output.name+"=");
+      for (Bit b : inputs) s.append(b.name+", ");
+      if (inputs.size() > 0) s.setLength(s.length()-2);
+      return s.toString();
+     }
+   }
+
+// Pulse                                                                        // Pulses rise and fall at a specified time
+
+  final Map<String,Pulse> pulse = new TreeMap<>();                              // Pulses have unique names
+
+  class Pulse implements Comparable<Pulse>                                      // Pulses rise and fall at a specified time
+   {final String name;                                                          // The name of the pulse
+    final int    step;                                                          // The step at which the pulse is in effect
+
+    Pulse(String Name, int Step)                                                // The step on which this pulse rise and falls to initiate action
+     {name = Name;
+      step = Step;
+      pulse.put(name, this);
+     }
+
+    public int compareTo(Pulse a)  {return toString().compareTo(a.toString());} // Pulses can be added to sets
+
+    public String toString() {return "Pulse("+name+"@"+step+")";}
+   }
 
 //D0                                                                            // Tests
 
@@ -90,8 +135,17 @@ public class Chip extends Test                                                  
     ok(b, "i_j_1");
    }
 
+  static void test_bits()
+   {Chip c = chip();
+    Bit  a = c.bit("i", 1);
+    Bit  b = c.bit("i", "j", 1);
+    Bits B = c.bits(a, b);
+    ok(B.size(), 2);
+   }
+
   static void oldTests()                                                        // Tests thought to be in good shape
    {test_bit();
+    test_bits();
    }
 
   static void newTests()                                                        // Tests being worked on
