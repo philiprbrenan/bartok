@@ -260,9 +260,14 @@ public class Chip extends Test                                                  
   class Pulse extends Name implements Comparable<Pulse>                         // Pulses rise and fall at a specified time
    {final int    step;                                                          // The step at which the pulse is in effect
 
-    Pulse(String Name, int Step)                                                // The step on which this pulse rise and falls to initiate action
+    Pulse(String Name, int Step)                                                // The step on which this pulse is active
      {super(Name);
       step = Step;
+     }
+
+    Pulse(String Name, Pulse pulse, int Steps)                                  // The number of steps beyond the specified pulse that this pulse becomes active
+     {super(Name);
+      step = pulse.step + Steps;
      }
 
     void put()                                                                  // Add to bit map
@@ -402,25 +407,25 @@ public class Chip extends Test                                                  
    }
 
   static void test_register()
-   {final int N  = 4;
-    Chip c       = chip();
-    Bits one     = c.bits("one", N); one.ones();
-    Bits out     = c.bits("out", N);
-    Pulse clear  = c.new Pulse("clear",  0);
-    Pulse update = c.new Pulse("update", 2);
+   {final int  N = 4;
+    Chip       c = chip();
+    Bits     one = c.bits("one", N); one.ones();
+    Bits     out = c.bits("out", N);
+    Pulse  clear = c.new Pulse("clear",  0);
+    Pulse update = c.new Pulse("update", clear, +2);
     Register reg = c.new Register("reg", clear, update, one, out);
     c.trace = c.new Trace()
-     {String title() {return "One   Out   Reg";}
-      String trace() {return String.format("%s  %s  %s", one, out, reg);}
+     {String title() {return "One   Out";}
+      String trace() {return String.format("%s  %s", one, out);}
      };
     c.simulate();
     //c.printTrace();
     c.trace.ok("""
-Step  One   Out   Reg
-   1  1111  0000  reg
-   2  1111  0000  reg
-   3  1111  1111  reg
-   4  1111  1111  reg
+Step  One   Out
+   1  1111  0000
+   2  1111  0000
+   3  1111  1111
+   4  1111  1111
 """);
    }
 
