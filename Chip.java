@@ -13,42 +13,32 @@ public class Chip extends Test                                                  
   final int        maxSimulationSteps = 1_0;                                    // Maximum number of simulation steps
   final Map<String,Bit>           bit = new TreeMap<>();                        // Bits on the chip
   final Map<String,Gate>         gate = new TreeMap<>();                        // Gates on the chip
-  final Map<String,Pulse>       pulse = new TreeMap<>();                        // Pulse used to control the chip
-  final Pulse  clear;                                                           // The pulse used to clear the memory of the chip to zero
-  final Pulse update;                                                           // The pulse used to load the memory of the chip from the input bits
   final Bits   input;                                                           // The input bits used to load the memory of the chip
   final Bits  output;                                                           // The output bits representing the current state of the memory
 
-  int           time = 0;                                                       // Number of  steps in time.  We start at time 0
-  int changedBitsInLastStep;                                                    // Changed bits in last step
+  int                           time = 0;                                       // Number of  steps in time.  We start at time 0
+  int          changedBitsInLastStep = 0;                                       // Changed bits in last step
   Trace trace;                                                                  // Tracing
 
-  Chip(String Name, int width, int steps)                                       // Create a new L<chip>.  The width is the number of bits in the chip memory. The number steps specifies the number of steps required to transition from one state to the next state
+  Chip(String Name, int width)                                                  // Create a new L<chip>  with the specified number of bits describing the width of the memory in bits
    {if (Name == null) Name = currentTestNameSuffix();
     name   = Name;
-    clear  = new Pulse(name, "clear");                                          // Clear the chip for action
-    update = new Pulse(name, "update");                                         // Next execution of the chip
     input  = bits     (Name, "Input" , width);
     output = bits     (Name, "Output", width);
+    for (Bit b : output) b.set(false);                                          // Clear memory
    }
 
-  static Chip chip() {return new Chip(null, 0, 0);}                             // Chip with no memory named after the test
+  static Chip chip() {return new Chip(null, 0);}                                // Chip with no memory named after the test
 
   void update()                                                                 // Update the memory associated with the chip
-   {if (clear.at() == time)                                                     // Clear has priority
-     {for (Bit b : output) b.set(false);
-      return;
-     }
-    if (update.at() == time)                                                    // Load requested
-     {final int N = input.size();
-      for (int j = 0; j < N; ++j)                                               // Copy memory input bits into memory and present them on the output bits
-       {output.elementAt(j).set(input .elementAt(j).get());
-       }
+   {final int N = input.size();
+    for (int j = 0; j < N; ++j)                                                 // Copy memory input bits into memory and present them on the output bits
+     {output.elementAt(j).set(input .elementAt(j).get());
      }
    }
 
-  static Chip chip(String name, int width, int steps)                           // Create a new chip while testing.
-   {return new Chip(name, width, steps);
+  static Chip chip(String name, int width)                                      // Create a new chip while testing.
+   {return new Chip(name, width);
    }
 
   public String toString()                                                      // Convert chip to string
@@ -321,53 +311,22 @@ public class Chip extends Test                                                  
      }
    }
 
-// Pulse                                                                        // Pulses rise and fall at a specified time
-
-  class Pulse extends Name implements Comparable<Pulse>                         // Pulses rise and fall at a specified time
-   {Pulse after;                                                                // If set, this pulse is relative to the after pulse. Changes to the after pulse will affect this puilse.
-    int step;                                                                   // The step at which the pulse is in effect
-
-    Pulse(String Name)                 {super(Name);}                           // Create a pulse
-    Pulse(String Name1, String Name2)  {super(Name1, Name2);}                   // The step on which this pulse is active
-
-    void setAfter(Pulse After) {after = After;}                                 // After pulse
-    void setStep (int    Step) {step  = Step;}                                  // Step
-    void setNow  ()            {step  = time;}                                  // The pulse will update on the next step
-
-    int at() {return after == null ? step : after.at() + step;}                 // Time step at which this pulse will be active                                      // Current time step at which this pulse will be active
-
-    void put()                                                                  // Add to bit map
-     {if (pulse.containsKey(name)) stop("Pulse", pulse,
-        "has already been already defined");
-      pulse.put(name, this);
-     }
-
-    public int compareTo(Pulse a)  {return toString().compareTo(a.toString());} // Pulses can be added to sets
-    public String toString() {return "Pulse("+name+"@"+step+")";}
-   }
-
 // Simulate                                                                     // Simulate the elements comprising the chip
 
   void simulate()                                                               // Simulate the elements comprising the chip
    {for (int i = 0; i < maxSimulationSteps; ++time, i++)                        // Each step in time
-     {update();                                                                 // Update register associated with chip
-      for (Gate g: gate.values()) g.action();                                   // Each gate computes its result
+     {for (Gate g: gate.values()) g.action();                                   // Each gate computes its result
       changedBitsInLastStep = 0;                                                // Number of changes to bits
       for (Bit  b: bit.values())  b.update();                                   // Each bit updates itself
       if (trace != null) trace.add();                                           // Trace this step if requested
-      if (changedBitsInLastStep == 0 && time >= lastPulse())                    // If nothing has changed and thre are no later pulses due we assume that the simulation has come to an end
+      if (changedBitsInLastStep == 0)                                           // If nothing has changed and thre are no later pulses due we assume that the simulation has come to an end
        {//say("Finished at step", time, "after no activity");
+        update();                                                                 // Update register associated with chip
         return;
        }
       //print();
      }
     err("Finished at maximum simulation step", maxSimulationSteps);
-   }
-
-  int  lastPulse()                                                              // Find the latest outstanding pulse
-   {int latest = 0;
-    for (Pulse p : pulse.values())  latest = max(latest, p.at());
-    return latest;
    }
 
 //D1 Tracing                                                                    // Trace simulation
@@ -445,16 +404,13 @@ public class Chip extends Test                                                  
 
   static void test_register()
    {final int  N = 16;
-    Chip       c = chip(null, N, 1);
+    Chip       c = chip(null, N);
     c.input.shiftLeftOnceByOne(c.output);
     c.trace = c.new Trace()
      {String title() {return "Input            Output";}
       String trace() {return String.format("%s %s", c.input, c.output);}
      };
-    for (int i = 0; i < N; i++)
-     {c.simulate();
-      c.update.setNow();
-     }
+    for (int i = 0; i < N; i++) c.simulate();
     //c.printTrace();
     c.trace.ok("""
 Step  Input            Output
