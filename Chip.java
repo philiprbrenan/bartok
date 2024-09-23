@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
-// Design, simulate and layout a binary tree on a silicon chip.
+// Simulate a silicon chip.
 // Philip R Brenan at appaapps dot com, Appa Apps Ltd Inc., 2024
 //------------------------------------------------------------------------------
-package com.AppaApps.Silicon;                                                   // Design, simulate and layout digital a binary tree on a silicon chip.
+package com.AppaApps.Silicon;                                                   // Simulate a silicon chip.
 
 import java.util.*;
 
@@ -16,8 +16,8 @@ public class Chip extends Test                                                  
   final Bits   input;                                                           // The input bits used to load the memory of the chip
   final Bits  output;                                                           // The output bits representing the current state of the memory
 
-  int                           time = 0;                                       // Number of  steps in time.  We start at time 0
-  int          changedBitsInLastStep = 0;                                       // Changed bits in last step
+  int                            time = 0;                                      // Number of  steps in time.  We start at time 0
+  int           changedBitsInLastStep = 0;                                      // Changed bits in last step
   Trace trace;                                                                  // Tracing
 
   Chip(String Name, int width)                                                  // Create a new L<chip>  with the specified number of bits describing the width of the memory in bits
@@ -28,12 +28,12 @@ public class Chip extends Test                                                  
     for (Bit b : output) b.set(false);                                          // Clear memory
    }
 
-  static Chip chip() {return new Chip(null, 0);}                                // Chip with no memory named after the test
+  static Chip chip() {return new Chip(null, 0);}                                // Chip with no memory, named after the test
 
   void update()                                                                 // Update the memory associated with the chip
    {final int N = input.size();
     for (int j = 0; j < N; ++j)                                                 // Copy memory input bits into memory and present them on the output bits
-     {output.elementAt(j).set(input .elementAt(j).get());
+     {output.elementAt(j).set(input.elementAt(j).get());
      }
    }
 
@@ -41,10 +41,17 @@ public class Chip extends Test                                                  
    {return new Chip(name, width);
    }
 
-  public String toString()                                                      // Convert chip to string
-   {final StringBuilder b = new StringBuilder();
-    b.append("Chip: "                         + name);
-    return b.toString();                                                        // String describing chip
+  public String toString()                                                      // Print a description of the state of the chip
+   {final StringBuilder s = new StringBuilder();
+    s.append("Time: " + time + ", Chip:" + name);
+
+    int i = 0;
+    for (Bit b : bit.values())
+     {final Boolean v = b.get();
+      s.append(String.format("%4d %16s %s", ++i,
+        b.name, v == null ? "." : v ? "1" : "0"));
+     }
+    return s.toString();
    }
 
 // Name                                                                         // Elements of the chip have names which are part akphabertic and part numeric.  Components of a name are separated by underscores
@@ -100,8 +107,9 @@ public class Chip extends Test                                                  
     Bit(String name1, String name2, int index) {super(name1, name2, index);}    // Named and numbered bit within a named bit
 
     void put()                                                                  // Add to bit map
-     {if (bit.containsKey(name)) stop("Bit", name, "has already been already defined");
-       bit.put(name, this);
+     {if (bit.containsKey(name)) stop("Bit", name,
+       "has already been already defined");
+      bit.put(name, this);
      }
 
     void update()                                                               // Update the value of this bit via an "or" of all driving gates
@@ -131,17 +139,16 @@ public class Chip extends Test                                                  
        }
      }
 
-    void ok(Boolean expected)
-     {
-     }
+    void ok(Boolean expected) {Test.ok(value, expected);}                       // Test a bit
+
     public String toString()                                                    // Print a bit
      {return name+(value == null ? "" : value ? "=1": "=0");
      }
    }
 
-  Bit bit(String Name)            {return new Bit(Name);}                       // Create a new bit
-  Bit bit(String Name, int Index) {return new Bit(Name, Index);}                // Create a new bit
-  Bit bit(String Name1, String Name2, int Index)                                // Create a new bit
+  Bit bit(String Name)            {return new Bit(Name);}                       // Create a new named bit
+  Bit bit(String Name, int Index) {return new Bit(Name, Index);}                // Create a new named, indexed, bit
+  Bit bit(String Name1, String Name2, int Index)                                // Create a new double named, indexed bit
    {return new Bit(Name1, Name2, Index);
    }
 
@@ -180,7 +187,7 @@ public class Chip extends Test                                                  
       return A;
      }
 
-    void shiftLeftOnce(Bits toShift, boolean fill)                             // Attach to these bits the left shift by one filled with the specified replacement bit
+    void shiftLeftOnce(Bits toShift, boolean fill)                              // Attach to these bits the left shift by one filled with the specified replacement bit
      {final int  N = sameSize(toShift);
       final Gate g = fill ? new One(elementAt(0)) : new Zero(elementAt(0));
       for (int i = 1; i < N; i++)
@@ -188,8 +195,19 @@ public class Chip extends Test                                                  
        }
      }
 
-    void shiftLeftOnceByOne (Bits toShift) {shiftLeftOnce(toShift, true);}      // Attach to these bits the left shift by one filled with one  of the supplied bits
-    void shiftLeftOnceByZero(Bits toShift) {shiftLeftOnce(toShift, false);}     // Attach to these bits the left shift by one filled with zero of the supplied bits
+    void shiftLeftOnceByOne (Bits toShift) {shiftLeftOnce(toShift, true);}      // Attach to these bits the right shift by one filled with one  of the supplied bits
+    void shiftLeftOnceByZero(Bits toShift) {shiftLeftOnce(toShift, false);}     // Attach to these bits the right shift by one filled with zero of the supplied bits
+
+    void shiftRightOnce(Bits toShift, boolean fill)                             // Attach to these bits the right shift by one filled with the specified replacement bit
+     {final int  N = sameSize(toShift);
+      final Gate g = fill ? new One(elementAt(N-1)) : new Zero(elementAt(N-1));
+      for (int i = 1; i < N; i++)
+       {new Continue(elementAt(i-1), toShift.elementAt(i));
+       }
+     }
+
+    void shiftRightOnceByOne (Bits toShift) {shiftRightOnce(toShift, true);}    // Attach to these bits the right shift by one filled with one  of the supplied bits
+    void shiftRightOnceByZero(Bits toShift) {shiftRightOnce(toShift, false);}   // Attach to these bits the right shift by one filled with zero of the supplied bits
    }
 
   Bits bits(Bit...bits) {return new Bits(bits);}                                // Get a named bit or define such a bit if it does not already exist
@@ -331,15 +349,6 @@ public class Chip extends Test                                                  
 
 //D1 Tracing                                                                    // Trace simulation
 
-  void print()                                                                  // Print all the bits in the chip
-   {say("Time:", time);
-    int i = 0;
-    for (Bit b : bit.values())
-     {final Boolean v = b.get();
-      say(String.format("%4d %16s %s", ++i, b.name, v == null ? "." : v ? "1" : "0"));
-     }
-   }
-
   abstract class Trace                                                          // Trace simulation
    {final Stack<String> trace = new Stack<>();                                  // Execution trace
 
@@ -470,6 +479,6 @@ Step  Input            Output
      {System.err.println(e);
       System.err.println(fullTraceBack(e));
      }
-    testExit(0);                                                                 // Exit with a return code if we failed any tests
+    testExit(0);                                                                // Exit with a return code if we failed any tests
    }
  }
