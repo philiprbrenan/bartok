@@ -6,31 +6,50 @@ package com.AppaApps.Silicon;                                                   
 
 import java.util.*;
 
-//D1 Construct                                                                  // Construct a silicon chip using standard logic gates combined via buses.
+//D1 Construct                                                                  // Construct a silicon chip comprised of memory, intermediate bits and logic gates.
 
-public class Chip extends Test                                                  // Describe a chip and emulate its operation.
+public class Chip extends Test                                                  // Describe a chip and emulate its operation.  A chip consists of a block of memory and some logic that computes the next value of the memory thus changing the state of the chip
  {final String   name;                                                          // Name of chip
   final int        maxSimulationSteps = 1_0;                                    // Maximum number of simulation steps
   final Map<String,Bit>           bit = new TreeMap<>();                        // Bits on the chip
   final Map<String,Gate>         gate = new TreeMap<>();                        // Gates on the chip
   final Map<String,Pulse>       pulse = new TreeMap<>();                        // Pulse used to control the chip
-  final Map<String,Register> register = new TreeMap<>();                        // Registers on the chip
-  final Pulse  clear;                                                           // The pulse used to clear the chip to zero
-  final Pulse update;                                                           // The next execution of the chip
+  final Pulse  clear;                                                           // The pulse used to clear the memory of the chip to zero
+  final Pulse update;                                                           // The pulse used to load the memory of the chip from the input bits
+  final Bits   input;                                                           // The input bits used to load the memory of the chip
+  final Bits  output;                                                           // The output bits representing the current state of the memory
+
   int           time = 0;                                                       // Number of  steps in time.  We start at time 0
   int changedBitsInLastStep;                                                    // Changed bits in last step
   Trace trace;                                                                  // Tracing
 
-  Chip(String Name)                                                             // Create a new L<chip>.
-   {name   = Name;
+  Chip(String Name, int width, int steps)                                       // Create a new L<chip>.  The width is the number of bits in the chip memory. The number steps specifies the number of steps required to transition from one state to the next state
+   {if (Name == null) Name = currentTestNameSuffix();
+    name   = Name;
     clear  = new Pulse(name, "clear");                                          // Clear the chip for action
     update = new Pulse(name, "update");                                         // Next execution of the chip
+    input  = bits     (Name, "Input" , width);
+    output = bits     (Name, "Output", width);
    }
 
-  Chip() {this(currentTestNameSuffix());}                                       // Create a new chip while testing.
+  static Chip chip() {return new Chip(null, 0, 0);}                             // Chip with no memory named after the test
 
-  static Chip chip()            {return new Chip();}                            // Create a new chip while testing.
-  static Chip chip(String name) {return new Chip(name);}                        // Create a new chip while testing.
+  void update()                                                                 // Update the memory associated with the chip
+   {if (clear.at() == time)                                                     // Clear has priority
+     {for (Bit b : output) b.set(false);
+      return;
+     }
+    if (update.at() == time)                                                    // Load requested
+     {final int N = input.size();
+      for (int j = 0; j < N; ++j)                                               // Copy memory input bits into memory and present them on the output bits
+       {output.elementAt(j).set(input .elementAt(j).get());
+       }
+     }
+   }
+
+  static Chip chip(String name, int width, int steps)                           // Create a new chip while testing.
+   {return new Chip(name, width, steps);
+   }
 
   public String toString()                                                      // Convert chip to string
    {final StringBuilder b = new StringBuilder();
@@ -327,51 +346,11 @@ public class Chip extends Test                                                  
     public String toString() {return "Pulse("+name+"@"+step+")";}
    }
 
-// Register                                                                     // A register takes a snapshot of a set of bits on a receipt of a pulse. A register can also be cleared via another pulse.
-
-  class Register extends Name implements Comparable<Register>                   // A register takes a snapshot of a set of bits on a receipt of a pulse. A register can also be cleared via another pulse.
-   {final Pulse  clear;                                                         // The pulse used to clear the register to zero
-    final Pulse update;                                                         // The pulse used to load the register from the input bits
-    final Bits   input;                                                         // The input bits used to load the register
-    final Bits  output;                                                         // The output bits driven by the register
-    Register(String Name, int width, int steps)                                 // A register of specified name and width takes a snapshot of its input bits and displays them on its output bits on a receipt of a pulse. A register can also be cleared via another pulse.
-     {super(Name);
-      clear  = new Pulse(Name, "Clear");  clear .setAfter(Chip.this.clear);     // Pulse used to clear register when chip is cleared
-      update = new Pulse(Name, "Update"); update.setAfter(Chip.this.update);    // Pulse used to update register
-      update.setStep(steps);                                                    // The number of steps to execute before updating the registers
-      input  = bits     (Name, "Input" , width);
-      output = bits     (Name, "Output", width);
-     }
-
-    public int compareTo(Register a)                                            // Pulses can be added to sets
-     {return toString().compareTo(a.toString());
-     }
-
-    void put()                                                                  // Add to bit map
-     {if (pulse.containsKey(name)) stop("Register", register,
-       "has already been already defined");
-      register.put(name, this);
-     }
-
-    void update()                                                               // Change output depending on pulses
-     {if (clear.at() == time)                                                   // Clear has priority
-       {for (Bit b : output) b.set(false);
-        return;
-       }
-      if (update.at() == time)                                                  // Load requested
-       {final int N = input.size();
-        for (int j = 0; j < N; ++j)                                             // Copy input to register to output of register
-         {output.elementAt(j).set(input .elementAt(j).get());
-         }
-       }
-     }
-   }
-
 // Simulate                                                                     // Simulate the elements comprising the chip
 
   void simulate()                                                               // Simulate the elements comprising the chip
    {for (int i = 0; i < maxSimulationSteps; ++time, i++)                        // Each step in time
-     {for (Register r: register.values()) r.update();                           // Update each register
+     {update();                                                                 // Update register associated with chip
       for (Gate g: gate.values()) g.action();                                   // Each gate computes its result
       changedBitsInLastStep = 0;                                                // Number of changes to bits
       for (Bit  b: bit.values())  b.update();                                   // Each bit updates itself
@@ -384,8 +363,6 @@ public class Chip extends Test                                                  
      }
     err("Finished at maximum simulation step", maxSimulationSteps);
    }
-
-  void trace() {}                                                               // Trace execution, called every step
 
   int  lastPulse()                                                              // Find the latest outstanding pulse
    {int latest = 0;
@@ -468,12 +445,11 @@ public class Chip extends Test                                                  
 
   static void test_register()
    {final int  N = 16;
-    Chip       c = chip();
-    Register reg = c.new Register("reg", N, 1);
-    reg.input.shiftLeftOnceByOne(reg.output);
+    Chip       c = chip(null, N, 1);
+    c.input.shiftLeftOnceByOne(c.output);
     c.trace = c.new Trace()
      {String title() {return "Input            Output";}
-      String trace() {return String.format("%s %s", reg.input, reg.output);}
+      String trace() {return String.format("%s %s", c.input, c.output);}
      };
     for (int i = 0; i < N; i++)
      {c.simulate();
@@ -483,52 +459,37 @@ public class Chip extends Test                                                  
     c.trace.ok("""
 Step  Input            Output
    1  0000000000000001 0000000000000000
-   2  0000000000000011 0000000000000001
+   2  0000000000000001 0000000000000000
    3  0000000000000011 0000000000000001
    4  0000000000000011 0000000000000001
    5  0000000000000111 0000000000000011
    6  0000000000000111 0000000000000011
-   7  0000000000000111 0000000000000011
+   7  0000000000001111 0000000000000111
    8  0000000000001111 0000000000000111
-   9  0000000000001111 0000000000000111
-  10  0000000000001111 0000000000000111
-  11  0000000000011111 0000000000001111
-  12  0000000000011111 0000000000001111
-  13  0000000000011111 0000000000001111
-  14  0000000000111111 0000000000011111
-  15  0000000000111111 0000000000011111
-  16  0000000000111111 0000000000011111
-  17  0000000001111111 0000000000111111
-  18  0000000001111111 0000000000111111
-  19  0000000001111111 0000000000111111
-  20  0000000011111111 0000000001111111
-  21  0000000011111111 0000000001111111
-  22  0000000011111111 0000000001111111
-  23  0000000111111111 0000000011111111
-  24  0000000111111111 0000000011111111
-  25  0000000111111111 0000000011111111
-  26  0000001111111111 0000000111111111
-  27  0000001111111111 0000000111111111
-  28  0000001111111111 0000000111111111
-  29  0000011111111111 0000001111111111
-  30  0000011111111111 0000001111111111
-  31  0000011111111111 0000001111111111
-  32  0000111111111111 0000011111111111
-  33  0000111111111111 0000011111111111
-  34  0000111111111111 0000011111111111
-  35  0001111111111111 0000111111111111
-  36  0001111111111111 0000111111111111
-  37  0001111111111111 0000111111111111
-  38  0011111111111111 0001111111111111
-  39  0011111111111111 0001111111111111
-  40  0011111111111111 0001111111111111
-  41  0111111111111111 0011111111111111
-  42  0111111111111111 0011111111111111
-  43  0111111111111111 0011111111111111
-  44  1111111111111111 0111111111111111
-  45  1111111111111111 0111111111111111
-  46  1111111111111111 0111111111111111
-  47  1111111111111111 1111111111111111
+   9  0000000000011111 0000000000001111
+  10  0000000000011111 0000000000001111
+  11  0000000000111111 0000000000011111
+  12  0000000000111111 0000000000011111
+  13  0000000001111111 0000000000111111
+  14  0000000001111111 0000000000111111
+  15  0000000011111111 0000000001111111
+  16  0000000011111111 0000000001111111
+  17  0000000111111111 0000000011111111
+  18  0000000111111111 0000000011111111
+  19  0000001111111111 0000000111111111
+  20  0000001111111111 0000000111111111
+  21  0000011111111111 0000001111111111
+  22  0000011111111111 0000001111111111
+  23  0000111111111111 0000011111111111
+  24  0000111111111111 0000011111111111
+  25  0001111111111111 0000111111111111
+  26  0001111111111111 0000111111111111
+  27  0011111111111111 0001111111111111
+  28  0011111111111111 0001111111111111
+  29  0111111111111111 0011111111111111
+  30  0111111111111111 0011111111111111
+  31  1111111111111111 0111111111111111
+  32  1111111111111111 0111111111111111
 """);
    }
 
@@ -540,7 +501,7 @@ Step  Input            Output
    }
 
   static void newTests()                                                        // Tests being worked on
-   {//oldTests();
+   {oldTests();
     test_register();
    }
 
