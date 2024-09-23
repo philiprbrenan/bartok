@@ -10,16 +10,23 @@ import java.util.*;
 
 public class Chip extends Test                                                  // Describe a chip and emulate its operation.
  {final String   name;                                                          // Name of chip
+  final int        maxSimulationSteps = 1_0;                                    // Maximum number of simulation steps
   final Map<String,Bit>           bit = new TreeMap<>();                        // Bits on the chip
   final Map<String,Gate>         gate = new TreeMap<>();                        // Gates on the chip
   final Map<String,Pulse>       pulse = new TreeMap<>();                        // Pulse used to control the chip
   final Map<String,Register> register = new TreeMap<>();                        // Registers on the chip
-  final int maxSimulationSteps = 1_0;                                           // Maximum number of simulation steps
-  int time;                                                                     // Number of  steps in time.  We start at time 0
+  final Pulse  clear;                                                           // The pulse used to clear the chip to zero
+  final Pulse update;                                                           // The next execution of the chip
+  int           time = 0;                                                       // Number of  steps in time.  We start at time 0
   int changedBitsInLastStep;                                                    // Changed bits in last step
   Trace trace;                                                                  // Tracing
 
-  Chip(String Name) {name = Name;}                                              // Create a new L<chip>.
+  Chip(String Name)                                                             // Create a new L<chip>.
+   {name   = Name;
+    clear  = new Pulse(name, "clear");                                          // Clear the chip for action
+    update = new Pulse(name, "update");                                         // Next execution of the chip
+   }
+
   Chip() {this(currentTestNameSuffix());}                                       // Create a new chip while testing.
 
   static Chip chip()            {return new Chip();}                            // Create a new chip while testing.
@@ -140,6 +147,10 @@ public class Chip extends Test                                                  
      {for (int i = 0; i < width; i++) push(bit(name, i));
      }
 
+    Bits(String name1, String name2, int width)                                 // Create an array of bits
+     {for (int i = 0; i < width; i++) push(bit(name1, name2, i));
+     }
+
     void ones()                                                                 // Drive the bits with some ones
      {for(Bit b : this) new One(b);                                             // Drive this bit with a one
      }
@@ -152,11 +163,33 @@ public class Chip extends Test                                                  
        }
       return s.reverse().toString();                                            // Prints string with lowest bit rightmost
      }
+
+    int sameSize(Bits b)                                                        // Check the specified set of bits is the same size as this one
+     {final int A = size(), B = b.size();
+      if (A != B) stop("This set of bits has width", A,
+         "but the set of input bits has width", B);
+      return A;
+     }
+
+    void shiftLeftOnce(Bits toShift, boolean fill)                             // Attach to these bits the left shift by one filled with the specified replacement bit
+     {final int  N = sameSize(toShift);
+      final Gate g = fill ? new One(elementAt(0)) : new Zero(elementAt(0));
+      for (int i = 1; i < N; i++)
+       {new Continue(elementAt(i), toShift.elementAt(i-1));
+       }
+     }
+
+    void shiftLeftOnceByOne (Bits toShift) {shiftLeftOnce(toShift, true);}      // Attach to these bits the left shift by one filled with one  of the supplied bits
+    void shiftLeftOnceByZero(Bits toShift) {shiftLeftOnce(toShift, false);}     // Attach to these bits the left shift by one filled with zero of the supplied bits
    }
 
   Bits bits(Bit...bits) {return new Bits(bits);}                                // Get a named bit or define such a bit if it does not already exist
 
   Bits bits(String name, int width) {return new Bits(name, width);}             // Make an array of bits
+
+  Bits bits(String name1, String name2, int width)                              // Make an array of bits
+   {return new Bits(name1, name2, width);
+   }
 
   Bits bits(String name)                                                        // Make some bits from a string of names separted by spaces
    {final String[]s = name.split("\\s+");
@@ -197,6 +230,7 @@ public class Chip extends Test                                                  
       return s.toString();
      }
    }
+
   class Zero extends Gate                                                       // Zero gate
    {Zero(Bit Output) {super(Output);}
     void action()    {set(false);}                                              // Set to false as a surrogate for zero
@@ -205,6 +239,19 @@ public class Chip extends Test                                                  
   class One extends Gate                                                        // One gate
    {One(Bit Output) {super(Output);}
     void action()   {set(true);}                                                // Set to true as a surrogate for one
+   }
+
+  class Continue extends Gate                                                   // Continue gate
+   {Continue(Bit Output, Bit Input) {super(Output, Input);}
+    void action() {set(inputs.firstElement().get());}                             // Set the value of the gate, not the target bit. The bit is responsible for examining its inputs and deciding what its actual value will be
+   }
+
+  class Not extends Gate                                                        // Not gate
+   {Not(Bit Output, Bit Input) {super(Output, Input);}
+    void action()
+     {final Boolean v = inputs.firstElement().get();
+      output.set(v == null ? v : !v);                                           // If we do not know the value before we do not know it after
+     }
    }
 
   class Or extends Gate                                                         // Or gate
@@ -258,20 +305,21 @@ public class Chip extends Test                                                  
 // Pulse                                                                        // Pulses rise and fall at a specified time
 
   class Pulse extends Name implements Comparable<Pulse>                         // Pulses rise and fall at a specified time
-   {final int    step;                                                          // The step at which the pulse is in effect
+   {Pulse after;                                                                // If set, this pulse is relative to the after pulse. Changes to the after pulse will affect this puilse.
+    int step;                                                                   // The step at which the pulse is in effect
 
-    Pulse(String Name, int Step)                                                // The step on which this pulse is active
-     {super(Name);
-      step = Step;
-     }
+    Pulse(String Name)                 {super(Name);}                           // Create a pulse
+    Pulse(String Name1, String Name2)  {super(Name1, Name2);}                   // The step on which this pulse is active
 
-    Pulse(String Name, Pulse pulse, int Steps)                                  // The number of steps beyond the specified pulse that this pulse becomes active
-     {super(Name);
-      step = pulse.step + Steps;
-     }
+    void setAfter(Pulse After) {after = After;}                                 // After pulse
+    void setStep (int    Step) {step  = Step;}                                  // Step
+    void setNow  ()            {step  = time;}                                  // The pulse will update on the next step
+
+    int at() {return after == null ? step : after.at() + step;}                 // Time step at which this pulse will be active                                      // Current time step at which this pulse will be active
 
     void put()                                                                  // Add to bit map
-     {if (pulse.containsKey(name)) stop("Pulse", pulse, "has already been already defined");
+     {if (pulse.containsKey(name)) stop("Pulse", pulse,
+        "has already been already defined");
       pulse.put(name, this);
      }
 
@@ -282,15 +330,17 @@ public class Chip extends Test                                                  
 // Register                                                                     // A register takes a snapshot of a set of bits on a receipt of a pulse. A register can also be cleared via another pulse.
 
   class Register extends Name implements Comparable<Register>                   // A register takes a snapshot of a set of bits on a receipt of a pulse. A register can also be cleared via another pulse.
-   {final Pulse clear;                                                          // The pulse used to clear the register to zero
-    final Pulse  load;                                                          // The pulse used to load the register from the input bits
-    final Bits  input;                                                          // The input bits used to load the register
-    final Bits output;                                                          // The output bits driven by the register
-    Register(String Name, Pulse Clear, Pulse Load, Bits Input, Bits Output)     // A register takes a snapshot of a set of bits on a receipt of a pulse. A register can also be cleared via another pulse.
+   {final Pulse  clear;                                                         // The pulse used to clear the register to zero
+    final Pulse update;                                                         // The pulse used to load the register from the input bits
+    final Bits   input;                                                         // The input bits used to load the register
+    final Bits  output;                                                         // The output bits driven by the register
+    Register(String Name, int width, int steps)                                 // A register of specified name and width takes a snapshot of its input bits and displays them on its output bits on a receipt of a pulse. A register can also be cleared via another pulse.
      {super(Name);
-      clear = Clear; load = Load; input = Input; output = Output;
-      if (input.size() != output.size()) stop                                   // Confirm size
-       ("Input has length", input.size(), "Output has length", output.size());
+      clear  = new Pulse(Name, "Clear");  clear .setAfter(Chip.this.clear);     // Pulse used to clear register when chip is cleared
+      update = new Pulse(Name, "Update"); update.setAfter(Chip.this.update);    // Pulse used to update register
+      update.setStep(steps);                                                    // The number of steps to execute before updating the registers
+      input  = bits     (Name, "Input" , width);
+      output = bits     (Name, "Output", width);
      }
 
     public int compareTo(Register a)                                            // Pulses can be added to sets
@@ -304,15 +354,14 @@ public class Chip extends Test                                                  
      }
 
     void update()                                                               // Change output depending on pulses
-     {if (clear.step == time)                                                   // Clear has priority
+     {if (clear.at() == time)                                                   // Clear has priority
        {for (Bit b : output) b.set(false);
         return;
        }
-      if (load.step == time)                                                    // Load requested
+      if (update.at() == time)                                                  // Load requested
        {final int N = input.size();
-        for (int i = 0; i < N; ++i)                                             // Copy input to output
-         {final Bit b = output.elementAt(i);
-          output.elementAt(i).set(input.elementAt(i).get());
+        for (int j = 0; j < N; ++j)                                             // Copy input to register to output of register
+         {output.elementAt(j).set(input .elementAt(j).get());
          }
        }
      }
@@ -321,16 +370,17 @@ public class Chip extends Test                                                  
 // Simulate                                                                     // Simulate the elements comprising the chip
 
   void simulate()                                                               // Simulate the elements comprising the chip
-   {for (time = 0; time < maxSimulationSteps; ++time)                           // Each step in time
+   {for (int i = 0; i < maxSimulationSteps; ++time, i++)                        // Each step in time
      {for (Register r: register.values()) r.update();                           // Update each register
       for (Gate g: gate.values()) g.action();                                   // Each gate computes its result
       changedBitsInLastStep = 0;                                                // Number of changes to bits
       for (Bit  b: bit.values())  b.update();                                   // Each bit updates itself
       if (trace != null) trace.add();                                           // Trace this step if requested
-      if (changedBitsInLastStep == 0 && time > lastPulse())                     // If nothing has changed and thre are no later pulses due we assume that the simulation has come to an end
-       {say("Finished at step", time, "after no activity");
+      if (changedBitsInLastStep == 0 && time >= lastPulse())                    // If nothing has changed and thre are no later pulses due we assume that the simulation has come to an end
+       {//say("Finished at step", time, "after no activity");
         return;
        }
+      //print();
      }
     err("Finished at maximum simulation step", maxSimulationSteps);
    }
@@ -339,11 +389,20 @@ public class Chip extends Test                                                  
 
   int  lastPulse()                                                              // Find the latest outstanding pulse
    {int latest = 0;
-    for (Pulse p : pulse.values())  latest = max(latest, p.step);
+    for (Pulse p : pulse.values())  latest = max(latest, p.at());
     return latest;
    }
 
 //D1 Tracing                                                                    // Trace simulation
+
+  void print()                                                                  // Print all the bits in the chip
+   {say("Time:", time);
+    int i = 0;
+    for (Bit b : bit.values())
+     {final Boolean v = b.get();
+      say(String.format("%4d %16s %s", ++i, b.name, v == null ? "." : v ? "1" : "0"));
+     }
+   }
 
   abstract class Trace                                                          // Trace simulation
    {final Stack<String> trace = new Stack<>();                                  // Execution trace
@@ -396,36 +455,80 @@ public class Chip extends Test                                                  
 
   static void test_simulate()
    {Chip c = chip();
-    Bit  a = c.bit("a");  c.new Zero(a);
-    Bit  b = c.bit("b");  c.new One (b);
+    Bit  a = c.bit("a"); c.new Zero(a);
+    Bit  b = c.bit("b"); c.new One (b);
     Bit  O = c.bit("O");
     Bit  A = c.bit("A");
     c.new And(A, a, b);
     c.new Or (O, a, b);
     c.simulate();
-    say("CCCC", A, O);
+    A.ok(false);
+    O.ok(true);
    }
 
   static void test_register()
-   {final int  N = 4;
+   {final int  N = 16;
     Chip       c = chip();
-    Bits     one = c.bits("one", N); one.ones();
-    Bits     out = c.bits("out", N);
-    Pulse  clear = c.new Pulse("clear",  0);
-    Pulse update = c.new Pulse("update", clear, +2);
-    Register reg = c.new Register("reg", clear, update, one, out);
+    Register reg = c.new Register("reg", N, 1);
+    reg.input.shiftLeftOnceByOne(reg.output);
     c.trace = c.new Trace()
-     {String title() {return "One   Out";}
-      String trace() {return String.format("%s  %s", one, out);}
+     {String title() {return "Input            Output";}
+      String trace() {return String.format("%s %s", reg.input, reg.output);}
      };
-    c.simulate();
+    for (int i = 0; i < N; i++)
+     {c.simulate();
+      c.update.setNow();
+     }
     //c.printTrace();
     c.trace.ok("""
-Step  One   Out
-   1  1111  0000
-   2  1111  0000
-   3  1111  1111
-   4  1111  1111
+Step  Input            Output
+   1  0000000000000001 0000000000000000
+   2  0000000000000011 0000000000000001
+   3  0000000000000011 0000000000000001
+   4  0000000000000011 0000000000000001
+   5  0000000000000111 0000000000000011
+   6  0000000000000111 0000000000000011
+   7  0000000000000111 0000000000000011
+   8  0000000000001111 0000000000000111
+   9  0000000000001111 0000000000000111
+  10  0000000000001111 0000000000000111
+  11  0000000000011111 0000000000001111
+  12  0000000000011111 0000000000001111
+  13  0000000000011111 0000000000001111
+  14  0000000000111111 0000000000011111
+  15  0000000000111111 0000000000011111
+  16  0000000000111111 0000000000011111
+  17  0000000001111111 0000000000111111
+  18  0000000001111111 0000000000111111
+  19  0000000001111111 0000000000111111
+  20  0000000011111111 0000000001111111
+  21  0000000011111111 0000000001111111
+  22  0000000011111111 0000000001111111
+  23  0000000111111111 0000000011111111
+  24  0000000111111111 0000000011111111
+  25  0000000111111111 0000000011111111
+  26  0000001111111111 0000000111111111
+  27  0000001111111111 0000000111111111
+  28  0000001111111111 0000000111111111
+  29  0000011111111111 0000001111111111
+  30  0000011111111111 0000001111111111
+  31  0000011111111111 0000001111111111
+  32  0000111111111111 0000011111111111
+  33  0000111111111111 0000011111111111
+  34  0000111111111111 0000011111111111
+  35  0001111111111111 0000111111111111
+  36  0001111111111111 0000111111111111
+  37  0001111111111111 0000111111111111
+  38  0011111111111111 0001111111111111
+  39  0011111111111111 0001111111111111
+  40  0011111111111111 0001111111111111
+  41  0111111111111111 0011111111111111
+  42  0111111111111111 0011111111111111
+  43  0111111111111111 0011111111111111
+  44  1111111111111111 0111111111111111
+  45  1111111111111111 0111111111111111
+  46  1111111111111111 0111111111111111
+  47  1111111111111111 1111111111111111
 """);
    }
 
