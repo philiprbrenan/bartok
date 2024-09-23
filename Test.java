@@ -223,6 +223,7 @@ public class Test                                                               
    {final StringBuilder b = new StringBuilder();                                // Print as a series of whitespace separated items
     for (int i = 0; i <  O.length; ++i)
      {final Object o = O[i];
+      if (o == null) {b.append("(null)"); continue;}
       final String s = o.toString();
       if (b.length() > 0 && s.length() > 0                &&
         !Character.isWhitespace(b.charAt(b.length() - 1)) &&
