@@ -28,7 +28,8 @@ public class Chip extends Test                                                  
     for (Bit b : output) b.set(false);                                          // Clear memory
    }
 
-  static Chip chip() {return new Chip(null, 0);}                                // Chip with no memory, named after the test
+  static Chip chip()          {return new Chip(null, 0);}                       // Chip with no memory, named after the test
+  static Chip chip(int width) {return new Chip(null, width);}                   // Chip with memory of specified number of bits
 
   void update()                                                                 // Update the memory associated with the chip
    {final int N = input.size();
@@ -208,6 +209,14 @@ public class Chip extends Test                                                  
 
     void shiftRightOnceByOne (Bits toShift) {shiftRightOnce(toShift, true);}    // Attach to these bits the right shift by one filled with one  of the supplied bits
     void shiftRightOnceByZero(Bits toShift) {shiftRightOnce(toShift, false);}   // Attach to these bits the right shift by one filled with zero of the supplied bits
+
+    void shiftRightOnceArithmetic(Bits toShift)                                 // Attach to these bits the right arithmetic shift by one
+     {final int     N = sameSize(toShift);
+      for (int i = 1; i < N; i++)
+       {new Continue(elementAt(i-1), toShift.elementAt(i));
+       }
+      new Continue(elementAt(N-1), toShift.elementAt(N-1));
+     }
    }
 
   Bits bits(Bit...bits) {return new Bits(bits);}                                // Get a named bit or define such a bit if it does not already exist
@@ -216,13 +225,6 @@ public class Chip extends Test                                                  
 
   Bits bits(String name1, String name2, int width)                              // Make an array of bits
    {return new Bits(name1, name2, width);
-   }
-
-  Bits bits(String name)                                                        // Make some bits from a string of names separted by spaces
-   {final String[]s = name.split("\\s+");
-    final Bit   []b = new Bit[s.length];
-    for (int i = 0; i < s.length; ++i) b[i] = bit(s[i]);                        // Make a bit from each name
-    return new Bits(b);                                                         // Create bits
    }
 
 // Gate                                                                         // Gates connect and combine bits
@@ -270,7 +272,7 @@ public class Chip extends Test                                                  
 
   class Continue extends Gate                                                   // Continue gate
    {Continue(Bit Output, Bit Input) {super(Output, Input);}
-    void action() {set(inputs.firstElement().get());}                             // Set the value of the gate, not the target bit. The bit is responsible for examining its inputs and deciding what its actual value will be
+    void action() {set(inputs.firstElement().get());}                           // Set the value of the gate, not the target bit. The bit is responsible for examining its inputs and deciding what its actual value will be
    }
 
   class Not extends Gate                                                        // Not gate
@@ -293,7 +295,7 @@ public class Chip extends Test                                                  
        {final Boolean v = b.get();
         if (v == null) {set(v); return;}
        }
-      set(false);                                                               // No true or null inputs means it was flase
+      set(false);                                                               // No true or null inputs means it was false
      }
    }
 
@@ -337,9 +339,9 @@ public class Chip extends Test                                                  
       changedBitsInLastStep = 0;                                                // Number of changes to bits
       for (Bit  b: bit.values())  b.update();                                   // Each bit updates itself
       if (trace != null) trace.add();                                           // Trace this step if requested
-      if (changedBitsInLastStep == 0)                                           // If nothing has changed and thre are no later pulses due we assume that the simulation has come to an end
+      if (changedBitsInLastStep == 0)                                           // If nothing has changed and there are no later pulses due we assume that the simulation has come to an end
        {//say("Finished at step", time, "after no activity");
-        update();                                                                 // Update register associated with chip
+        update();                                                               // Update memory associated with chip
         return;
        }
       //print();
@@ -413,7 +415,7 @@ public class Chip extends Test                                                  
 
   static void test_register()
    {final int  N = 16;
-    Chip       c = chip(null, N);
+    Chip       c = chip(N);
     c.input.shiftLeftOnceByOne(c.output);
     c.trace = c.new Trace()
      {String title() {return "Input            Output";}
@@ -458,6 +460,37 @@ Step  Input            Output
 """);
    }
 
+  static void test_shift()
+   {final int  N = 4;
+    Chip       c = chip(N);
+    Bits      b1 = c.bits("b1", N); b1.shiftLeftOnceByOne (c.output);
+    Bits      b2 = c.bits("b2", N); b2.shiftLeftOnceByZero(b1);
+    Bits      b3 = c.bits("b3", N); b3.shiftLeftOnceByOne (b2);
+    Bits      b4 = c.bits("b4", N); b4.shiftLeftOnceByZero(b3);
+    c.input.shiftRightOnceArithmetic(b4);
+    c.trace = c.new Trace()
+     {String title() {return "Out  b1   b2   b3   b4   In";}
+      String trace() {return String.format("%s %s %s %s %s %s", c.output, b1, b2, b3, b4, c.input);}
+     };
+    for (int i = 0; i < N; i++) c.simulate();
+    //c.printTrace();
+    c.trace.ok("""
+Step  Out  b1   b2   b3   b4   In
+   1  0000 0001 ...0 ...1 ...0 ....
+   2  0000 0001 0010 ..01 ..10 ....
+   3  0000 0001 0010 0101 .010 ...1
+   4  0000 0001 0010 0101 1010 ..01
+   5  0000 0001 0010 0101 1010 1101
+   6  0000 0001 0010 0101 1010 1101
+   7  1101 1011 0010 0101 1010 1101
+   8  1101 1011 0110 0101 1010 1101
+   9  1101 1011 0110 1101 1010 1101
+  10  1101 1011 0110 1101 1010 1101
+  11  1101 1011 0110 1101 1010 1101
+  12  1101 1011 0110 1101 1010 1101
+""");
+   }
+
   static void oldTests()                                                        // Tests thought to be in good shape
    {test_bit();
     test_bits();
@@ -467,7 +500,7 @@ Step  Input            Output
 
   static void newTests()                                                        // Tests being worked on
    {oldTests();
-    test_register();
+    test_shift();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
