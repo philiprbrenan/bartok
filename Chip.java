@@ -655,7 +655,7 @@ public class Chip extends Test                                                  
 
   String printTrace  () {return trace.print();}                                 // Print execution trace
 
-//D0                                                                            // Tests
+//D0                                                                            // Tests: I test, therefore I am.  And so do my mentees.  But most other people, apparently, do not, they live in a half world lit by shadows in which they never know if their code works or not.
 
   static void test_bit()
    {Chip c = chip();
@@ -840,6 +840,6 @@ Step  ao   bo   a    b    ai   bi
      {System.err.println(e);
       System.err.println(fullTraceBack(e));
      }
-    testExit(0);                                                                // Exit with a return code if we failed any tests
+    testExit(0);                                                                // Exit with a return code if we failed any tests to alert github
    }
  }
