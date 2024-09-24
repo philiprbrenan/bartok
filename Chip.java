@@ -216,7 +216,6 @@ public class Chip extends Test                                                  
     Layout duplicate(int At)                                                    // Duplicate an array so we can modify it safely
      {final Array a = new Array(name, element.duplicate(), size);
       a.width = width; a.at = at - At; a.depth = depth; a.index = index;
-      //a.bits = bits;
       return a;
      }
    }
@@ -255,7 +254,7 @@ public class Chip extends Test                                                  
      {at = At;
       int w = 0;
       for(Layout v : subStack)                                                  // Layout sub structure
-       {v.position(v.at = at+w);
+       {v.position(v.at = at+w);                                                // Substructures are laid out sequentially
         w += v.width;
        }
       return this;
@@ -263,7 +262,7 @@ public class Chip extends Test                                                  
 
     Layout duplicate(int At)                                                    // Duplicate a structure so we can modify it safely
      {final Structure s = new Structure(name);
-      s.width = width; s.at = at - At; s.depth = depth; //s.bits = bits;
+      s.width = width; s.at = at - At; s.depth = depth;
       for(Layout L : subStack)
        {final Layout l = L.duplicate(L.at);
         s.subMap.put(l.name, l);
@@ -273,7 +272,7 @@ public class Chip extends Test                                                  
      }
    }
 
-  class Union extends Layout                                                    // Union of structures laid out in memory
+  class Union extends Layout                                                    // Union of structures laid out in memory on top of each other - it is up to you to have a way of deciding which substructure is valid
    {final Map<String,Layout> subMap = new TreeMap<>();                          // Unique variables contained inside this variable
 
     Union(String Name, Layout...Fields)                                         // Fields in the union
@@ -293,7 +292,7 @@ public class Chip extends Test                                                  
       depth = Depth;
       superStructure.fields.push(this);
       for(Layout v : subMap.values())                                           // Find largest substructure
-       {v.at = at;
+       {v.at = at;                                                              // Substructures are laid out on top of each other
         v.layout(v.at, Depth+1, superStructure);
         width = max(width, v.width);                                            // Space occupied is determined by largest element of union
        }
@@ -307,7 +306,7 @@ public class Chip extends Test                                                  
 
     Layout duplicate(int At)                                                    // Duplicate a union so we can modify it safely
      {final Union u = new Union(name);
-      u.width = width; u.at = at - At; u.depth = depth; //u.bits = bits;
+      u.width = width; u.at = at - At; u.depth = depth;
       for(String s : subMap.keySet())
        {final Layout L = subMap.get(s);
         final Layout l = L.duplicate(L.at);
@@ -322,14 +321,14 @@ public class Chip extends Test                                                  
   Structure structure(String name, Layout...ml)            {return new Structure(name, ml);}
   Union     union    (String name, Layout...ml)            {return new Union    (name, ml);}
 
-// Name                                                                         // Elements of the chip have names which are part akphabertic and part numeric.  Components of a name are separated by underscores
+// Name                                                                         // Elements of the chip have names which are part alpabetic and part numeric.  Components of a name are separated by underscores
 
   abstract class Name                                                           // Names of elements on the chip
    {final String name;                                                          // Name of the element
 
     Name(Name name) {this(name.toString());}                                    // The output bit of a gate can be used as the name of the gate
 
-    Name(String Name)                                                           // Named Name
+    Name(String Name)                                                           // Single name
      {name = validateName(Name);
       put();
      }
@@ -337,11 +336,11 @@ public class Chip extends Test                                                  
      {name = validateName(Name)+"_"+index;
       put();
      }
-    Name(String Name1, String Name2)                                            // Named Name within a named Name
+    Name(String Name1, String Name2)                                            // Double name
      {name = validateName(Name1)+"_"+validateName(Name2);
       put();
      }
-    Name(String Name1, String Name2, int index)                                 // Named amd numbered Name within a named Name
+    Name(String Name1, String Name2, int index)                                 // Double name with index
      {name = validateName(Name1)+"_"+validateName(Name2)+"_"+index;
       put();
      }
@@ -361,12 +360,12 @@ public class Chip extends Test                                                  
     public String toString()      {return name;}                                // Name  as a string
    }
 
-// Bit                                                                          // Description of a bit
+// Bit                                                                          // Description of a bit. Bits are points to which gates conbnect.  If multiple gates connect to the same bit their values are combined with "or".
 
   class Bit extends Name                                                        // Bits are connected by gates.  Each bit has a name.
    {final Set<Gate> drivenBy = new TreeSet<>();                                 // Driven by these gates. If a bit is driven by multiple gates we assume that the inputs are combined using "or"
     final Set<Gate> drives   = new TreeSet<>();                                 // Drives these gates. The order of the input pins for a gate matters  so this can only be used to find which gates drive this bit but the actual pin will have to be found by examining the gate.
-    Boolean value;                                                              // The currently set value of the bit by its driving gates
+    Boolean value;                                                              // The currently set value of the bit computed as the or of the values of its driving gates
     Integer changed;                                                            // The last step at which this bit was changed
 
     Bit(String name)                           {super(name);}                   // Named bit
@@ -374,7 +373,7 @@ public class Chip extends Test                                                  
     Bit(String name1, String name2)            {super(name1, name2);}           // Named bit within a named bit
     Bit(String name1, String name2, int index) {super(name1, name2, index);}    // Named and numbered bit within a named bit
 
-    void put()                                                                  // Add to bit map
+    void put()                                                                  // Add a bit to the bit map
      {if (bit.containsKey(name)) stop("Bit", name,
        "has already been already defined");
       bit.put(name, this);
@@ -390,7 +389,7 @@ public class Chip extends Test                                                  
       set(false);                                                               // The only other possibility is that the outcome is false
      }
 
-    Boolean get() {return value;}                                               // Current value o bit
+    Boolean get() {return value;}                                               // Current value of a bit
 
     void set(Boolean Value)                                                     // Set the current value of the bit.
      {if (Value != null && value != null)                                       // Both states are known
@@ -401,44 +400,41 @@ public class Chip extends Test                                                  
          }
        }
       else                                                                      // At least one state is unknown
-       {value   = Value;                                                        // What ever thenew value is
+       {value   = Value;                                                        // What ever the new value is
         changed = null;                                                         // We do not know if it changed or not
-        changedBitsInLastStep++;                                                // It might have changed so we ought to keep going
+        changedBitsInLastStep++;                                                // It might have changed so we should keep going
        }
      }
 
-    void ok(Boolean expected) {Test.ok(value, expected);}                       // Test a bit
+    void ok(Boolean expected) {Test.ok(value, expected);}                       // Conform a bit has the expected value
 
-    public String toString()                                                    // Print a bit
+    public String toString()                                                    // Print the name and value of a bit
      {return name+(value == null ? "" : value ? "=1": "=0");
      }
    }
 
-  Bit bit(String Name)            {return new Bit(Name);}                       // Create a new named bit
-  Bit bit(String Name, int Index) {return new Bit(Name, Index);}                // Create a new named, indexed, bit
-  Bit bit(String Name1, String Name2, int Index)                                // Create a new double named, indexed bit
-   {return new Bit(Name1, Name2, Index);
-   }
+  Bit bit(String Name)                 {return new Bit(Name);}                  // Create a new named bit
+  Bit bit(String Name, int Index)      {return new Bit(Name, Index);}           // Create a new named, indexed, bit
+  Bit bit(String N1, String N2, int I) {return new Bit(N1, N2, I);}             // Create a new double named, indexed bit
 
 // Bits                                                                         // Description of a collection of bits
 
-  class Bits extends Stack<Bit>                                                 // Collection of bits in order so we can convert them to integers
-   {private static final long serialVersionUID = 1L;
+  class Bits extends Stack<Bit>                                                 // Collection of bits in order so we can operate on them enmass
+   {private static final long serialVersionUID = 1L;                            // Some weird Java ceremony we would be better off without
 
-    Bits() {}                                                                   // Add bits to a collection of bits
-    Bits(Bit...Bits) {for (int i = 0; i < Bits.length; i++) push(Bits[i]);}     // Add bits to a collection of bits
+    Bits() {}                                                                   // Create an empty collection of bits that behaves like a stack
+    Bits(Bit...Bits) {for (int i = 0; i < Bits.length; i++) push(Bits[i]);}     // Create an collection of bits that behaves like a stack
 
-    Bits(String name, int width)                                                // Create an array of bits
+    Bits(String name, int width)                                                // Create an array of bits with an indexed name
      {for (int i = 0; i < width; i++) push(bit(name, i));
      }
 
-    Bits(String name1, String name2, int width)                                 // Create an array of bits
+    Bits(String name1, String name2, int width)                                 // Create an array of bits with an indexed double name
      {for (int i = 0; i < width; i++) push(bit(name1, name2, i));
      }
 
-    void ones()                                                                 // Drive the bits with some ones
-     {for(Bit b : this) new One(b);                                             // Drive this bit with a one
-     }
+    void ones()  {for(Bit b : this) new One(b);}                                // Drive these bits with some ones
+    void zeros() {for(Bit b : this) new Zero(b);}                               // Drive these bits with some zeros
 
     public String toString()                                                    // Convert the bits represented by an output bus to a string
      {final StringBuilder s = new StringBuilder();
