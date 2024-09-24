@@ -25,6 +25,7 @@ public class Chip extends Test                                                  
    {if (Name == null) Name = currentTestNameSuffix();
     name   = Name;                                                              // Name of chip
     layout = layout();                                                          // Layout of memory
+    if (layout != null) layout.layout();                                        // Layout the memory layout of supplied
     final int width = layout != null ? layout.width : 0;                        // Width of memory in bits required for the memory layout supplied
     input  = bits(Name, "Input" , width);
     output = bits(Name, "Output", width);
@@ -88,10 +89,7 @@ public class Chip extends Test                                                  
     Layout layout()                                                             // Layout the structure based on the fields that describe it
      {fields.clear();                                                           // Clear of chain of fields in this layout
       layout(0, 0, this);                                                       // Compute field positions
-      //output = new Bits(name, "output", width);                                 // Memory for this layout
-      //for(int i = 0; i < width; i++) output.push(false);                        // Initialize the memory to all false
       for(Layout l : fields) l.superStructure = this;                           // Locate the super structure containing this field
-      //for(Layout l : fields) l.bits           = output;                         // Locate the bits containing this layout element
       return this;
      }
 
@@ -151,7 +149,13 @@ public class Chip extends Test                                                  
       return null;                                                              // No matching path
      }
 
-    Bits get()                                                                  // Get the bits in the layout
+    Bits input()                                                                // Get the input bits mapped by the layout
+     {final Bits b = new Bits();
+      for (int i = 0; i < width; i++) b.push( input.elementAt(at + i));
+      return b;
+     }
+
+    Bits output()                                                               // Get the output bits mapped by the layout
      {final Bits b = new Bits();
       for (int i = 0; i < width; i++) b.push(output.elementAt(at + i));
       return b;
@@ -162,9 +166,6 @@ public class Chip extends Test                                                  
     Layout duplicate()                                                          // Duplicate a set of nested layouts rebasing their start point to zero
      {final Layout l = duplicate(at);                                           // Duplicate the layout
       l.layout();                                                               // Layout the structure - it now has its own memory from layout. Its easier to do this than duplicate all of layout logic during duplication and iyt only costs an unnecessary memory allocatc
-      //l.bits = bits;                                                            // Share memory of layout being duplicated
-
-      //for(Layout f : l.fields) f.bits = bits;                                   // Locate the bits containing this layout element
       return l;
      }
 
@@ -459,6 +460,8 @@ public class Chip extends Test                                                  
       return s.reverse().toString();                                            // Prints string with lowest bit rightmost
      }
 
+    void ok(String expected) {Test.ok(toString(), expected);}                   // Expected value of the bits
+
     int sameSize(Bits b)                                                        // Check the specified set of bits is the same size as this one
      {final int A = size(), B = b.size();
       if (A != B) stop("This set of bits has width", A,
@@ -657,8 +660,8 @@ public class Chip extends Test                                                  
      }
    }
 
-  void printTrace  () {say(trace.print(false));}                                // Print execution trace
-  void printSummary() {say(trace.print(true));}                                 // Print execution trace summary
+  String printTrace  () {return trace.print(false);}                            // Print execution trace
+  String printSummary() {return trace.print(true);}                             // Print execution trace summary
 
 //D0                                                                            // Tests
 
@@ -701,7 +704,7 @@ public class Chip extends Test                                                  
       String trace() {return String.format("%s %s", c.input, c.output);}
      };
     for (int i = 0; i < N; i++) c.simulate();
-    //c.printTrace();
+    //say(c.printTrace());
     c.trace.ok("""
 Step  Input            Output
    1  0000000000000001 0000000000000000
@@ -754,7 +757,7 @@ Step  Input            Output
     for (int i = 0; i < N; i++) c.simulate();
     ok(c.layout, "1101");
     ok(c.output, "1101");
-    //c.printTrace();
+    //say(c.printTrace());
     c.trace.ok("""
 Step  Out  b1   b2   b3   b4   In
    1  0000 0001 ...0 ...1 ...0 ....
@@ -772,17 +775,68 @@ Step  Out  b1   b2   b3   b4   In
 """);
    }
 
+  static void test_double_shift()
+   {final int  N = 4;
+    Chip       c = new Chip()
+     {Layout layout()
+       {final Variable  a = variable ("a", N);
+        final Variable  b = variable ("b", N);
+        return              structure("c", a, b);
+       }
+     };
+    ok(c.layout.print(), """
+  At  Wide  Size    Field name
+   0     8          c
+   0     4            a
+   4     4            b
+""");
+    Bits ai = c.layout.getField("a").input ();
+    Bits ao = c.layout.getField("a").output();
+    Bits bi = c.layout.getField("b").input ();
+    Bits bo = c.layout.getField("b").output();
+    Bits a  = c.bits("a", N);
+    Bits b  = c.bits("b", N);
+    a.shiftLeftOnceByOne (ao); ai.shiftLeftOnceByZero(a);
+    b.shiftLeftOnceByZero(bo); bi.shiftLeftOnceByOne (b);
+    c.trace = c.new Trace()
+     {String title() {return "ao   bo   a    b    ai   bi";}
+      String trace() {return String.format("%s %s %s %s %s %s", ao, bo, a, b, ai, bi);}
+     };
+    for (int i = 0; i < N; i++) c.simulate();
+    ao.ok("1010");
+    a .ok("0101");
+    ai.ok("1010");
+    bo.ok("0101");
+    b .ok("1010");
+    bi.ok("0101");
+    ok(c.layout, "01011010");
+    ok(c.output, "01011010");
+    //c.printTrace(); stop();
+    c.trace.ok("""
+Step  ao   bo   a    b    ai   bi
+   1  0000 0000 0001 0000 ...0 ...1
+   2  0000 0000 0001 0000 0010 0001
+   3  0000 0000 0001 0000 0010 0001
+   4  0010 0001 0101 0010 0010 0001
+   5  0010 0001 0101 0010 1010 0101
+   6  0010 0001 0101 0010 1010 0101
+   7  1010 0101 0101 1010 1010 0101
+   8  1010 0101 0101 1010 1010 0101
+   9  1010 0101 0101 1010 1010 0101
+""");
+   }
+
   static void oldTests()                                                        // Tests thought to be in good shape
    {test_bit();
     test_bits();
     test_simulate();
     test_register();
     test_shift();
+    test_double_shift();
    }
 
   static void newTests()                                                        // Tests being worked on
    {oldTests();
-    //test_shift();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
