@@ -433,6 +433,8 @@ public class Chip extends Test                                                  
      {for (int i = 0; i < width; i++) push(bit(name1, name2, i));
      }
 
+    Boolean getValue(int index) {return output.elementAt(index).get();}         // Get the value of an indexed bit in the collection of bits
+
     Integer toInt()                                                             // Get an integer representing the value of the bits
      {int n = 0;
       final int N = size();
