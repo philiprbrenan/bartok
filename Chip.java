@@ -507,6 +507,26 @@ public class Chip extends Test                                                  
        {new And(elementAt(i), in.elementAt(i), enable);
        }
      }
+
+    void and(Bits...in)                                                         // Set these bits to the value obtained by "anding" corresponding input bits horizontallythrough the vertical of the inputs
+     {final int L = size(), N = in.length;                                      // Dimensions
+      for (int i = 0; i < N; i++) sameSize(in[i]);                              // Check each input has the same size as these bits
+      for (int i = 0; i < L; i++)                                               // Combine horizontally
+       {final  Bit[]b = new Bit[N];                                             // Bits to combine
+        for (int j = 0; j < N; j++) b[j] = in[j].elementAt(i);                  // Combine horizontally
+        new And(elementAt(i), b);                                               // Perform combination
+       }
+     }
+
+    void or(Bits...in)                                                          // Set these bits to the value obtained by "oring" corresponding input bits horizontallythrough the vertical of the inputs
+     {final int L = size(), N = in.length;                                      // Dimensions
+      for (int i = 0; i < N; i++) sameSize(in[i]);                              // Check each input has the same size as these bits
+      for (int i = 0; i < L; i++)                                               // Combine horizontally
+       {final  Bit[]b = new Bit[N];                                             // Bits to combine
+        for (int j = 0; j < N; j++) b[j] = in[j].elementAt(i);                  // Combine horizontally
+        new Or(elementAt(i), b);                                                // Perform combination
+       }
+     }
    }
 
   Bits bits(Bit...bits) {return new Bits(bits);}                                // Make a collection of bits from the supplied individual bits
@@ -671,16 +691,16 @@ public class Chip extends Test                                                  
 
   static void test_bit()
    {Chip c = chip();
-    Bit  a = c.bit("i", 1);
-    Bit  b = c.bit("i", "j", 1);
-    ok(a, "bit.i_1");
-    ok(b, "bit.i_j_1");
+    Bit  a = c.bit("a", 1);
+    Bit  b = c.bit("a", "b", 1);
+    ok(a, "bit.a_1");
+    ok(b, "bit.a_b_1");
    }
 
   static void test_bits()
    {Chip c = chip();
-    Bit  a = c.bit("i", 1);
-    Bit  b = c.bit("i", "j", 1);
+    Bit  a = c.bit("a", 1);
+    Bit  b = c.bit("a", "b", 1);
     Bits B = c.bits(a, b);
     ok(B.size(), 2);
    }
@@ -847,6 +867,30 @@ Step  ao   bo   a    b    ai   bi
 """);
    }
 
+  static void test_and_bits()
+   {final int N = 4;
+    Chip c = chip();
+    Bits a = c.bits("a", N); a.ones();
+    Bits b = c.bits("b", N); b.shiftLeftOnceByZero(a);
+    Bits d = c.bits("d", N); d.shiftLeftOnceByZero(b);
+    Bits e = c.bits("e", N);
+         e.and(a, d);
+    c.simulate();
+    e.ok("1100");
+   }
+
+  static void test_or_bits()
+   {final int N = 4;
+    Chip c = chip();
+    Bits a = c.bits("a", N); a.ones();
+    Bits b = c.bits("b", N); b.shiftLeftOnceByZero(a);
+    Bits d = c.bits("d", N); d.shiftLeftOnceByZero(b);
+    Bits e = c.bits("e", N);
+         e.or(a, d);
+    c.simulate();
+    e.ok("1111");
+   }
+
   static void oldTests()                                                        // Tests thought to be in good shape
    {test_bit();
     test_bits();
@@ -855,11 +899,12 @@ Step  ao   bo   a    b    ai   bi
     test_shift();
     test_double_shift();
     test_enable_bits();
+    test_and_bits();
+    test_or_bits();
    }
 
   static void newTests()                                                        // Tests being worked on
-   {//oldTests();
-    test_enable_bits();
+   {oldTests();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
