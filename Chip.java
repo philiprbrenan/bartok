@@ -122,10 +122,10 @@ public class Chip extends Test                                                  
         if (v && i > Integer.SIZE-1) return null;                               // Value is too big to be represented
         n += v ? 1<<i : 0;
        }
-      return n;
+      return n;                                                                 // Valid representation of bits as an integer
      }
 
-    Layout getField(String path)                                                // Path to field
+    Layout getField(String path)                                                // Locate a field from its path which must include the outer most element
      {final String[]names = path.split("\\.");                                  // Split path
       if (fields == null) return null;                                          // Not compiled
       search: for (Layout m : fields)                                           // Each field in structure
@@ -133,7 +133,7 @@ public class Chip extends Test                                                  
         for(int q = names.length; q > 0 && p != null; --q, p = p.up)            // Back track through names
          {if (!p.name.equals(names[q-1])) continue search;                      // Check path matches
          }
-        return m;                                                               // Return this field if its path matches
+        return m;                                                               // Return this field as its path matches
        }
       return null;                                                              // No matching path
      }
