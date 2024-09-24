@@ -178,6 +178,7 @@ public class Chip extends Test                                                  
    {int size;                                                                   // Dimension of array
     int index = 0;                                                              // Index of array element to access
     Layout element;                                                             // The elements of this array
+
     Array(String Name, Layout Element, int Size)
      {super(Name);
       arraySize(Size).element(Element);
