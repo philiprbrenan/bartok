@@ -1,5 +1,5 @@
 //------------------------------------------------------------------------------
-// Simulate a silicon chip.
+// Simulate a silicon chip with memory, bits and gates.
 // Philip R Brenan at appaapps dot com, Appa Apps Ltd Inc., 2024
 //------------------------------------------------------------------------------
 package com.AppaApps.Silicon;                                                   // Simulate a silicon chip.
