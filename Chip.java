@@ -59,9 +59,9 @@ public class Chip extends Test                                                  
     return s.toString();                                                        // Description of chip at this time
    }
 
-//D1 Layouts                                                                    // Layout memory of the chip as variables, arrays, structures, unions
+//D1 Layouts                                                                    // Layout memory of the chip as variables, arrays, structures, unions. Dividing the memory in this manner makes it easier to program the chip symbolically.
 
-  abstract class Layout                                                         // Variable/Array/Structure definition. Memory definitions can only be laid out once.
+  abstract class Layout                                                         // Variable/Array/Structure definition.
    {final String name;                                                          // Name of field
     int at;                                                                     // Offset of variable from start of memory
     int width;                                                                  // Number of bits in a field
@@ -337,15 +337,15 @@ public class Chip extends Test                                                  
       put();
      }
     Name(String Name1, String Name2)                                            // Double name
-     {name = validateName(Name1)+"_"+validateName(Name2);
+     {name = validateName(Name1)+"_"+validateName(Name2, false);
       put();
      }
     Name(String Name1, String Name2, int index)                                 // Double name with index
-     {name = validateName(Name1)+"_"+validateName(Name2)+"_"+index;
+     {name = validateName(Name1)+"_"+validateName(Name2, false)+"_"+index;
       put();
      }
 
-    String validateName(String name)                                            // Confirm that a component name looks like a variable name and has not already been used
+    String validateName(String name, boolean addChipName)                       // Confirm that a component name looks like a variable name and has not already been used
      {if (name == null) err("Name cannot be null");
       final String[]words = name.split("_");
       for (int i = 0; i < words.length; i++)
@@ -353,8 +353,10 @@ public class Chip extends Test                                                  
         if (!w.matches("\\A([a-zA-Z][a-zA-Z0-9_.:]*|\\d+)\\Z"))
           stop("Invalid gate name:", name, "in word", w);
        }
-      return name;
+      return addChipName ? Chip.this.name+"."+name : name;                      // Add chip name if requested
      }
+
+    String validateName(String name) {return validateName(name, true);}         // Confirm that a component name looks like a variable name and has not already been used
 
     abstract void put();                                                        // Put the element into the map of existing elements if possible
     public String toString()      {return name;}                                // Name  as a string
@@ -389,7 +391,7 @@ public class Chip extends Test                                                  
       set(false);                                                               // The only other possibility is that the outcome is false
      }
 
-    Boolean get() {return value;}                                               // Current value of a bit
+    Boolean get()              {return value;}                                  // Current value of a bit
 
     void set(Boolean Value)                                                     // Set the current value of the bit.
      {if (Value != null && value != null)                                       // Both states are known
@@ -415,6 +417,7 @@ public class Chip extends Test                                                  
 
   Bit bit(String Name)                 {return new Bit(Name);}                  // Create a new named bit
   Bit bit(String Name, int Index)      {return new Bit(Name, Index);}           // Create a new named, indexed, bit
+  Bit bit(String N1, String N2)        {return new Bit(N1, N2);}                // Create a new double named bit
   Bit bit(String N1, String N2, int I) {return new Bit(N1, N2, I);}             // Create a new double named, indexed bit
 
 // Bits                                                                         // Description of a collection of bits
@@ -433,17 +436,16 @@ public class Chip extends Test                                                  
      {for (int i = 0; i < width; i++) push(bit(name1, name2, i));
      }
 
-    Boolean getValue(int index) {return output.elementAt(index).get();}         // Get the value of an indexed bit in the collection of bits
+    Boolean getValue(int index) {return elementAt(index).get();}                // Get the value of an indexed bit in the collection of bits
 
     Integer toInt()                                                             // Get an integer representing the value of the bits
-     {int n = 0;
+     {int i = 0, n = 0;
       final int N = size();
-      for (int i = 0; i < N; ++i)
-       {final Bit     b = output.elementAt(i);
-        final Boolean v = b.get();
+      for (Bit b : this)
+       {final Boolean v = b.get();
         if (v == null) return null;                                             // One of the bits is null so the overall value is no longer known
         if (v && i > Integer.SIZE-1) return null;                               // Value is too big to be represented
-        n += v ? 1<<i : 0;
+        n += v ? 1<<(i++) : 0;                                                  // Set the corresponding bit in the result if possible and requested
        }
       return n;                                                                 // Valid representation of bits as an integer
      }
@@ -492,11 +494,18 @@ public class Chip extends Test                                                  
     void shiftRightOnceByZero(Bits toShift) {shiftRightOnce(toShift, false);}   // Attach to these bits the right shift by one filled with zero of the supplied bits
 
     void shiftRightOnceArithmetic(Bits toShift)                                 // Attach to these bits the right arithmetic shift by one
-     {final int     N = sameSize(toShift);
+     {final int N = sameSize(toShift);
       for (int i = 1; i < N; i++)
        {new Continue(elementAt(i-1), toShift.elementAt(i));
        }
       new Continue(elementAt(N-1), toShift.elementAt(N-1));
+     }
+
+    void enable(Bits in, Bit enable)                                            // Set these bits to the value of the input bits if the enable flag is true else set them to false.
+     {final int N = sameSize(in);
+      for (int i = 0; i < N; i++)
+       {new And(elementAt(i), in.elementAt(i), enable);
+       }
      }
    }
 
@@ -664,8 +673,8 @@ public class Chip extends Test                                                  
    {Chip c = chip();
     Bit  a = c.bit("i", 1);
     Bit  b = c.bit("i", "j", 1);
-    ok(a, "i_1");
-    ok(b, "i_j_1");
+    ok(a, "bit.i_1");
+    ok(b, "bit.i_j_1");
    }
 
   static void test_bits()
@@ -674,6 +683,23 @@ public class Chip extends Test                                                  
     Bit  b = c.bit("i", "j", 1);
     Bits B = c.bits(a, b);
     ok(B.size(), 2);
+   }
+
+  static void test_enable_bits()
+   {final int N = 2;
+    Chip c = chip();
+    Bits a = c.bits("i", N); a.ones();
+    Bits b = c.bits("j", N);
+    Bit  e = c.bit("enable");
+         b.enable(a, e);
+
+    e.set(false);
+    c.simulate();
+    b.ok("00");
+
+    e.set(true);
+    c.simulate();
+    b.ok("11");
    }
 
   static void test_simulate()
@@ -828,10 +854,12 @@ Step  ao   bo   a    b    ai   bi
     test_register();
     test_shift();
     test_double_shift();
+    test_enable_bits();
    }
 
   static void newTests()                                                        // Tests being worked on
-   {oldTests();
+   {//oldTests();
+    test_enable_bits();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
