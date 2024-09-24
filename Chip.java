@@ -114,7 +114,6 @@ public class Chip extends Test                                                  
 
     Integer toInt()                                                             // Get an integer representing the value of the layout
      {int n = 0;
-      final int W = min(Integer.SIZE-1, width);                                 // Only a limited range of values can be xpressed as a n
       for (int i = 0; i < width; ++i)
        {final Bit     b = output.elementAt(at+i);
         final Boolean v = b.get();
@@ -433,8 +432,18 @@ public class Chip extends Test                                                  
      {for (int i = 0; i < width; i++) push(bit(name1, name2, i));
      }
 
-    void ones()  {for(Bit b : this) new One(b);}                                // Drive these bits with some ones
-    void zeros() {for(Bit b : this) new Zero(b);}                               // Drive these bits with some zeros
+    Integer toInt()                                                             // Get an integer representing the value of the bits
+     {int n = 0;
+      final int N = size();
+      for (int i = 0; i < N; ++i)
+       {final Bit     b = output.elementAt(i);
+        final Boolean v = b.get();
+        if (v == null) return null;                                             // One of the bits is null so the overall value is no longer known
+        if (v && i > Integer.SIZE-1) return null;                               // Value is too big to be represented
+        n += v ? 1<<i : 0;
+       }
+      return n;                                                                 // Valid representation of bits as an integer
+     }
 
     public String toString()                                                    // Convert the bits represented by an output bus to a string
      {final StringBuilder s = new StringBuilder();
@@ -453,6 +462,9 @@ public class Chip extends Test                                                  
          "but the set of input bits has width", B);
       return A;
      }
+
+    void ones()  {for(Bit b : this) new One(b);}                                // Drive these bits with some ones
+    void zeros() {for(Bit b : this) new Zero(b);}                               // Drive these bits with some zeros
 
     void shiftLeftOnce(Bits toShift, boolean fill)                              // Attach to these bits the left shift by one filled with the specified replacement bit
      {final int  N = sameSize(toShift);
@@ -485,20 +497,20 @@ public class Chip extends Test                                                  
      }
    }
 
-  Bits bits(Bit...bits) {return new Bits(bits);}                                // Get a named bit or define such a bit if it does not already exist
+  Bits bits(Bit...bits) {return new Bits(bits);}                                // Make a collection of bits from the supplied individual bits
 
-  Bits bits(String name, int width) {return new Bits(name, width);}             // Make an array of bits
+  Bits bits(String name, int width) {return new Bits(name, width);}             // Make an array of named indexed bits
 
-  Bits bits(String name1, String name2, int width)                              // Make an array of bits
+  Bits bits(String name1, String name2, int width)                              // Make an array of doubke named  indexed bits
    {return new Bits(name1, name2, width);
    }
 
-// Gate                                                                         // Gates connect and combine bits
+// Gate                                                                         // Gates connect and combine bits with well known logical operations
 
-  class Gate extends Name implements Comparable<Gate>                           // Gates connect and combine bits
-   {final Bit  output;                                                          // A gate has one output bit
-    final Bits inputs;                                                          // A gate has zero or more input bits whose order matters
-    Boolean value;                                                              // The next value of the gate
+  class Gate extends Name implements Comparable<Gate>                           // Gates combine input bits to produce an out value which is used to drive a bit
+   {final Bit  output;                                                          // A gate drives one output bit
+    final Bits inputs;                                                          // A gate is driven by zero or more input bits whose order matters
+    Boolean value;                                                              // The next value of the gate which drives the output bit
     Gate(Bit Output, Bit...Inputs)                                              // A gate has one output and several input bits
      {super(Output);                                                            // Use the name of the output bit as the name of the gate as well
       output = Output;
@@ -509,7 +521,7 @@ public class Chip extends Test                                                  
 
     void action() {}                                                            // Override this method to specify how the gate works
 
-    void put()                                                                  // Add to bit map
+    void put()                                                                  // Add to gate map
      {if (gate.containsKey(name)) stop("Gate", name,
         "has already been already defined");
       gate.put(name, this);
@@ -518,7 +530,7 @@ public class Chip extends Test                                                  
     void set(Boolean Value) {value = Value;}                                    // Set the next value of the gate
     public int compareTo(Gate a)  {return toString().compareTo(a.toString());}  // Gates can be added to sets
 
-    public String toString()
+    public String toString()                                                    // Print a gate
      {final StringBuilder s = new StringBuilder();
       s.append("Gate("+output.name+"=");
       for (Bit b : inputs) s.append(b.name+", ");
@@ -604,11 +616,11 @@ public class Chip extends Test                                                  
    {for (int i = 0; i < maxSimulationSteps; ++time, i++)                        // Each step in time
      {for (Gate g: gate.values()) g.action();                                   // Each gate computes its result
       changedBitsInLastStep = 0;                                                // Number of changes to bits
-      for (Bit  b: bit.values())  b.update();                                   // Each bit updates itself
+      for (Bit  b: bit.values())  b.update();                                   // Each bit updates itself from the gates it is driven by
       if (trace != null) trace.add();                                           // Trace this step if requested
-      if (changedBitsInLastStep == 0)                                           // If nothing has changed and there are no later pulses due we assume that the simulation has come to an end
+      if (changedBitsInLastStep == 0)                                           // If nothing has changed then the chip has stabilized and the simulation has come to an end
        {//say("Finished at step", time, "after no activity");
-        update();                                                               // Update memory associated with chip
+        update();                                                               // Update the memory associated with the chip with the values computed by the gates of the chip
         return;
        }
       //print();
@@ -623,31 +635,25 @@ public class Chip extends Test                                                  
 
     void add() {trace.push(trace());}                                           // Add a trace record
 
-    abstract String title();                                                    // Trace required at each step
-    abstract String trace();                                                    // Trace required at each step
+    abstract String title();                                                    // Title of trace
+    abstract String trace();                                                    // Trace at each step
 
-    String print(boolean summary)                                               // Print execution trace
+    String print()                                                              // Print execution trace
      {final StringBuilder b = new StringBuilder();
       b.append("Step  "+title()); b.append('\n');
       b.append(String.format("%4d  %s\n", 1, trace.firstElement()));
       for(int i = 1; i < trace.size(); ++i)
        {final String s = trace.elementAt(i-1);
         final String t = trace.elementAt(i);
-        if (!summary || !s.equals(t))                                           // Remove duplicate entries if summaryion requested
-          b.append(String.format("%4d  %s\n", i+1, trace.elementAt(i)));
+        b.append(String.format("%4d  %s\n", i+1, trace.elementAt(i)));
        }
       return b.toString();
      }
 
-    void ok(String expected)                                                    // Confirm expected trace
-     {final String s = print(true), t = print(false);
-      if      (s.equals(expected)) Test.ok(s, expected);
-      else                         Test.ok(t, expected);
-     }
+    void ok(String expected) {Test.ok(print(), expected);}                      // Confirm expected trace
    }
 
-  String printTrace  () {return trace.print(false);}                            // Print execution trace
-  String printSummary() {return trace.print(true);}                             // Print execution trace summary
+  String printTrace  () {return trace.print();}                                 // Print execution trace
 
 //D0                                                                            // Tests
 
