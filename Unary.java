@@ -6,25 +6,35 @@ package com.AppaApps.Silicon;                                                   
 
 class Unary extends Chip                                                        // Unary arithmetic on a chip
  {final String      name;                                                       // Name of the chip
+  final int          max;                                                       // Maximum size of unary number
   final Variable notZero;                                                       // Not zero if true
   final Variable   atMax;                                                       // At the maximum value
   final Variable   value;                                                       // The value of the unary number
   final Structure  unary;                                                       // Structure representing a unary number
+  final Bit    decrement;                                                       // If true decrement the unary number
   final Bit    increment;                                                       // If true increment the unary number
-  final int max;                                                                // Maximum size of unary number
+  final Bits     incBits;                                                       // Result of an increment
+  final Bits     decBits;                                                       // Result of a decrement
+  final Bits   enIncBits;                                                       // Enable result of an increment
+  final Bits   enDecBits;                                                       // Enable result of a decrement
 
 //D1 Construction                                                               // Create a unary number
 
   Unary(String Name, int Max)                                                   // Create a unary number of specified size
    {super(Name);                                                                // Structure definition
     if (Max <= 0) stop("Unary size must be at least one, not", Max);            // Size check
-    name      = name;                                                           // Name of the chip
-    max       = Max;                                                            // Maximum size of the unary number
-    notZero   = (Variable) layout.getField("unary.notZero");                    // Not zero if true
-    atMax     = (Variable) layout.getField("unary.atMax");                      // At the maximum value
-    value     = (Variable) layout.getField("unary.value");                      // The value of the unary number
-    unary     = (Structure)layout.getField("unary");                            // The value of the unary number
-    increment = bit(name, "increment");                                         // Increment the value of the unary number if true
+    name       = name;                                                          // Name of the chip
+    max        = Max;                                                           // Maximum size of the unary number
+    notZero    = (Variable) layout.getField("unary.notZero");                   // Not zero if true
+    atMax      = (Variable) layout.getField("unary.atMax");                     // At the maximum value
+    value      = (Variable) layout.getField("unary.value");                     // The value of the unary number
+    unary      = (Structure)layout.getField("unary");                           // The value of the unary number
+    increment  = bit(name, "increment");                                        // Increment the value of the unary number if true
+    decrement  = bit(name, "decrement");                                        // Decrement the value of the unary number if true
+    incBits    = bits("incBits",   max());                                      // Result of an increment
+    decBits    = bits("decBits",   max());                                      // Result of a decrement
+    enIncBits  = bits("enIncBits", max());                                      // Enabled increment
+    enDecBits  = bits("enDecBits", max());                                      // Disabled increment
    }
 
   Layout layout()                                                               // Memory layout of a unary number
