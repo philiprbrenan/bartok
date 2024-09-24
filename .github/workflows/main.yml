@@ -1,4 +1,4 @@
-# Test 2024-09-24 at 23:01:22
+# Test 2024-09-25 at 00:11:34
 
 name: Test
 run-name: bartok
@@ -20,7 +20,7 @@ jobs:
 
     strategy:
       matrix:
-        task: [Chip, Memory, Test]
+        task: [Chip, Test, Unary]
 
     steps:
     - uses: actions/checkout@v3
@@ -54,12 +54,12 @@ jobs:
       run: |
         java -cp Classes com/AppaApps/Silicon/Chip
 
-    - name: Test Memory
-      if: matrix.task == 'Memory'
-      run: |
-        java -cp Classes com/AppaApps/Silicon/Memory
-
     - name: Test Test
       if: matrix.task == 'Test'
       run: |
         java -cp Classes com/AppaApps/Silicon/Test
+
+    - name: Test Unary
+      if: matrix.task == 'Unary'
+      run: |
+        java -cp Classes com/AppaApps/Silicon/Unary
