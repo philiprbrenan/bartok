@@ -8,68 +8,65 @@ import java.util.*;
 
 //D1 Construct                                                                  // Construct a silicon chip comprised of memory, intermediate bits and logic gates.
 
-public class Chip extends Test                                                  // Describe a chip and emulate its operation.  A chip consists of a block of memory and some logic that computes the next value of the memory thus changing the state of the chip
+public class Chip extends Test                                                  // Describe a chip and emulate its operation.  A chip consists of a block of memory and some logic that computes the next value of the memory thus changing the state of the chip. A chip is testable.
  {final String  name;                                                           // Name of chip
-  final Bits   input;                                                           // The input bits used to load the memory of the chip
+  final Bits   input;                                                           // The logic computed input bits used to load the memory of the chip
   final Bits  output;                                                           // The output bits representing the current state of the memory
   final int maxSimulationSteps = 1_0;                                           // Maximum number of simulation steps
   final Map<String,Bit>    bit = new TreeMap<>();                               // Bits on the chip
   final Map<String,Gate>  gate = new TreeMap<>();                               // Gates on the chip
   final Layout          layout;                                                 // Layout of the memory used  by the chip
 
-  int                     time = 0;                                             // Number of  steps in time.  We start at time 0
+  int                     time = 0;                                             // Number of  steps in time.  We start at time 0 and  continue to increment through subsequent simulations
   int    changedBitsInLastStep = 0;                                             // Changed bits in last step
   Trace trace;                                                                  // Tracing
 
   Chip(String Name)                                                             // Create a new L<chip>  with the specified memory layout
-   {if (Name == null) Name = currentTestNameSuffix();
+   {if (Name == null) Name = currentTestNameSuffix();                           // Use the current test name as the chip name if none has been supplied
     name   = Name;                                                              // Name of chip
-    layout = layout();                                                          // Layout of memory
-    if (layout != null) layout.layout();                                        // Layout the memory layout of supplied
+    layout = layout();                                                          // Layout of memory used by the chip into variables arranged in arrays, structures and unions
+    if (layout != null) layout.layout();                                        // Position each element in memory
     final int width = layout != null ? layout.width : 0;                        // Width of memory in bits required for the memory layout supplied
-    input  = bits(Name, "Input" , width);
-    output = bits(Name, "Output", width);
-    for (Bit b : output) b.set(false);                                          // Clear memory
+    input  = bits(Name, "Input" , width);                                       // Input to memory once the chip has stabilized after a sufficient number of steps
+    output = bits(Name, "Output", width);                                       // Current output of memory
+    for (Bit b : output) b.set(false);                                          // Clear memory to zero
    }
 
-  Chip() {this(null);}                                                          // Create a new L<chip>  with the specified memory layout
+  Chip() {this(null);}                                                          // Create a new L<chip>  named after the current test with the specified memory layout
 
-  static Chip chip()          {return new Chip(null);}                          // Chip named after the test
+  static Chip chip()            {return new Chip();}                            // Chip named after the test
+  static Chip chip(String name) {return new Chip(name);}                        // Create a new chip while testing.
 
   Layout layout() {return null;}                                                // Override to provide the layout of the memory used by the chip
 
-  void update()                                                                 // Update the memory associated with the chip
-   {final int N = input.size();
+  void update()                                                                 // Update the memory associated with the chip once the chips bits have stabilized
+   {final int N = input.size();                                                 // Size of memory in bits
     for (int j = 0; j < N; ++j)                                                 // Copy memory input bits into memory and present them on the output bits
      {output.elementAt(j).set(input.elementAt(j).get());
      }
    }
 
-  static Chip chip(String name)                                                 // Create a new chip while testing.
-   {return new Chip(name);
-   }
-
   public String toString()                                                      // Print a description of the state of the chip
    {final StringBuilder s = new StringBuilder();
-    s.append("Time: " + time + ", Chip:" + name);
+    s.append("Time: " + time + ", Chip:" + name);                               // Time and chip name form the title
 
-    int i = 0;
-    for (Bit b : bit.values())
-     {final Boolean v = b.get();
-      s.append(String.format("%4d %16s %s", ++i,
+    int i = 0;                                                                  // Number each bit
+    for (Bit b : bit.values())                                                  // Each bit
+     {final Boolean v = b.get();                                                // Value of bit
+      s.append(String.format("%4d %16s %s", ++i,                                // Print bit name and value
         b.name, v == null ? "." : v ? "1" : "0"));
      }
-    return s.toString();
+    return s.toString();                                                        // Description of chip at this time
    }
 
-//D1 Layouts                                                                    // Layout memory as variables, arrays, structures, unions
+//D1 Layouts                                                                    // Layout memory of the chip as variables, arrays, structures, unions
 
   abstract class Layout                                                         // Variable/Array/Structure definition. Memory definitions can only be laid out once.
    {final String name;                                                          // Name of field
-    int at;                                                                     // Offset of variable either from start of memory
-    int width;                                                                  // Number bits in field
+    int at;                                                                     // Offset of variable from start of memory
+    int width;                                                                  // Number of bits in a field
     int depth;                                                                  // Depth of field - the number of containing arrays/structures/unions above
-    Layout up;                                                                  // Chain to containing field
+    Layout up;                                                                  // Upward chain to containing array/structure/union
     Layout superStructure;                                                      // Containing super structure
     final Stack<Layout> fields = new Stack<>();                                 // Fields in the super structure in the order they appear in the memory layout. Only relevant in the outer most layout == the super structure,  where it is used for printing the structure and locating sub structures.
 
@@ -77,11 +74,6 @@ public class Chip extends Test                                                  
 
     Layout width   (int Width) {width = Width; return this;}                    // Set width or layout once it is known
     Layout position(int At)    {at    = At;    return this;}                    // Reposition array elements to take account of the index applied to the array
-
-    Layout superStructure()                                                     // No super structure present probably means that layout needs to be called
-     {if (superStructure == null) stop("Need to call layout first");
-      return  superStructure;
-     }
 
     int at()   {return at;}                                                     // Position of field in memory
     int memorySize() {return width;}                                            // Size of the memory
@@ -94,11 +86,6 @@ public class Chip extends Test                                                  
      }
 
     abstract void layout(int at, int depth, Layout superStructure);             // Layout this field within the super structure.
-
-    void sameSize(Layout layout)                                                // Check that two layouts have the same size
-     {if (width != layout.width) stop("Layouts have different widths",
-        width, layout.width);
-     }
 
     String indent() {return "  ".repeat(depth);}                                // Indentation
 
@@ -117,20 +104,22 @@ public class Chip extends Test                                                  
 
     public String toString()                                                    // Part of memory corresponding to this layout as a string of bits in low endian order
      {final StringBuilder s = new StringBuilder();
-      for (int i = 0; i <  width; ++i)
-       {final Bit     b = output.elementAt(at+i);
-        final Boolean v = b.get();
-        s.append(v == null ? '.' : v ? '1' : '0');
+      for (int i = 0; i <  width; ++i)                                          // Index each bit
+       {final Bit     b = output.elementAt(at+i);                               // Bit definition
+        final Boolean v = b.get();                                              // Value of bit
+        s.append(v == null ? '.' : v ? '1' : '0');                              // Represent bit
        }
-      return s.reverse().toString();                                            // Prints string with lowest bit rightmost
+      return s.reverse().toString();                                            // Prints string with lowest bit rightmost because we work in little endian layout
      }
 
     Integer toInt()                                                             // Get an integer representing the value of the layout
      {int n = 0;
-      for (int i = 0; i <  width; ++i)
+      final int W = min(Integer.SIZE-1, width);                                 // Only a limited range of values can be xpressed as a n
+      for (int i = 0; i < width; ++i)
        {final Bit     b = output.elementAt(at+i);
         final Boolean v = b.get();
-        if (v == null) return null;
+        if (v == null) return null;                                             // One of the bits is null so the overall value is no longer known
+        if (v && i > Integer.SIZE-1) return null;                               // Value is too big to be represented
         n += v ? 1<<i : 0;
        }
       return n;
@@ -525,7 +514,8 @@ public class Chip extends Test                                                  
     void action() {}                                                            // Override this method to specify how the gate works
 
     void put()                                                                  // Add to bit map
-     {if (gate.containsKey(name)) stop("Gate", name, "has already been already defined");
+     {if (gate.containsKey(name)) stop("Gate", name,
+        "has already been already defined");
       gate.put(name, this);
      }
 
