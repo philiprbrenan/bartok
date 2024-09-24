@@ -753,6 +753,7 @@ Step  Input            Output
      };
     for (int i = 0; i < N; i++) c.simulate();
     ok(c.layout, "1101");
+    ok(c.output, "1101");
     //c.printTrace();
     c.trace.ok("""
 Step  Out  b1   b2   b3   b4   In
