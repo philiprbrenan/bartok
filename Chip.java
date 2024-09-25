@@ -15,6 +15,7 @@ public class Chip extends Test                                                  
   final int maxSimulationSteps = 1_0;                                           // Maximum number of simulation steps
   final Map<String,Bit>    bit = new TreeMap<>();                               // Bits on the chip
   final Map<String,Gate>  gate = new TreeMap<>();                               // Gates on the chip
+  final Map<String,Chip> chips = new TreeMap<>();                               // Sub chips placed on this chip
   final Layout          layout;                                                 // Layout of the memory used  by the chip
 
   int                     time = 0;                                             // Number of  steps in time.  We start at time 0 and  continue to increment through subsequent simulations
@@ -26,9 +27,10 @@ public class Chip extends Test                                                  
     name   = Name;                                                              // Name of chip
     layout = layout();                                                          // Layout of memory used by the chip into variables arranged in arrays, structures and unions
     if (layout != null) layout.layout();                                        // Position each element in memory
+    if (layout != null) say("PPPP", layout.print());                            // Position each element in memory
     final int width = layout != null ? layout.width : 0;                        // Width of memory in bits required for the memory layout supplied
-    input  = bits(Name, "Input" , width);                                       // Input to memory once the chip has stabilized after a sufficient number of steps
-    output = bits(Name, "Output", width);                                       // Current output of memory
+    input  = bits(Name, "Input" , width);                                       // Create input to memory once the chip has stabilized after a sufficient number of steps
+    output = bits(Name, "Output", width);                                       // Create output memory to match input memory
     for (Bit b : output) b.set(false);                                          // Clear memory to zero
    }
 
@@ -46,14 +48,27 @@ public class Chip extends Test                                                  
      }
    }
 
+  void addSubChip(Chip subChip)                                                 // Add a sub chip
+   {final String n = subChip.name;
+    if (chips.containsKey(n)) stop("Sub chip with name:", n,                    // Size of memory in bits
+      "already present on chip", name);
+    chips.put(n, subChip);
+   }
+
+  Chip getSubChip(String subChipName)                                           // Get a sub chip
+   {if (chips.containsKey(subChipName)) return chips.get(subChipName);
+    stop("Sub chip with name:", subChipName, "not present on chip", name);
+    return null;
+   }
+
   public String toString()                                                      // Print a description of the state of the chip
    {final StringBuilder s = new StringBuilder();
-    s.append("Time: " + time + ", Chip:" + name);                               // Time and chip name form the title
+    s.append("Time: " + time + ", Chip:" + name+"\n");                          // Time and chip name form the title
 
     int i = 0;                                                                  // Number each bit
     for (Bit b : bit.values())                                                  // Each bit
      {final Boolean v = b.get();                                                // Value of bit
-      s.append(String.format("%4d %16s %s", ++i,                                // Print bit name and value
+      s.append(String.format("%4d %16s %s\n", ++i,                              // Print bit name and value
         b.name, v == null ? "." : v ? "1" : "0"));
      }
     return s.toString();                                                        // Description of chip at this time
