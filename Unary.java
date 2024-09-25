@@ -4,9 +4,8 @@
 //------------------------------------------------------------------------------
 package com.AppaApps.Silicon;                                                   // Design, simulate and layout a binary tree on a silicon chip.
 
-class Unary extends Chip                                                        // Unary arithmetic on a chip
+abstract class Unary extends Chip                                               // Unary arithmetic on a chip
  {final String      name;                                                       // Name of the chip
-  final int          max;                                                       // Maximum size of unary number
   final Variable notZero;                                                       // Not zero if true
   final Variable   atMax;                                                       // At the maximum value
   final Variable   value;                                                       // The value of the unary number
@@ -20,11 +19,11 @@ class Unary extends Chip                                                        
 
 //D1 Construction                                                               // Create a unary number
 
-  Unary(String Name, int Max)                                                   // Create a unary number of specified size
+
+  Unary(String Name)                                                            // Create a unary number of specified size
    {super(Name);                                                                // Structure definition
-    if (Max <= 0) stop("Unary size must be at least one, not", Max);            // Size check
-    name       = name;                                                          // Name of the chip
-    max        = Max;                                                           // Maximum size of the unary number
+    if (max() <= 0) stop("Unary size must be at least one, not", max());        // Size check
+    name       = Name;                                                          // Name of the chip
     notZero    = (Variable) layout.getField("unary.notZero");                   // Not zero if true
     atMax      = (Variable) layout.getField("unary.atMax");                     // At the maximum value
     value      = (Variable) layout.getField("unary.value");                     // The value of the unary number
@@ -35,55 +34,54 @@ class Unary extends Chip                                                        
     decBits    = bits("decBits",   max());                                      // Result of a decrement
     enIncBits  = bits("enIncBits", max());                                      // Enabled increment
     enDecBits  = bits("enDecBits", max());                                      // Disabled increment
+
+    incBits.shiftLeftOnceByOne  (value.output());                               // Increment
+    decBits.shiftRightOnceByZero(value.output());                               // Decrement
+
+    enIncBits.enable(incBits, increment);                                       // Enable increment if requested
+    enDecBits.enable(incBits, decrement);                                       // Enable decrement if requested
+    value.input().or(enIncBits, enDecBits);                                     // Assemble result
    }
 
   Layout layout()                                                               // Memory layout of a unary number
    {final Variable  notZero = variable("notZero", 1);                           // Not zero if true
     final Variable  atMax   = variable("atMax",   1);                           // At the maximum value
-    final Variable  value   = variable("value", max) ;                          // The value of the unary number
+    final Variable  value   = variable("value", max()) ;                        // The value of the unary number
     final Structure unary   = structure("unary", value, notZero, atMax);        // Structure representing a unary number
-    unary.addField(notZero);                                                    // Not zero if true
-    unary.addField(atMax);                                                      // At the maximum value
-    unary.addField(value);                                                      // The value of the unary number
-    return structure("unary", value, notZero, atMax);
+    return unary;
    }
 
-  static Unary unary(String name, int max) {return new Unary(name, max);}       // Create a unary number of specified size
+  static Unary unary(String name, int max)                                      // Create a unary number of specified size
+   {return new Unary(name)
+     {int max() {return max;}
+     };
+   }
 
-  int max() {return max;}                                                       // The maximum value of the unary number
+  abstract int max();                                                           // The maximum value of the unary number - override this method to set a non zero size
 
   void ok(int n) {ok(get(), n);}                                                // Check that a unary number has the expected value
 
-//D1 Set and get                                                                // Set and get a unary number
-
-  void set(int n)                                                               // Set the unary number
-   {if (n < 0)   stop("Cannot set to a value less than zero", n);
-    if (n > max) stop("Cannot set to a value greater than max", n, max);
-    zero();                                                                     // Zero out the number
-    if (n > 0)                                                                  // Set a non zero value
-     {value.shiftLeftFillWithOnes(n);                                           // Non zero value
-      notZero.set(1);
-      atMax.set(n < max ? 0 : 1);
-     }
-   }
-
   int get()                                                                     // Get the unary number
-   {return value.countTrailingOnes();
+   {int n = 0;
+    for (Bit b : value.output()) if (b.value) ++n;
+    return n;
    }
 
 //D1 Arithmetic                                                                 // Arithmetic using unary numbers
 
-  boolean canInc() {return get() < max();}                                      // Can we increment the unary number
-  boolean canDec() {return get() > 0;}                                          // Can we decrement the unary number
+  boolean canInc() {return !value.output(). lastElement().value;}               // Unary has at space for at least one more element so we can increment
+  boolean canDec() {return  value.output().firstElement().value;}               // Unary is at least one so we can decrement
 
   void inc()                                                                    // Increment the unary number
-   {if (atMax.toInt() == 1) stop(get(), "Unary number is too big to be incremented");
-    set(get()+1);
+   {increment.set(true);
+    decrement.set(false);
+    simulate();
    }
 
   void dec()                                                                    // Decrement the unary number
-   {if (notZero.toInt() == 0) stop(get(), "Unary number is too small to be decremented");
-    set(get()-1);
+   {increment.set(false);
+    decrement.set(true);
+    simulate();
    }
 
 //D1 Print                                                                      // Print a unary number
@@ -92,61 +90,46 @@ class Unary extends Chip                                                        
    {return "Unary(notZero:"+notZero.toInt()+                                    // Print a unary number
                  ", atMax:"+atMax.toInt()+
                  ", value:"+get()+
-                   ", max:"+max+")";
+                   ", max:"+max()+")";
    }
 
 //D0 Tests                                                                      // Test unary numbers
 
   static void test_unary()
-   {Unary u = unary(32);
-              u.set(0);
-              u.ok(0);
-    u.inc();  u.ok(1);
-    u.inc();  u.ok(2);
-    u.inc();  u.ok(3);
-    u.inc();  u.ok(4);
-    u.set(21);
-    u.inc();
-    u.ok (22);
-    u.set(23);
-    u.dec();
-    u.ok( 22);
-    u.set(31); ok( u.canInc());
-    u.set(32); ok(!u.canInc());
-
-    u.set(1);  ok( u.canDec());
-    u.set(0);  ok(!u.canDec());
-    u.ok (0);
-   }
-
-  static void test_preset()
-   {Unary     u = unary(4);
-    u.set(1); u.ok(1);
-    u.dec();  u.ok(0); ok( u.canInc());
-    u.inc();  u.ok(1); ok( u.canInc());
-    u.inc();  u.ok(2); ok( u.canInc());
-    u.inc();  u.ok(3); ok( u.canInc());
-    u.inc();  u.ok(4); ok(!u.canInc());
+   {Unary u = unary("Unary", 4);
+              u.ok(0); ok( u.canInc()); ok(!u.canDec());
+    u.inc();  u.ok(1); ok( u.canInc()); ok( u.canDec());
+    u.inc();  u.ok(2); ok( u.canInc()); ok( u.canDec());
+    u.inc();  u.ok(3); ok( u.canInc()); ok( u.canDec());
+    u.inc();  u.ok(4); ok(!u.canInc()); ok( u.canDec());
    }
 
   static void test_sub_unary()
-   {Variable  a = variable ("a", 4);
-    Unary     u = unary(4);
-    Structure s = structure("s", a, u);
-    s.layout();
-    s.set(0);
-    u.set(2);
-    u.ok (2);
+   {final int N = 4;
+    Chip      c = new Chip("Unary")
+     {Layout layout()
+       {Variable  a = variable ("a", N);
+        Unary     u = unary("unary", N);
+        Structure s = structure("s", a, u.layout);
+        addSubChip(u);
+        return s;
+       }
+     };
+    Unary u = (Unary)c.getSubChip("unary");
+    u.inc(); u.inc();
+    final Variable v = (Variable)c.layout.getField("s.unary.value");
+say("AAAA", v.name, v.at, v.width);
+say("BBBB", v.toInt());
+    c.layout.getField("s.unary.value").ok(2);
    }
 
   static void oldTests()                                                        // Tests thought to be in good shape
    {test_unary();
-    test_preset();
+    test_sub_unary();
    }
 
   static void newTests()                                                        // Tests being worked on
    {oldTests();
-    test_sub_unary();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
