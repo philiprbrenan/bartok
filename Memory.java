@@ -11,7 +11,7 @@ import java.util.*;
 public class Memory extends Test                                                // Describe a chip and emulate its operation.  A chip consists of a block of memory and some logic that computes the next value of the memory thus changing the state of the chip. A chip is testable.
  {final String  name;                                                           // Name of layout
   Field top;                                                                    // The top most field in a set of nested fields
-  final Stack<     Field> fields    = new Stack<>();                            // Fields in the layout in in-order
+  final Stack<     Field> fields    = new Stack<>();                            // Fields in in-order
   final Map<String,Field> fullNames = new TreeMap<>();                          // Fields by name
 
   Memory(String Name)                                                           // Create a new Layout loaded from a set of definitions
@@ -24,18 +24,6 @@ public class Memory extends Test                                                
   Field define() {return null;};                                                // Use variables, arrays, structures, union to define the layout and return its upper most field
 
   Field get(String path) {return fullNames.get(path);}                          // Locate a field from its full name path which must include the outer most field
-
-  Field get3(String path)                                                        // Locate a field from its path which must include the outer most field
-   {final String[]names = path.split("\\.");                                    // Split path
-    search: for (Field m : fields)                                              // Each field in structure
-     {Field p = m;                                                              // Start at this field and try to match the path
-      for(int q = names.length; q > 0 && p != null; --q, p = p.up)              // Back track through names
-       {if (!p.name.equals(names[q-1])) continue search;                        // Check path matches
-       }
-      return m;                                                                 // Return this field as its path matches
-     }
-    return null;                                                                // No matching path
-   }
 
   Memory duplicate()                                                            // Duplicate a layout
    {final Memory d = new Memory(name);
@@ -106,6 +94,7 @@ public class Memory extends Test                                                
 
     abstract Field duplicate(Memory d);                                         // Duplicate an field of this field so we can modify it safely
 
+    Bit       toBit      () {return (Bit)      this;}                           // Try to convert to a bit
     Variable  toVariable () {return (Variable) this;}                           // Try to convert to a variable
     Array     toArray    () {return (Array)    this;}                           // Try to convert to an array
     Structure toStructure() {return (Structure)this;}                           // Try to convert to a structure
@@ -146,6 +135,8 @@ public class Memory extends Test                                                
         set(at+i, b);                                                           // Set bit
        }
      }
+    void ok(int    expected) {Test.ok(asInt(),    expected);}                   // Check value of a field as an integer
+    void ok(String expected) {Test.ok(asString(), expected);}                   // Check value of a field as a string
    }
 
   class Variable extends Field                                                  // Layout a variable with no sub structure
@@ -165,6 +156,8 @@ public class Memory extends Test                                                
       return v;
      }
    }
+
+  class Bit extends Variable {Bit(String name) {super(name, 1);}}               // A variable of unit width is a bit
 
   class Array extends Field                                                     // Layout an array definition.
    {int size;                                                                   // Dimension of array
@@ -328,12 +321,13 @@ public class Memory extends Test                                                
      }
    }
 
+  Bit       bit      (String name)                       {return new Bit      (name);}
   Variable  variable (String name, int width)            {return new Variable (name, width);}
   Array     array    (String name, Field   ml, int size) {return new Array    (name, ml, size);}
   Structure structure(String name, Field...ml)           {return new Structure(name, ml);}
   Union     union    (String name, Field...ml)           {return new Union    (name, ml);}
 
-//D0                                                                            // Tests: I test, therefore I am.  And so do my mentees.  But most other people, apparently, do not, they live in a half world lit by shadows in which they never know if their code works or not.
+//D0                                                                            // Tests: I test, therefore I am.  And so do my mentees.  But most other people, apparently, do not, they live in a half world lit by shadows in which they never know if their code actually works or not.
 
   static void test_1()
    {Memory l = new Memory("layout")
@@ -469,6 +463,34 @@ V   76     4                 0     e
 """);
    }
 
+  static void test_bit()
+   {final Stack<Boolean> memory = new Stack<>();
+
+    Memory l = new Memory("layout")
+     {Field define()
+       {var a = bit      ("a");
+        var b = variable ("b", 7);
+        var s = structure("s", a, b);
+        return s;
+       }
+
+      void    set(int i, Boolean b) {       memory.setElementAt(b, i);}
+      Boolean get(int i)            {return memory.   elementAt(   i);}
+     };
+
+    for (int i = 0; i < l.size(); i++) memory.push(false);
+
+    l.get("s").toStructure().fromInt(3);
+    l.ok("""
+T   At  Wide  Size       Value   Field name
+S    0     8                 3   s
+B    0     1                 1     a
+V    1     7                 1     b
+""");
+    l.get("s.a").toBit()     .ok(1);
+    l.get("s.b").toVariable().ok(1);
+   }
+
   static void oldTests()                                                        // Tests thought to be in good shape
    {test_1();
     test_memory();
@@ -476,7 +498,7 @@ V   76     4                 0     e
 
   static void newTests()                                                        // Tests being worked on
    {oldTests();
-    test_memory();
+    test_bit();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
@@ -491,3 +513,5 @@ V   76     4                 0     e
     testExit(0);                                                                // Exit with a return code if we failed any tests to alert github
    }
  }
+/* To feed into a gate we need a stack of biots which might be a collection
+ **/
