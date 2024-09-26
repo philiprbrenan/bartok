@@ -42,7 +42,7 @@ public class Memory extends Test                                                
     return b.toString();
    }
 
-  void indexNames() {for(Field f : fields) fullNames.put(f.fullName(), f);}     // Index field names
+  void indexNames() {for(Field f : fields) f.fullName();}                       // Index field names in each containing structure
 
   int size() {return top == null ? 0 : top.width;}                              // Size of memory
 
@@ -53,6 +53,61 @@ public class Memory extends Test                                                
   Boolean get(int i) {return null;}                                             // Get a bit
   void    set(int i, Boolean value) {}                                          // Set a bit
 
+  class Bits extends Stack<Integer>                                             // Some bits of interest
+   {private static final long serialVersionUID = 1L;
+    void push(Field field)                                                      // Add the bits associated with a field
+     {for (int i = 0; i < field.width; i++) push(Integer.valueOf(field.at+i));  // Add index of the indicated bit in the field
+     }
+    void push(Field field, int offset) {push(Integer.valueOf(field.at+offset));}// Add the bit at the specified offset int the field
+    void push(Field field, int start, int length)                               // Add a substring of the bits associated with a field
+     {for (int i = 0; i < length; i++) push(Integer.valueOf(field.at+i+start)); // Add index of each referenced bit in the field
+     }
+
+    public String asString()                                                    // Part of memory corresponding to this layout as a string of bits in low endian order
+     {final StringBuilder s = new StringBuilder();
+      final int N = size();
+      for (int i = 0; i < N; ++i)                                               // Index each bit
+       {final Boolean v = Memory.this.get(elementAt(i));                        // Value of bit
+        s.append(v == null ? '.' : v ? '1' : '0');                              // Represent bit
+       }
+      return s.reverse().toString();                                            // Prints string with lowest bit rightmost because we work in little endian layout
+     }
+
+    Integer asInt()                                                             // Get an integer representing the value of the layout to the extent that is possible.  The integer is held inlittle endian format
+     {int n = 0, N = size();                                                    // Resulting integer
+      for (int i = 0; i < N; ++i)                                               // Each bit
+       {final Boolean v = Memory.this.get(elementAt(i));                        // Value of bit
+        if (v == null) return null;                                             // One of the bits is null so the overall value is no longer known
+        if (v && i > Integer.SIZE-1) return null;                               // Value is too big to be represented
+        n += v ? 1<<i : 0;
+       }
+      return n;                                                                 // Valid representation of bits as an integer
+     }
+
+    void fromString(String value)                                               // Set bits to the little endian value represented by the supplied string
+     {final int N = value.length();
+      for(int i = 0; i < N; ++i)
+       {final char c = value.charAt(i);                                         // Bit value to be set
+        final Boolean b = c == '0' ? false : c == '1' ? true : null;            // Value
+        final int     j = elementAt(i);                                         // Index
+        Memory.this.set(j, b);                                                  // Set bit
+       }
+     }
+
+    void fromInt(int value)                                                     // Set bits to match those of the supplied integer
+     {final int N = min(Integer.SIZE-1, size());                                // Maximum number of bits we can set
+      for(int i = 0; i < N; ++i)                                                // Set bits
+       {final Boolean b = (value & (1<<i)) > 0;                                 // Value
+        final int     j = elementAt(i);                                         // Index
+        Memory.this.set(j, b);                                                  // Set bit
+       }
+     }
+    void ok(int    expected) {Test.ok(asInt(),    expected);}                   // Check value of bits as an integer
+    void ok(String expected) {Test.ok(asString(), expected);}                   // Check value of a bits as a string
+   }
+
+  Bits bits() {return new Bits();}                                              // Create some bits
+
 //D1 Layouts                                                                    // Field memory of the chip as variables, arrays, structures, unions. Dividing the memory in this manner makes it easier to program the chip symbolically.
 
   abstract class Field                                                          // Variable/Array/Structure/Union definition.
@@ -61,13 +116,25 @@ public class Memory extends Test                                                
     int width;                                                                  // Number of bits in a field
     int depth;                                                                  // Depth of field - the number of containing arrays/structures/unions above
     Field up;                                                                   // Upward chain to containing array/structure/union
+    final Map<String,Field> fullNames = new TreeMap<>();                        // Fields by name
 
     Field(String Name) {name = Name;}                                           // Create a new named field
 
     int at   () {return at;}                                                    // Position of field in memory
     int width() {return width;}                                                 // Size of the memory in bits occupied by this field
 
-    String fullName()                                                               // The full name of a field
+    void fullName()                                                             // The full name of a field
+     {String n = name;
+      for(Field p = up; p != null; p = p.up)                                    // Up through containing fields
+       {p.fullNames.put(n, this);                                               // Full name from this field
+        n = p.name + "."+n;
+       }
+      Memory.this.fullNames.put(n, this);                                       // Full name from outer most to inner most
+     }
+
+    Field get(String path) {return fullNames.get(path);}                        // Address a contained field by name
+
+    String fullName2()                                                          // The full name of a field
      {final StringBuilder b = new StringBuilder();
       final Stack<String> n = new Stack<>();
       for(Field p = this; p != null; p = p.up) n.push(p.name);
@@ -103,7 +170,7 @@ public class Memory extends Test                                                
     public String asString()                                                    // Part of memory corresponding to this layout as a string of bits in low endian order
      {final StringBuilder s = new StringBuilder();
       for (int i = 0; i <  width; ++i)                                          // Index each bit
-       {final Boolean v = get(at+i);                                            // Value of bit
+       {final Boolean v = Memory.this.get(at+i);                                // Value of bit
         s.append(v == null ? '.' : v ? '1' : '0');                              // Represent bit
        }
       return s.reverse().toString();                                            // Prints string with lowest bit rightmost because we work in little endian layout
@@ -112,7 +179,7 @@ public class Memory extends Test                                                
     Integer asInt()                                                             // Get an integer representing the value of the layout to the extent that is possible.  The integer is held inlittle endian format
      {int n = 0;                                                                // Resulting integer
       for (int i = 0; i < width; ++i)                                           // Each bit
-       {final Boolean v = get(at+i);                                            // Value of bit
+       {final Boolean v = Memory.this.get(at+i);                                // Value of bit
         if (v == null) return null;                                             // One of the bits is null so the overall value is no longer known
         if (v && i > Integer.SIZE-1) return null;                               // Value is too big to be represented
         n += v ? 1<<i : 0;
@@ -487,18 +554,57 @@ S    0     8                 3   s
 B    0     1                 1     a
 V    1     7                 1     b
 """);
-    l.get("s.a").toBit()     .ok(1);
-    l.get("s.b").toVariable().ok(1);
+    Structure s = l.get("s").toStructure();
+    s.get("a").toBit()     .ok(1);
+    s.get("b").toVariable().ok(1);
+   }
+
+  static void test_bits()
+   {final Stack<Boolean> memory = new Stack<>();
+
+    Memory l = new Memory("layout")
+     {Field define()
+       {var a = bit     ("a");
+        var b = variable("b", 2);
+        var c = bit     ("c");
+        var d = variable("d", 2);
+        var s = structure("s", a, b, c, d);
+        return s;
+       }
+
+      void    set(int i, Boolean b) {       memory.setElementAt(b, i);}
+      Boolean get(int i)            {return memory.   elementAt(   i);}
+     };
+
+    for (int i = 0; i < l.size(); i++) memory.push(false);
+
+    l.get("s").toStructure().fromInt(27);
+    l.ok("""
+T   At  Wide  Size       Value   Field name
+S    0     6                27   s
+B    0     1                 1     a
+V    1     2                 1     b
+B    3     1                 1     c
+V    4     2                 1     d
+""");
+    Structure s = l.get("s").toStructure();
+    Variable  a = s.get("a").toVariable();
+    Variable  b = s.get("b").toVariable();
+    Variable  c = s.get("c").toVariable();
+    Variable  d = s.get("d").toVariable();
+    final Bits A = l.bits(); A.push(a);       A.push(c);    A.ok(3);
+    final Bits B = l.bits(); B.push(b, 1, 1); B.push(c, 0); B.ok(2);
    }
 
   static void oldTests()                                                        // Tests thought to be in good shape
    {test_1();
     test_memory();
+    test_bit();
+    test_bits();
    }
 
   static void newTests()                                                        // Tests being worked on
    {oldTests();
-    test_bit();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
