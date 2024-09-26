@@ -11,17 +11,21 @@ import java.util.*;
 public class Memory extends Test                                                // Describe a chip and emulate its operation.  A chip consists of a block of memory and some logic that computes the next value of the memory thus changing the state of the chip. A chip is testable.
  {final String  name;                                                           // Name of layout
   Field top;                                                                    // The top most field in a set of nested fields
-  final Stack<Field> fields = new Stack<>();                                   // Fields in the layout in in-order
+  final Stack<     Field> fields    = new Stack<>();                            // Fields in the layout in in-order
+  final Map<String,Field> fullNames = new TreeMap<>();                          // Fields by name
 
   Memory(String Name)                                                           // Create a new Layout loaded from a set of definitions
    {name = Name;                                                                // Name of layout
     top  = define();
     if (top != null) top.layout(0, 0, null);                                    // Locate field positions
+    indexNames();                                                               // Index the names of the fields
    }
 
   Field define() {return null;};                                                // Use variables, arrays, structures, union to define the layout and return its upper most field
 
-  Field get(String path)                                                        // Locate a field from its path which must include the outer most field
+  Field get(String path) {return fullNames.get(path);}                          // Locate a field from its full name path which must include the outer most field
+
+  Field get3(String path)                                                        // Locate a field from its path which must include the outer most field
    {final String[]names = path.split("\\.");                                    // Split path
     search: for (Field m : fields)                                              // Each field in structure
      {Field p = m;                                                              // Start at this field and try to match the path
@@ -38,6 +42,7 @@ public class Memory extends Test                                                
     if (top == null) return d;                                                  // No fields to duplicate
     d.top = top.duplicate(d);                                                   // Copy each field into this layout
     d.top.order();                                                              // Order the fields
+    d.indexNames();                                                             // Index the names of the fields
     return d;
    }
 
@@ -48,6 +53,8 @@ public class Memory extends Test                                                
     for(Field f : fields) b.append(f.toString());                               // Print all the fields in the structure field
     return b.toString();
    }
+
+  void indexNames() {for(Field f : fields) fullNames.put(f.fullName(), f);}     // Index field names
 
   int size() {return top == null ? 0 : top.width;}                              // Size of memory
 
@@ -71,6 +78,15 @@ public class Memory extends Test                                                
 
     int at   () {return at;}                                                    // Position of field in memory
     int width() {return width;}                                                 // Size of the memory in bits occupied by this field
+
+    String fullName()                                                               // The full name of a field
+     {final StringBuilder b = new StringBuilder();
+      final Stack<String> n = new Stack<>();
+      for(Field p = this; p != null; p = p.up) n.push(p.name);
+      for(;n.size() > 0;) b.append("."+n.pop());
+      final String r = b.toString().substring(1);
+      return r;
+     }
 
     abstract void layout(int at, int depth, Field superStructure);              // Layout this field
     abstract void order();                                                      // Add this field to the tree of fields
@@ -188,7 +204,6 @@ public class Memory extends Test                                                
       final String[]c = getClass().getName().split("\\$");                      // Class name
       return String.format("%c %4d  %4d   %4d %10s   %s\n",
                             c[1].charAt(0), at, width, size, i, n);
-
      }
 
     void setIndex(int Index)                                                    // Sets the index for the current array field allowing us to set and get this field and all its sub elements.
@@ -198,8 +213,10 @@ public class Memory extends Test                                                
      }
 
     Field duplicate(Memory d)                                                   // Duplicate an array so we can modify it safely
-     {final Array a = d.new Array(name, element.duplicate(d), size);
+     {final Field e = element.duplicate(d);
+      final Array a = d.new Array(name, e, size);
       a.width = width; a.at = at; a.depth = depth; a.index = index;
+      e.up = a;
       return a;
      }
    }
@@ -256,6 +273,7 @@ public class Memory extends Test                                                
        {final Field l = L.duplicate(d);
         s.subMap.put(l.name, l);
         s.subStack.push(l);
+        l.up = this;
        }
       return s;
      }
@@ -304,6 +322,7 @@ public class Memory extends Test                                                
        {final Field L = subMap.get(s);
         final Field l = L.duplicate(d);
         u.subMap.put(l.name, l);
+        l.up = this;
        }
       return u;
      }
@@ -329,6 +348,7 @@ public class Memory extends Test                                                
         return        structure("S", d, A, e);
        }
      };
+
     l.ok("""
 T   At  Wide  Size       Value   Field name
 S    0    32                     S
