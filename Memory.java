@@ -13,11 +13,15 @@ public class Memory extends Test                                                
   Field top;                                                                    // The top most field in a set of nested fields
   final Stack<     Field> fields    = new Stack<>();                            // Fields in in-order
   final Map<String,Field> fullNames = new TreeMap<>();                          // Fields by name
+  Stack<Boolean> memory = new Stack<>();                                        // A sample memory
 
   Memory(String Name)                                                           // Create a new Layout loaded from a set of definitions
    {name = Name;                                                                // Name of layout
     top  = define();
-    if (top != null) top.layout(0, 0, null);                                    // Locate field positions
+    if (top != null)                                                            // Layout memory and load a sample memory
+     {top.layout(0, 0, null);                                                   // Locate field positions
+      for (int i = 0; i < top.width; i++) memory.push(false);                   // Create a matching memory.
+     }
     indexNames();                                                               // Index the names of the fields
    }
 
@@ -31,6 +35,7 @@ public class Memory extends Test                                                
     d.top = top.duplicate(d);                                                   // Copy each field into this layout
     d.top.order();                                                              // Order the fields
     d.indexNames();                                                             // Index the names of the fields
+    d.memory = memory;
     return d;
    }
 
@@ -48,10 +53,10 @@ public class Memory extends Test                                                
 
   void ok(String expected) {Test.ok(toString(), expected);}                     // Confirm layout is as expected
 
-//D1 Bits                                                                       // A memory is implemented using bits
+//D1 Bits                                                                       // A memory is implemented using bits. Override get and set to use a different memory if required
 
-  Boolean get(int i) {return null;}                                             // Get a bit
-  void    set(int i, Boolean value) {}                                          // Set a bit
+  void    set(int i, Boolean b) {       memory.setElementAt(b, i);}             // Set a bit in the sample memory
+  Boolean get(int i)            {return memory.   elementAt(   i);}             // Get a bit from the sample memory
 
   class Bits extends Stack<Integer>                                             // Some bits of interest
    {private static final long serialVersionUID = 1L;
@@ -412,87 +417,86 @@ public class Memory extends Test                                                
 
     l.ok("""
 T   At  Wide  Size       Value   Field name
-S    0    32                     S
-V    0     4                       d
+S    0    32                 0   S
+V    0     4                 0     d
 A    4    24      3          0     A
-S    4     8                         s
-V    4     2                           a
-V    6     2                           b
-V    8     4                           c
-V   28     4                       e
+S    4     8                 0       s
+V    4     2                 0         a
+V    6     2                 0         b
+V    8     4                 0         c
+V   28     4                 0     e
 """);
 
     l.get("S.A").toArray().setIndex(1);
     //stop(l);
     l.ok("""
 T   At  Wide  Size       Value   Field name
-S    0    32                     S
-V    0     4                       d
+S    0    32                 0   S
+V    0     4                 0     d
 A    4    24      3          1     A
-S   12     8                         s
-V   12     2                           a
-V   14     2                           b
-V   16     4                           c
-V   28     4                       e
+S   12     8                 0       s
+V   12     2                 0         a
+V   14     2                 0         b
+V   16     4                 0         c
+V   28     4                 0     e
 """);
 
     Memory m = l.duplicate();
     //stop(l);
     l.ok("""
 T   At  Wide  Size       Value   Field name
-S    0    32                     S
-V    0     4                       d
+S    0    32                 0   S
+V    0     4                 0     d
 A    4    24      3          1     A
-S   12     8                         s
-V   12     2                           a
-V   14     2                           b
-V   16     4                           c
-V   28     4                       e
+S   12     8                 0       s
+V   12     2                 0         a
+V   14     2                 0         b
+V   16     4                 0         c
+V   28     4                 0     e
 """);
 
     //stop(m);
     m.ok("""
 T   At  Wide  Size       Value   Field name
-S    0    32                     S
-V    0     4                       d
+S    0    32                 0   S
+V    0     4                 0     d
 A    4    24      3          1     A
-S   12     8                         s
-V   12     2                           a
-V   14     2                           b
-V   16     4                           c
-V   28     4                       e
+S   12     8                 0       s
+V   12     2                 0         a
+V   14     2                 0         b
+V   16     4                 0         c
+V   28     4                 0     e
 """);
     m.get("S.A").toArray().setIndex(2);
     //stop(l);
     l.ok("""
 T   At  Wide  Size       Value   Field name
-S    0    32                     S
-V    0     4                       d
+S    0    32                 0   S
+V    0     4                 0     d
 A    4    24      3          1     A
-S   12     8                         s
-V   12     2                           a
-V   14     2                           b
-V   16     4                           c
-V   28     4                       e
+S   12     8                 0       s
+V   12     2                 0         a
+V   14     2                 0         b
+V   16     4                 0         c
+V   28     4                 0     e
 """);
 
     //stop(m);
     m.ok("""
 T   At  Wide  Size       Value   Field name
-S    0    32                     S
-V    0     4                       d
+S    0    32                 0   S
+V    0     4                 0     d
 A    4    24      3          2     A
-S   20     8                         s
-V   20     2                           a
-V   22     2                           b
-V   24     4                           c
-V   28     4                       e
+S   20     8                 0       s
+V   20     2                 0         a
+V   22     2                 0         b
+V   24     4                 0         c
+V   28     4                 0     e
 """);
    }
 
   static void test_memory()
-   {final Stack<Boolean> memory = new Stack<>();
-    Memory l = new Memory("layout")
+   {Memory l = new Memory("layout")
      {Field define()
        {Variable  a = variable ("a", 8);
         Variable  b = variable ("b", 8);
@@ -503,11 +507,7 @@ V   28     4                       e
         Variable  e = variable ("e", 4);
         return        structure("S", d, A, e);
        }
-      void    set(int i, Boolean b) {       memory.setElementAt(b, i);}
-      Boolean get(int i)            {return memory.   elementAt(   i);}
      };
-
-    for (int i = 0; i < l.size(); i++) memory.push(false);
 
     final Variable a = l.get("S.A.s.a").toVariable();
     final Variable b = l.get("S.A.s.b").toVariable();
@@ -531,21 +531,14 @@ V   76     4                 0     e
    }
 
   static void test_bit()
-   {final Stack<Boolean> memory = new Stack<>();
-
-    Memory l = new Memory("layout")
+   {Memory l = new Memory("layout")
      {Field define()
        {var a = bit      ("a");
         var b = variable ("b", 7);
         var s = structure("s", a, b);
         return s;
        }
-
-      void    set(int i, Boolean b) {       memory.setElementAt(b, i);}
-      Boolean get(int i)            {return memory.   elementAt(   i);}
      };
-
-    for (int i = 0; i < l.size(); i++) memory.push(false);
 
     l.get("s").toStructure().fromInt(3);
     l.ok("""
@@ -592,8 +585,8 @@ V    4     2                 1     d
     Variable  b = s.get("b").toVariable();
     Variable  c = s.get("c").toVariable();
     Variable  d = s.get("d").toVariable();
-    final Bits A = l.bits(); A.push(a);       A.push(c);    A.ok(3);
-    final Bits B = l.bits(); B.push(b, 1, 1); B.push(c, 0); B.ok(2);
+    Bits      A = l.bits(); A.push(a);       A.push(c);    A.ok(3);
+    Bits      B = l.bits(); B.push(b, 1, 1); B.push(c, 0); B.ok(2);
    }
 
   static void oldTests()                                                        // Tests thought to be in good shape
@@ -619,5 +612,3 @@ V    4     2                 1     d
     testExit(0);                                                                // Exit with a return code if we failed any tests to alert github
    }
  }
-/* To feed into a gate we need a stack of biots which might be a collection
- **/
