@@ -13,7 +13,7 @@ public class Memory extends Test                                                
   Field top;                                                                    // The top most field in a set of nested fields
   final Stack<     Field> fields    = new Stack<>();                            // Fields in in-order
   final Map<String,Field> fullNames = new TreeMap<>();                          // Fields by name
-  Stack<Boolean> memory = new Stack<>();                                        // A sample memory
+  Stack<Boolean> memory = new Stack<>();                                        // A sample memory that can be freed if not wanted by assigning null to this non final field.
 
   Memory(String Name)                                                           // Create a new Layout loaded from a set of definitions
    {name = Name;                                                                // Name of layout
@@ -50,6 +50,13 @@ public class Memory extends Test                                                
   void indexNames() {for(Field f : fields) f.fullName();}                       // Index field names in each containing structure
 
   int size() {return top == null ? 0 : top.width;}                              // Size of memory
+
+  Field asFields() {return top;}                                                // Get field definitions associated with memory
+
+  void clear()                                                                  // Clear memory
+   {final int N = top != null ? top.width : 0;
+    for (int i = 0; i < N; i++) set(i, false);
+   }
 
   void ok(String expected) {Test.ok(toString(), expected);}                     // Confirm layout is as expected
 
@@ -526,6 +533,18 @@ S   28    24            197121       s
 V   28     8                 1         a
 V   36     8                 2         b
 V   44     8                 3         c
+V   76     4                 0     e
+""");
+    l.clear();
+    l.ok("""
+T   At  Wide  Size       Value   Field name
+S    0    80                 0   S
+V    0     4                 0     d
+A    4    72      3          1     A
+S   28    24                 0       s
+V   28     8                 0         a
+V   36     8                 0         b
+V   44     8                 0         c
 V   76     4                 0     e
 """);
    }
