@@ -15,11 +15,9 @@ public class Layout extends Test                                                
   Stack<Bit>                 memory = new Stack<>();                            // A sample memory that can be freed if not wanted by assigning null to this non final field.
 
   void layout(Field field)                                                      // Create a new Layout loaded from a set of definitions
-   {top  = field;
-    if (field != null)                                                          // Layout memory and load a sample memory
-     {field.layout(0, 0, null);                                                 // Locate field positions
-      for (int i = 0; i < field.width; i++) memory.push(new Bit());                 // Create a matching memory.
-     }
+   {top  = field;                                                               // Record layout
+    field.layout(0, 0, null);                                                   // Locate field positions
+    for (int i = 0; i < field.width; i++) memory.push(new Bit());               // Create a matching memory.
     indexNames();                                                               // Index the names of the fields
    }
 
