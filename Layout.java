@@ -61,9 +61,9 @@ public class Layout extends Test                                                
   void    set(int i, Boolean b) {       memory.setElementAt(b, i);}             // Set a bit in the sample memory. This method should be overridden to drive a more useful memory that captures more information about its bits than just their values.
   Boolean get(int i)            {return memory.   elementAt(   i);}             // Get a bit from the sample memory
 
-//D1 BitSet                                                                     // A collection of bits abstracted from memory layouts
+//D1 BoolSet                                                                     // A collection of bits abstracted from memory layouts
 
-  class BitSet extends Stack<Integer>                                             // Some bits of interest
+  class BoolSet extends Stack<Integer>                                             // Some bits of interest
    {private static final long serialVersionUID = 1L;
     void push(Field field)                                                      // Add the bits associated with a field
      {for (int i = 0; i < field.width; i++) push(Integer.valueOf(field.at+i));  // Add index of the indicated bit in the field
@@ -116,7 +116,7 @@ public class Layout extends Test                                                
     void ok(String expected) {Test.ok(asString(), expected);}                   // Check value of a bits as a string
    }
 
-  BitSet bitSet() {return new BitSet();}                                        // Create a set of bits
+  BoolSet bitSet() {return new BoolSet();}                                        // Create a set of bits
 
 //D1 Layouts                                                                    // Field memory of the chip as variables, arrays, structures, unions. Dividing the memory in this manner makes it easier to program the chip symbolically.
 
@@ -574,8 +574,8 @@ V    1     2                 1     b
 B    3     1                 1     c
 V    4     2                 1     d
 """);
-    BitSet A = l.bitSet(); A.push(a);       A.push(c);    A.ok(3);
-    BitSet B = l.bitSet(); B.push(b, 1, 1); B.push(c, 0); B.ok(2);
+    BoolSet A = l.bitSet(); A.push(a);       A.push(c);    A.ok(3);
+    BoolSet B = l.bitSet(); B.push(b, 1, 1); B.push(c, 0); B.ok(2);
     ok(a.sameSize(c) == a.width);
    }
 
