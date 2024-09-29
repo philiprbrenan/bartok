@@ -6,12 +6,12 @@ package com.AppaApps.Silicon;                                                   
 
 import java.util.*;
 
-//D1 Construct                                                                  // Layout a description of the powered memory used by a chip
+//D1 Construct                                                                  // Layout a description of the memory used by a chip
 
-public class Layout extends Test                                                // Describe a chip and emulate its operation.  A chip consists of a block of memory and some logic that computes the next value of the memory thus changing the state of the chip. A chip is testable.
- {Field top;                                                                    // The top most field in a set of nested fields
+public class Layout extends Test                                                // A Memory layout for a chip. There might be several such layouts representing parts of the chip.
+ {Field top;                                                                    // The top most field in a set of nested fields describing memory.
   final Stack<     Field> fields    = new Stack<>();                            // Fields in in-order
-  final Map<String,Field> fullNames = new TreeMap<>();                          // Fields by name
+  final Map<String,Field> fullNames = new TreeMap<>();                          // Fields by full name
   Stack<Bit>                 memory = new Stack<>();                            // A sample memory that can be freed if not wanted by assigning null to this non final field.
 
   void layout(Field field)                                                      // Create a new Layout loaded from a set of definitions
@@ -21,10 +21,10 @@ public class Layout extends Test                                                
     indexNames();                                                               // Index the names of the fields
    }
 
-  Field get(String path) {return fullNames.get(path);}                          // Locate a field from its full name path which must include the outer most field
+  Field get(String path) {return fullNames.get(path);}                          // Locate a field from its full name path which must include the top most field
 
   Layout duplicate()                                                            // Duplicate a layout
-   {final Layout d = new Layout();
+   {final Layout d = new Layout();                                              // New layout
     if (top == null) return d;                                                  // No fields to duplicate
     d.top = top.duplicate(d);                                                   // Copy each field into this layout
     d.top.order();                                                              // Order the fields
@@ -33,7 +33,7 @@ public class Layout extends Test                                                
     return d;
    }
 
-  public String toString()                                                      // Walk the field tree in in-order printing the memory field headers
+  public String toString()                                                      // Walk the field tree in in-order printing the memory field headers. For arrays, print the currently indexed element rather than all elements.
    {final StringBuilder b = new StringBuilder();
     b.append(String.format("%1s %4s  %4s  %4s    %8s   %s\n",
                              "T", "At", "Wide", "Size", "Value", "Field name"));
@@ -41,7 +41,7 @@ public class Layout extends Test                                                
     return b.toString();
    }
 
-  void indexNames() {for(Field f : fields) f.fullName();}                       // Index field names in each containing structure
+  void indexNames() {for(Field f : fields) f.fullName();}                       // Index field names in each containing structure so fields can be accessed by a unique structured name
 
   int size() {return top == null ? 0 : top.width;}                              // Size of memory
 
@@ -65,7 +65,7 @@ public class Layout extends Test                                                
    }
 
   class Bit                                                                     // a bit in memory is driven by driveables and in turn drives driveables
-   {Boolean value = null;                                                      // Really should be null to show that we do not know what the value is until it has been explicilty set.
+   {Boolean value = null;                                                       // Null to show that we do not know what the value is until it has been explicilty set.
     final Map<Integer,Drivable> drives   = new TreeMap<>();
     final Map<Integer,Drivable> drivenBy = new TreeMap<>();
    }
