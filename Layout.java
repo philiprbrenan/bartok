@@ -14,16 +14,14 @@ public class Layout extends Test                                                
   final Map<String,Field> fullNames = new TreeMap<>();                          // Fields by name
   Stack<Boolean> memory = new Stack<>();                                        // A sample memory that can be freed if not wanted by assigning null to this non final field.
 
-  Layout()                                                                      // Create a new Layout loaded from a set of definitions
-   {top  = define();
-    if (top != null)                                                            // Layout memory and load a sample memory
-     {top.layout(0, 0, null);                                                   // Locate field positions
-      for (int i = 0; i < top.width; i++) memory.push(false);                   // Create a matching memory.
+  void layout(Field field)                                                      // Create a new Layout loaded from a set of definitions
+   {top  = field;
+    if (field != null)                                                          // Layout memory and load a sample memory
+     {field.layout(0, 0, null);                                                 // Locate field positions
+      for (int i = 0; i < field.width; i++) memory.push(false);                 // Create a matching memory.
      }
     indexNames();                                                               // Index the names of the fields
    }
-
-  Field define() {return null;};                                                // Use variables, arrays, structures, union to define the layout and return its upper most field
 
   Field get(String path) {return fullNames.get(path);}                          // Locate a field from its full name path which must include the outer most field
 
@@ -58,12 +56,14 @@ public class Layout extends Test                                                
 
   void ok(String expected) {Test.ok(toString(), expected);}                     // Confirm layout is as expected
 
-//D1 Bits                                                                       // A memory is implemented using bits. Override get and set to use a different memory if required
+//D1 Bit                                                                        // A bit is the element from which memory is constructed.
 
   void    set(int i, Boolean b) {       memory.setElementAt(b, i);}             // Set a bit in the sample memory. This method should be overridden to drive a more useful memory that captures more information about its bits than just their values.
   Boolean get(int i)            {return memory.   elementAt(   i);}             // Get a bit from the sample memory
 
-  class Bits extends Stack<Integer>                                             // Some bits of interest
+//D1 BitSet                                                                     // A collection of bits abstracted from memory layouts
+
+  class BitSet extends Stack<Integer>                                             // Some bits of interest
    {private static final long serialVersionUID = 1L;
     void push(Field field)                                                      // Add the bits associated with a field
      {for (int i = 0; i < field.width; i++) push(Integer.valueOf(field.at+i));  // Add index of the indicated bit in the field
@@ -116,7 +116,7 @@ public class Layout extends Test                                                
     void ok(String expected) {Test.ok(asString(), expected);}                   // Check value of a bits as a string
    }
 
-  Bits bits() {return new Bits();}                                              // Create some bits
+  BitSet bitSet() {return new BitSet();}                                        // Create a set of bits
 
 //D1 Layouts                                                                    // Field memory of the chip as variables, arrays, structures, unions. Dividing the memory in this manner makes it easier to program the chip symbolically.
 
@@ -169,7 +169,7 @@ public class Layout extends Test                                                
 
     abstract Field duplicate(Layout d);                                         // Duplicate an field of this field so we can modify it safely
 
-    Bit       toBit      () {return (Bit)      this;}                           // Try to convert to a bit
+    Bool      toBool     () {return (Bool)     this;}                           // Try to convert to a boolean
     Variable  toVariable () {return (Variable) this;}                           // Try to convert to a variable
     Array     toArray    () {return (Array)    this;}                           // Try to convert to an array
     Structure toStructure() {return (Structure)this;}                           // Try to convert to a structure
@@ -232,7 +232,7 @@ public class Layout extends Test                                                
      }
    }
 
-  class Bit extends Variable {Bit(String name) {super(name, 1);}}               // A variable of unit width is a bit
+  class Bool extends Variable {Bool(String name) {super(name, 1);}}             // A variable of unit width is a boolean. could have called it a boolean but decied to callit abool instead becuase it was shorter and more like
 
   class Array extends Field                                                     // Layout an array definition.
    {int size;                                                                   // Dimension of array
@@ -396,7 +396,7 @@ public class Layout extends Test                                                
      }
    }
 
-  Bit       bit      (String name)                       {return new Bit      (name);}
+  Bool      bool     (String name)                       {return new Bool     (name);}
   Variable  variable (String name, int width)            {return new Variable (name, width);}
   Array     array    (String name, Field   ml, int size) {return new Array    (name, ml, size);}
   Structure structure(String name, Field...ml)           {return new Structure(name, ml);}
@@ -405,18 +405,16 @@ public class Layout extends Test                                                
 //D0                                                                            // Tests: I test, therefore I am.  And so do my mentees.  But most other people, apparently, do not, they live in a half world lit by shadows in which they never know if their code actually works or not.
 
   static void test_1()
-   {Layout l = new Layout()
-     {Field define()
-       {Variable  a = variable ("a", 2);
-        Variable  b = variable ("b", 2);
-        Variable  c = variable ("c", 4);
-        Structure s = structure("s", a, b, c);
-        Array     A = array    ("A", s, 3);
-        Variable  d = variable ("d", 4);
-        Variable  e = variable ("e", 4);
-        return        structure("S", d, A, e);
-       }
-     };
+   {Layout    l = new Layout();
+    Variable  a = l.variable ("a", 2);
+    Variable  b = l.variable ("b", 2);
+    Variable  c = l.variable ("c", 4);
+    Structure s = l.structure("s", a, b, c);
+    Array     A = l.array    ("A", s, 3);
+    Variable  d = l.variable ("d", 4);
+    Variable  e = l.variable ("e", 4);
+    Structure S = l.structure("S", d, A, e);
+    l.layout(S);
 
     l.ok("""
 T   At  Wide  Size       Value   Field name
@@ -499,23 +497,16 @@ V   28     4                 0     e
    }
 
   static void test_memory()
-   {Layout l = new Layout()
-     {Field define()
-       {Variable  a = variable ("a", 8);
-        Variable  b = variable ("b", 8);
-        Variable  c = variable ("c", 8);
-        Structure s = structure("s", a, b, c);
-        Array     A = array    ("A", s, 3);
-        Variable  d = variable ("d", 4);
-        Variable  e = variable ("e", 4);
-        return        structure("S", d, A, e);
-       }
-     };
+   {Layout l = new Layout();
+    Variable  a = l.variable ("a", 8);
+    Variable  b = l.variable ("b", 8);
+    Variable  c = l.variable ("c", 8);
+    Structure s = l.structure("s", a, b, c);
+    Array     A = l.array    ("A", s, 3);
+    Variable  d = l.variable ("d", 4);
+    Variable  e = l.variable ("e", 4);
+    l.layout(l.structure("S", d, A, e));
 
-    final Variable a = l.get("S.A.s.a").toVariable();
-    final Variable b = l.get("S.A.s.b").toVariable();
-    final Variable c = l.get("S.A.s.c").toVariable();
-    final Array    A = l.get("S.A").toArray();
     A.setIndex(0); a.fromInt(11); b.fromInt(12); c.fromInt(14);
     A.setIndex(1); a.fromInt( 1); b.fromInt( 2); c.fromInt( 3);
     A.setIndex(2); a.fromInt(31); b.fromInt(32); c.fromInt(34);
@@ -546,14 +537,11 @@ V   76     4                 0     e
    }
 
   static void test_bit()
-   {Layout l = new Layout()
-     {Field define()
-       {var a = bit      ("a");
-        var b = variable ("b", 7);
-        var s = structure("s", a, b);
-        return s;
-       }
-     };
+   {Layout l = new Layout();
+    var a = l.bool     ("a");
+    var b = l.variable ("b", 7);
+    var s = l.structure("s", a, b);
+    l.layout(s);
 
     l.get("s").toStructure().fromInt(3);
     l.ok("""
@@ -562,29 +550,20 @@ S    0     8                 3   s
 B    0     1                 1     a
 V    1     7                 1     b
 """);
-    Structure s = l.get("s").toStructure();
-    s.get("a").toBit()     .ok(1);
+    s.get("a").toBool()    .ok(1);
     s.get("b").toVariable().ok(1);
    }
 
   static void test_bits()
    {final Stack<Boolean> memory = new Stack<>();
 
-    Layout l = new Layout()
-     {Field define()
-       {var a = bit     ("a");
-        var b = variable("b", 2);
-        var c = bit     ("c");
-        var d = variable("d", 2);
-        var s = structure("s", a, b, c, d);
-        return s;
-       }
-
-      void    set(int i, Boolean b) {       memory.setElementAt(b, i);}
-      Boolean get(int i)            {return memory.   elementAt(   i);}
-     };
-
-    for (int i = 0; i < l.size(); i++) memory.push(false);
+    Layout l = new Layout();
+    var a = l.bool     ("a");
+    var b = l.variable ("b", 2);
+    var c = l.bool     ("c");
+    var d = l.variable ("d", 2);
+    var s = l.structure("s", a, b, c, d);
+    l.layout(s);
 
     l.get("s").toStructure().fromInt(27);
     l.ok("""
@@ -595,13 +574,8 @@ V    1     2                 1     b
 B    3     1                 1     c
 V    4     2                 1     d
 """);
-    Structure s = l.get("s").toStructure();
-    Variable  a = s.get("a").toVariable();
-    Variable  b = s.get("b").toVariable();
-    Variable  c = s.get("c").toVariable();
-    Variable  d = s.get("d").toVariable();
-    Bits      A = l.bits(); A.push(a);       A.push(c);    A.ok(3);
-    Bits      B = l.bits(); B.push(b, 1, 1); B.push(c, 0); B.ok(2);
+    BitSet A = l.bitSet(); A.push(a);       A.push(c);    A.ok(3);
+    BitSet B = l.bitSet(); B.push(b, 1, 1); B.push(c, 0); B.ok(2);
     ok(a.sameSize(c) == a.width);
    }
 
