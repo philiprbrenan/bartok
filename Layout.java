@@ -167,7 +167,7 @@ public class Layout extends Test                                                
 
     abstract Field duplicate(Layout d);                                         // Duplicate an field of this field so we can modify it safely
 
-    Bool      toBool     () {return (Bool)     this;}                           // Try to convert to a boolean
+    Bit       toBit      () {return (Bit)      this;}                           // Try to convert to a bit
     Variable  toVariable () {return (Variable) this;}                           // Try to convert to a variable
     Array     toArray    () {return (Array)    this;}                           // Try to convert to an array
     Structure toStructure() {return (Structure)this;}                           // Try to convert to a structure
@@ -233,7 +233,7 @@ public class Layout extends Test                                                
      }
    }
 
-  class Bool extends Variable {Bool(String name) {super(name, 1);}}             // A variable of unit width is a boolean. could have called it a boolean but decied to callit abool instead becuase it was shorter and more like
+  class Bit extends Variable {Bit(String name) {super(name, 1);}}               // A variable of unit width is a boolean. could have called it a boolean but decied to callit abool instead becuase it was shorter and more like
 
   class Array extends Field                                                     // Layout an array definition.
    {int size;                                                                   // Dimension of array
@@ -397,7 +397,7 @@ public class Layout extends Test                                                
      }
    }
 
-  Bool      bool     (String name)                       {return new Bool     (name);}
+  Bit       bit      (String name)                       {return new Bit      (name);}
   Variable  variable (String name, int width)            {return new Variable (name, width);}
   Array     array    (String name, Field   ml, int size) {return new Array    (name, ml, size);}
   Structure structure(String name, Field...ml)           {return new Structure(name, ml);}
@@ -539,7 +539,7 @@ V   76     4                 0     e
 
   static void test_bit()
    {Layout l = new Layout();
-    var a = l.bool     ("a");
+    var a = l.bit      ("a");
     var b = l.variable ("b", 7);
     var s = l.structure("s", a, b);
     l.layout(s);
@@ -551,7 +551,7 @@ S    0     8                 3   s
 B    0     1                 1     a
 V    1     7                 1     b
 """);
-    s.get("a").toBool()    .ok(1);
+    s.get("a").toBit()     .ok(1);
     s.get("b").toVariable().ok(1);
    }
 
@@ -559,9 +559,9 @@ V    1     7                 1     b
    {final Stack<Boolean> memory = new Stack<>();
 
     Layout l = new Layout();
-    var a = l.bool     ("a");
+    var a = l.bit      ("a");
     var b = l.variable ("b", 2);
-    var c = l.bool     ("c");
+    var c = l.bit      ("c");
     var d = l.variable ("d", 2);
     var s = l.structure("s", a, b, c, d);
     l.layout(s);
