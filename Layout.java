@@ -12,12 +12,12 @@ public class Layout extends Test                                                
  {Field top;                                                                    // The top most field in a set of nested fields describing memory.
   final Stack<     Field> fields    = new Stack<>();                            // Fields in in-order
   final Map<String,Field> fullNames = new TreeMap<>();                          // Fields by full name
-  Stack<Bit>                 memory = new Stack<>();                            // A sample memory that can be freed if not wanted by assigning null to this non final field.
+  Stack<Boolean>             memory = new Stack<>();                            // A sample memory that can be freed if not wanted by assigning null to this non final field.
 
   void layout(Field field)                                                      // Create a new Layout loaded from a set of definitions
    {top  = field;                                                               // Record layout
     field.layout(0, 0, null);                                                   // Locate field positions
-    for (int i = 0; i < field.width; i++) memory.push(new Bit());               // Create a matching memory.
+    for (int i = 0; i < field.width; i++) memory.push(null);                    // Create a matching memory.
     indexNames();                                                               // Index the names of the fields
    }
 
@@ -56,23 +56,12 @@ public class Layout extends Test                                                
 
 //D1 Bit                                                                        // A bit is the element from which memory is constructed.
 
-  void set(int i, Boolean b) {       memory.elementAt(i).value = b;}            // Set a bit in the sample memory. This method should be overridden to drive a more useful memory that captures more information about its bits than just their values.
-  Bit  get(int i)            {return memory.elementAt(i);}                      // Get a bit from the sample memory
+  void    set(int i, Boolean b) {       memory.setElementAt(b, i);}             // Set a bit in the sample memory. This method should be overridden to drive a more useful memory that captures more information about its bits than just their values.
+  Boolean get(int i)            {return memory.elementAt(i);}                   // Get a bit from the sample memory
 
-  interface Drivable                                                            // Drive a bit or be driven by it
-   {Boolean get();                                                              // Get the value of a bit driver a drivable
-    void    set(Boolean value);                                                 // Drive the value of the bit into a driveabke
-   }
+//D1 Bits                                                                       // A collection of bits abstracted from memory layouts
 
-  class Bit                                                                     // a bit in memory is driven by driveables and in turn drives driveables
-   {Boolean value = null;                                                       // Null to show that we do not know what the value is until it has been explicilty set.
-    final Map<Integer,Drivable> drives   = new TreeMap<>();
-    final Map<Integer,Drivable> drivenBy = new TreeMap<>();
-   }
-
-//D1 BoolSet                                                                    // A collection of bits abstracted from memory layouts
-
-  class BoolSet extends Stack<Integer>                                          // Some bits of interest
+  class Bits extends Stack<Integer>                                          // Some bits of interest
    {private static final long serialVersionUID = 1L;
     void push(Field field)                                                      // Add the bits associated with a field
      {for (int i = 0; i < field.width; i++) push(Integer.valueOf(field.at+i));  // Add index of the indicated bit in the field
@@ -86,7 +75,7 @@ public class Layout extends Test                                                
      {final StringBuilder s = new StringBuilder();
       final int N = size();
       for (int i = 0; i < N; ++i)                                               // Index each bit
-       {final Boolean v = Layout.this.get(elementAt(i)).value;                  // Value of bit
+       {final Boolean v = Layout.this.get(elementAt(i));                        // Value of bit
         s.append(v == null ? '.' : v ? '1' : '0');                              // Represent bit
        }
       return s.reverse().toString();                                            // Prints string with lowest bit rightmost because we work in little endian layout
@@ -95,7 +84,7 @@ public class Layout extends Test                                                
     Integer asInt()                                                             // Get an integer representing the value of the layout to the extent that is possible.  The integer is held inlittle endian format
      {int n = 0, N = size();                                                    // Resulting integer
       for (int i = 0; i < N; ++i)                                               // Each bit
-       {final Boolean v = Layout.this.get(elementAt(i)).value;                  // Value of bit
+       {final Boolean v = Layout.this.get(elementAt(i));                        // Value of bit
         if (v == null) return null;                                             // One of the bits is null so the overall value is no longer known
         if (v && i > Integer.SIZE-1) return null;                               // Value is too big to be represented
         n += v ? 1<<i : 0;
@@ -125,7 +114,7 @@ public class Layout extends Test                                                
     void ok(String expected) {Test.ok(asString(), expected);}                   // Check value of a bits as a string
    }
 
-  BoolSet bitSet() {return new BoolSet();}                                        // Create a set of bits
+  Bits bits() {return new Bits();}                                              // Create a set of bits
 
 //D1 Layouts                                                                    // Field memory of the chip as variables, arrays, structures, unions. Dividing the memory in this manner makes it easier to program the chip symbolically.
 
@@ -187,7 +176,7 @@ public class Layout extends Test                                                
     public String asString()                                                    // Part of memory corresponding to this layout as a string of bits in low endian order
      {final StringBuilder s = new StringBuilder();
       for (int i = 0; i <  width; ++i)                                          // Index each bit
-       {final Boolean v = Layout.this.get(at+i).value;                          // Value of bit
+       {final Boolean v = Layout.this.get(at+i);                                // Value of bit
         s.append(v == null ? '.' : v ? '1' : '0');                              // Represent bit
        }
       return s.reverse().toString();                                            // Prints string with lowest bit rightmost because we work in little endian layout
@@ -196,7 +185,7 @@ public class Layout extends Test                                                
     Integer asInt()                                                             // Get an integer representing the value of the layout to the extent that is possible.  The integer is held inlittle endian format
      {int n = 0;                                                                // Resulting integer
       for (int i = 0; i < width; ++i)                                           // Each bit
-       {final Boolean v = Layout.this.get(at+i).value;                          // Value of bit
+       {final Boolean v = Layout.this.get(at+i);                                // Value of bit
         if (v == null) return null;                                             // One of the bits is null so the overall value is no longer known
         if (v && i > Integer.SIZE-1) return null;                               // Value is too big to be represented
         n += v ? 1<<i : 0;
@@ -583,8 +572,8 @@ V    1     2                 1     b
 B    3     1                 1     c
 V    4     2                 1     d
 """);
-    BoolSet A = l.bitSet(); A.push(a);       A.push(c);    A.ok(3);
-    BoolSet B = l.bitSet(); B.push(b, 1, 1); B.push(c, 0); B.ok(2);
+    Bits A = l.bits(); A.push(a);       A.push(c);    A.ok(3);
+    Bits B = l.bits(); B.push(b, 1, 1); B.push(c, 0); B.ok(2);
     ok(a.sameSize(c) == a.width);
    }
 
