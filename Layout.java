@@ -149,6 +149,11 @@ public class Layout extends Test                                                
       return A;
      }
 
+    void isBit()                                                                // Check the specified field is a bit field
+     {if (width != 1) stop("Field must be one bit wide, but it is",
+        width, "bits wide");
+     }
+
     abstract void layout(int at, int depth, Field superStructure);              // Layout this field
     abstract void order();                                                      // Add this field to the tree of fields
 
