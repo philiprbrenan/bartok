@@ -161,6 +161,19 @@ public class BitMachine extends Test                                            
     a.ok(0b0101);
    }
 
+  static void test_shift_right_oneByZero()
+   {Layout          l = new Layout();
+    Layout.Variable a = l.variable ("a", 4);
+    l.layout(a);
+
+    a.fromInt(0b1010);
+
+    BitMachine m = new BitMachine();
+    m.new ShiftRightOneByZero(a);
+    m.execute();
+    a.ok(0b0101);
+   }
+
   static void test_equal()
    {Layout           l = new Layout();
     Layout.Variable  a = l.variable ("a", 4);
@@ -316,6 +329,7 @@ B   20     1                 1     cc
 
   static void oldTests()                                                        // Tests thought to be in good shape
    {test_shift_left_oneByOne();
+    test_shift_right_oneByZero();
     test_equal();
     test_less_than();
     test_less_than_equal();
