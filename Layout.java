@@ -173,10 +173,13 @@ public class Layout extends Test                                                
     Structure toStructure() {return (Structure)this;}                           // Try to convert to a structure
     Union     toUnion    () {return (Union)    this;}                           // Try to convert to a union
 
+    Boolean get(int i)     {return Layout.this.get(at+i);}                      // Get a bit from this layout
+    void    set(int i, Boolean b) {Layout.this.set(at+i, b);}                   // Put a bit into this layout
+
     public String asString()                                                    // Part of memory corresponding to this layout as a string of bits in low endian order
      {final StringBuilder s = new StringBuilder();
       for (int i = 0; i <  width; ++i)                                          // Index each bit
-       {final Boolean v = Layout.this.get(at+i);                                // Value of bit
+       {final Boolean v = get(i);                                               // Value of bit
         s.append(v == null ? '.' : v ? '1' : '0');                              // Represent bit
        }
       return s.reverse().toString();                                            // Prints string with lowest bit rightmost because we work in little endian layout
@@ -185,7 +188,7 @@ public class Layout extends Test                                                
     Integer asInt()                                                             // Get an integer representing the value of the layout to the extent that is possible.  The integer is held inlittle endian format
      {int n = 0;                                                                // Resulting integer
       for (int i = 0; i < width; ++i)                                           // Each bit
-       {final Boolean v = Layout.this.get(at+i);                                // Value of bit
+       {final Boolean v = get(i);                                               // Value of bit
         if (v == null) return null;                                             // One of the bits is null so the overall value is no longer known
         if (v && i > Integer.SIZE-1) return null;                               // Value is too big to be represented
         n += v ? 1<<i : 0;
@@ -197,7 +200,7 @@ public class Layout extends Test                                                
      {final int  N = value.length();
       for(int i = 0; i < N; ++i)
        {final char c = value.charAt(i);                                         // Bit value
-        set(at+i, c == '0' ? false : c == '1' ? true : null);
+        set(i, c == '0' ? false : c == '1' ? true : null);
        }
      }
 
@@ -205,7 +208,7 @@ public class Layout extends Test                                                
      {final int N = min(Integer.SIZE-1, width);                                 // Maximum number of bits we can set
       for(int i = 0; i < N; ++i)                                                // Set bits
        {final Boolean b = (value & (1<<i)) > 0;                                 // Bit value
-        set(at+i, b);                                                           // Set bit
+        set(i, b);                                                              // Set bit
        }
      }
     void ok(int    expected) {Test.ok(asInt(),    expected);}                   // Check value of a field as an integer
