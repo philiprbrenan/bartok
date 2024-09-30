@@ -1,4 +1,4 @@
-# Test 2024-09-30 at 18:49:50
+# Test 2024-09-30 at 20:17:05
 
 name: Test
 run-name: bartok
@@ -20,7 +20,7 @@ jobs:
 
     strategy:
       matrix:
-        task: [Chip, Layout, Test, Unary, Chip2]
+        task: [BitMachine, Chip, Layout, Test, Unary, Chip2]
 
     steps:
     - uses: actions/checkout@v3
@@ -48,6 +48,11 @@ jobs:
     - name: Compile
       run: |
         javac -g -d Classes -cp Classes `find com/AppaApps/Silicon -name "*.java"`
+
+    - name: Test BitMachine
+      if: matrix.task == 'BitMachine'
+      run: |
+        java -cp Classes com/AppaApps/Silicon/BitMachine
 
     - name: Test Chip
       if: matrix.task == 'Chip'
