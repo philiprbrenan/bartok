@@ -37,6 +37,21 @@ public class BitMachine extends Test                                            
      }
    }
 
+  class Copy extends Instruction                                                // Copy data from the second field to the first field
+   {Layout.Field source, target;                                                // Copy source to target
+    Copy(Layout.Field Target, Layout.Field Source)                              // Copy source to target
+     {super("Copy");
+      Source.sameSize(Target);
+      source = Source; target = Target;
+     }
+    void action()                                                               // Perform instruction
+     {for (int i = source.width-1; i >= 0; i--) target.set(i, source.get(i));   // Copy each bit assuming no overlap
+     }
+   }
+  Copy copy(Layout.Field target, Layout.Field source)                           // Copy bits from source to target
+   {return new Copy(source, target);
+   }
+
   class Equals extends Instruction                                              // Check that two fields are equal
    {Layout.Field f1, f2;                                                        // Fields to compare
     Layout.Field result;                                                        // Bit field showing result
@@ -327,8 +342,34 @@ B   20     1                 1     cc
 """);
    }
 
+  static void test_copy()
+   {Layout           l = new Layout();
+    Layout.Variable  a = l.variable ("a", 4);
+    Layout.Variable  b = l.variable ("b", 4);
+    Layout.Variable  c = l.variable ("c", 4);
+    Layout.Structure s = l.structure("s", a, b, c);
+    l.layout(s);
+
+    a.fromInt(7);
+    b.fromInt(0);
+    c.fromInt(0);
+
+    BitMachine m = new BitMachine();
+    m.copy(b, a);
+    m.copy(c, b);
+    //stop(l);
+    l.ok("""
+T   At  Wide  Size       Value   Field name
+S    0    12                 7   s
+V    0     4                 7     a
+V    4     4                 0     b
+V    8     4                 0     c
+""");
+   }
+
   static void oldTests()                                                        // Tests thought to be in good shape
-   {test_shift_left_oneByOne();
+   {test_copy();
+    test_shift_left_oneByOne();
     test_shift_right_oneByZero();
     test_equal();
     test_less_than();
