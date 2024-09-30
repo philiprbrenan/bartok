@@ -10,7 +10,6 @@ import java.util.*;
 
 public class BitMachine extends Test                                            // A machine whose assembler code is just capable enough to manipulate a b-tree
  {Stack<Instruction> instructions = new Stack<>();                              // Instructions to be executed
-  Map<String,Instruction>  labels = new TreeMap<>();                            // Map labels to instructions
   Layout layout;                                                                // Layout of bit memory being manipulated by this bit machine
 
   void execute()
@@ -24,42 +23,79 @@ public class BitMachine extends Test                                            
    {String name;                                                                // Name of the instruction
     String label;                                                               // Label of the instruction
     int    position;                                                            // Position of the instruction in the instruction stack
+
+    Instruction(String Name)                                                    // Set name of instruction
+     {name  = Name;
+      addInstruction();
+     }
+
     abstract void action();                                                     // Action performed by the instruction
 
     void addInstruction()                                                       // Add the instruction to the instruction stack
      {position = instructions.size();                                           // Position of instruction in stack of instructions
       instructions.push(this);                                                  // Save instruction
      }
+   }
 
-    void   addLabels()                                                          // Add the instruction label to the labels map
-     {if (labels.containsKey(label)) stop("Label", label, "already defined");   // Duplicate label
-      labels.put(label, this);                                                  // Add label to label map
+  class Equals extends Instruction                                              // Check that two fields are equal
+   {Layout.Field f1, f2;                                                        // Fields to compare
+    Layout.Field result;                                                        // Bit field showing result
+    Equals(Layout.Field Result, Layout.Field F1, Layout.Field F2)               // Check two fields are equal
+     {super("Equals");
+      if (Result.width != 1) stop("Rsult field must be one bit, but it is",
+        Result.width, "bits");
+      F1.sameSize(F2);
+      result = Result; f1 = F1; f2 = F2;
      }
+    void action()                                                               // Perform instruction
+     {for (int i = f1.width-1; i >= 0; i--)                                     // Check each bit
+       {if (f1.get(i) != f2.get(i))                                             // Unequal bit
+         {result.set(0, false);                                                 // Indicate that the fields are not equal becuase they differ in at least one bit
+          return;                                                               // No need to check further
+         }
+       }
+      result.set(0, true);                                                      // All bits are equal
+     }
+   }
+  Equals equals(Layout.Field Result, Layout.Field F1, Layout.Field F2)          // Check two fields are equal
+   {return new Equals(Result, F1, F2);
    }
 
   class ShiftLeftOneByOne extends Instruction                                   // Left shift one place and fill by one
    {Layout.Field field;                                                         // Field to shift
     ShiftLeftOneByOne(Layout.Field Field)                                       // Left shift a field by one place fillng with a one
-     {name = "ShiftLeftOneByOne";
+     {super("ShiftLeftOneByOne");
       field = Field;
-      addInstruction();
-     }
-    ShiftLeftOneByOne(String Label, Layout.Field Field)                         // Left shift a field by one place fillng with a one
-     {this(Field);
-      label = Label;
-      addLabels();
      }
     void action()                                                               // Perform instruction
      {for (int i = field.width-1; i > 0; i--) field.set(i, field.get(i-1));
       field.set(0, true);
      }
    }
+  ShiftLeftOneByOne shiftLeftOneByOne(Layout.Field Field)                       // Left shift a field by one place fillng with a one
+   {return new ShiftLeftOneByOne(Field);                                        // Left shift a field by one place fillng with a one
+   }
+
+  class ShiftRightOneByZero extends Instruction                                 // Shift right one fill with zero
+   {Layout.Field field;                                                         // Field to shift
+    ShiftRightOneByZero(Layout.Field Field)                                     // Right shift a field by one place fillng with a zero
+     {super("ShiftRightOneByZero");
+      field = Field;
+     }
+    void action()                                                               // Perform instruction
+     {for (int i = field.width-1; i > 0; i--) field.set(i, field.get(i-1));
+      field.set(0, true);
+     }
+   }
+  ShiftRightOneByZero shiftRLeftOneByOne(Layout.Field Field)                    // Shift right one fill with zero
+   {return new ShiftRightOneByZero(Field);
+   }
 
 //D0                                                                            // Tests: I test, therefore I am.  And so do my mentees.  But most other people, apparently, do not, they live in a half world lit by shadows in which they never know if their code works or not.
 
   static void test_shift_left_oneByOne()
-   {Layout           l = new Layout();
-    Layout .Variable a = l.variable ("a", 4);
+   {Layout          l = new Layout();
+    Layout.Variable a = l.variable ("a", 4);
     l.layout(a);
 
     a.fromInt(0b1010);
@@ -70,12 +106,64 @@ public class BitMachine extends Test                                            
     a.ok(0b0101);
    }
 
+  static void test_equal()
+   {Layout           l = new Layout();
+    Layout.Variable  a = l.variable ("a", 4);
+    Layout.Variable  b = l.variable ("b", 4);
+    Layout.Variable  c = l.variable ("c", 4);
+    Layout.Bit      aa = l.bit      ("aa");
+    Layout.Bit      ab = l.bit      ("ab");
+    Layout.Bit      ac = l.bit      ("ac");
+    Layout.Bit      ba = l.bit      ("ba");
+    Layout.Bit      bb = l.bit      ("bb");
+    Layout.Bit      bc = l.bit      ("bc");
+    Layout.Bit      ca = l.bit      ("ca");
+    Layout.Bit      cb = l.bit      ("cb");
+    Layout.Bit      cc = l.bit      ("cc");
+    Layout.Structure s = l.structure("s", a, b, c, aa, ab, ac, ba, bb, bc, ca, cb, cc);
+    l.layout(s);
+
+    a.fromInt(1);
+    b.fromInt(2);
+    c.fromInt(1);
+
+    BitMachine m = new BitMachine();
+    m.equals(aa, a, a);
+    m.equals(ab, a, b);
+    m.equals(ac, a, c);
+    m.equals(ba, b, a);
+    m.equals(bb, b, b);
+    m.equals(bc, b, c);
+    m.equals(ca, c, a);
+    m.equals(cb, c, b);
+    m.equals(cc, c, c);
+    m.execute();
+    //stop(l);
+    l.ok("""
+T   At  Wide  Size       Value   Field name
+S    0    21           1397025   s
+V    0     4                 1     a
+V    4     4                 2     b
+V    8     4                 1     c
+B   12     1                 1     aa
+B   13     1                 0     ab
+B   14     1                 1     ac
+B   15     1                 0     ba
+B   16     1                 1     bb
+B   17     1                 0     bc
+B   18     1                 1     ca
+B   19     1                 0     cb
+B   20     1                 1     cc
+""");
+   }
+
   static void oldTests()                                                        // Tests thought to be in good shape
    {test_shift_left_oneByOne();
    }
 
   static void newTests()                                                        // Tests being worked on
-   {oldTests();
+   {//oldTests();
+    test_equal();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
