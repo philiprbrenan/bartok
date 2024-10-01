@@ -11,10 +11,13 @@ import java.util.*;
 public class BitMachine extends Test                                            // A machine whose assembler code is just capable enough to manipulate a b-tree
  {Stack<Instruction> instructions = new Stack<>();                              // Instructions to be executed
   Layout layout;                                                                // Layout of bit memory being manipulated by this bit machine
+  int instructionIndex;                                                         // The current instruction
 
   void execute()
    {final int N = instructions.size();
-    for(int p = 0; p < N; ++p) instructions.elementAt(p).action();
+    for(instructionIndex = 0; instructionIndex < N; ++instructionIndex)
+     {instructions.elementAt(instructionIndex).action();
+     }
    }
 
 //D1 Instruction                                                                // Instructions recognized by the bit machine
@@ -36,6 +39,34 @@ public class BitMachine extends Test                                            
       instructions.push(this);                                                  // Save instruction
      }
    }
+
+  class Nop extends Instruction                                                 // No operation
+   {Nop        () {super("No");}
+    void action() {}                                                            // Perform instruction
+   }
+  Nop nop() {return new Nop();}                                                 // No operation
+
+  class GoTo extends Instruction                                                // Goto the specified instruction
+   {int target;
+
+    GoTo() {super("Goto");}                                                     // Forward goto
+    GoTo(Instruction instruction)                                               // Backward goto
+     {this();
+      target = instruction.position;                                            // Record index of target instruction
+     }
+    void action() {instructionIndex = target;}                                  // Set insgruction pointer to continue execution at the next instruction
+   }
+  GoTo goTo()                        {return new GoTo();}                       // Jump forward to a comeFrom instruction
+  GoTo goTo(Instruction instruction) {return new GoTo(instruction);}            // Jump back to an existing instruction
+
+  class ComeFrom extends Instruction                                            // Set the target of the referenced goto instruction
+   {ComeFrom(GoTo source)                                                       // Forward goto to this instruction
+     {super("ComeFrom");
+      source.target = position;                                                 // Set goto to jump to this instruction
+     }
+    void action() {}                                                            // Perform instruction
+   }
+  ComeFrom comeFrom(GoTo source) {return new ComeFrom(source);}                 // Goto the specified instruction
 
   class Copy extends Instruction                                                // Copy data from the second field to the first field
    {Layout.Field source, target;                                                // Copy source to target
@@ -159,6 +190,46 @@ public class BitMachine extends Test                                            
    }
   ShiftRightOneByZero shiftRLeftOneByOne(Layout.Field Field)                    // Shift right one fill with zero
    {return new ShiftRightOneByZero(Field);
+   }
+
+//D1 Structured Programming                                                     // Structured programming constructs
+
+  abstract class If extends Instruction                                         // If condition then block else block
+   {Layout.Field condition;                                                     // Condition deciding if
+    If(Layout.Field Condition)                                                  // Right shift a field by one place fillng with a zero
+     {super("If");
+      condition = Condition;
+      final GoTo else_inst = goTo();
+      Then();
+      final GoTo end_inst = goTo();
+      comeFrom(else_inst);
+      Else();
+      comeFrom(end_inst);
+     }
+    void action()                                                               // Perform instruction
+     {if (condition.get(0)) instructionIndex++;
+     }
+    abstract void Then();                                                       // Then block
+    abstract void Else();                                                       // Else block
+   }
+
+  abstract class For extends Instruction                                        // Iterate over an array
+   {Layout.Field array;                                                         // Array being iterated
+    If(Layout.Field Condition)                                                  // Right shift a field by one place fillng with a zero
+     {super("If");
+      condition = Condition;
+      final GoTo else_inst = goTo();
+      Then();
+      final GoTo end_inst = goTo();
+      comeFrom(else_inst);
+      Else();
+      comeFrom(end_inst);
+     }
+    void action()                                                               // Perform instruction
+     {if (condition.get(0)) instructionIndex++;
+     }
+    abstract void Then();                                                       // Then block
+    abstract void Else();                                                       // Else block
    }
 
 //D0                                                                            // Tests: I test, therefore I am.  And so do my mentees.  But most other people, apparently, do not, they live in a half world lit by shadows in which they never know if their code works or not.
@@ -355,8 +426,11 @@ B   20     1                 1     cc
     c.fromInt(0);
 
     BitMachine m = new BitMachine();
+    m.nop();
     m.copy(b, a);
+    m.nop();
     m.copy(c, b);
+    m.nop();
     m.execute();
     //stop(l);
     l.ok("""
@@ -368,6 +442,103 @@ V    8     4                 7     c
 """);
    }
 
+  static void test_if_then()
+   {Layout           l = new Layout();
+    Layout.Variable  s = l.variable ("s", 4);
+    Layout.Variable  t = l.variable ("t", 4);
+    Layout.Variable  e = l.variable ("e", 4);
+    Layout.Variable  i = l.bit      ("i");
+    Layout.Structure x = l.structure("x", i, s, t, e);
+    l.layout(x);
+
+    i.fromInt(1);
+    s.fromInt(7);
+    t.fromInt(0);
+    e.fromInt(0);
+
+    BitMachine m = new BitMachine();
+    m.new If(i)
+     {void Then() {m.copy(t, s);}
+      void Else() {m.copy(e, s);}
+     };
+    m.execute();
+    //stop(l);
+    l.ok("""
+T   At  Wide  Size       Value   Field name
+S    0    13               239   x
+B    0     1                 1     i
+V    1     4                 7     s
+V    5     4                 7     t
+V    9     4                 0     e
+""");
+   }
+
+  static void test_if_else()
+   {Layout           l = new Layout();
+    Layout.Variable  s = l.variable ("s", 4);
+    Layout.Variable  t = l.variable ("t", 4);
+    Layout.Variable  e = l.variable ("e", 4);
+    Layout.Variable  i = l.bit      ("i");
+    Layout.Structure x = l.structure("x", i, s, t, e);
+    l.layout(x);
+
+    i.fromInt(0);
+    s.fromInt(7);
+    t.fromInt(0);
+    e.fromInt(0);
+
+    BitMachine m = new BitMachine();
+    m.new If(i)
+     {void Then() {m.copy(t, s);}
+      void Else() {m.copy(e, s);}
+     };
+    m.execute();
+    //stop(l);
+    l.ok("""
+T   At  Wide  Size       Value   Field name
+S    0    13              3598   x
+B    0     1                 0     i
+V    1     4                 7     s
+V    5     4                 0     t
+V    9     4                 7     e
+""");
+   }
+
+  static void test_for()
+   {final int N = 4;
+    Layout           l = new Layout();
+    Layout.Variable  a = l.variable ("a", 8);
+    Layout.Variable  b = l.variable ("b", 8);
+    Layout.Variable  c = l.variable ("c", 8);
+    Layout.Structure s = l.structure("s", a, b, c);
+    Layout.Array     A = l.array    ("A", s, N);
+    l.layout(A);
+
+    for (int i = 0; i < N; i++)
+     {A.setIndex(i);
+      a.fromInt(1*(i+1));
+      b.fromInt(2*(i+2));
+      c.fromInt(3*(i+3));
+     }
+
+
+    BitMachine m = new BitMachine();
+    m.For(A)
+     {void block()
+       {Then() {m.copy(t, s);}
+       };
+    m.execute();
+    stop(l);
+    l.ok("""
+T   At  Wide  Size       Value   Field name
+S    0    13              3598   x
+B    0     1                 0     i
+V    1     4                 7     s
+V    5     4                 0     t
+V    9     4                 7     e
+""");
+   }
+
   static void oldTests()                                                        // Tests thought to be in good shape
    {test_copy();
     test_shift_left_oneByOne();
@@ -375,11 +546,13 @@ V    8     4                 7     c
     test_equal();
     test_less_than();
     test_less_than_equal();
+    test_if_then();
+    test_if_else();
    }
 
   static void newTests()                                                        // Tests being worked on
-   {//oldTests();
-    test_copy();
+   {oldTests();
+    test_for();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
