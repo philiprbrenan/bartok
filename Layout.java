@@ -34,8 +34,8 @@ public class Layout extends Test                                                
    }
 
   public String printHeader()                                                   // Header for  print of layout
-   {return String.format("%1s %4s  %4s  %4s    %8s   %s\n",
-                         "T", "At", "Wide", "Size", "Value", "Field name");
+   {return String.format("%1s %4s  %4s  %5s    %8s   %s\n",
+                         "T", "At", "Wide", "Index", "Value", "Field name");
    }
 
   public String toString()                                                      // Print the layout with a header
@@ -163,7 +163,25 @@ public class Layout extends Test                                                
 
     void position(int At) {at = At;}                                            // Reposition a field after an index of a containing array has been changed
 
-    String indent() {return "  ".repeat(depth);}                                // Indentation during printing
+    String  indent() {return "  ".repeat(depth);}                               // Indentation during printing
+    char fieldType() {return getClass().getName().split("\\$")[1].charAt(0);}   // First letter of inner most class name to identify type of field
+
+    StringBuilder header(boolean printHeader)                                   // Create a strin builder with a header laoded if necessary
+     {final StringBuilder s = new StringBuilder();
+      if (printHeader) s.append(printHeader());                                 // Header requested
+      return s;
+     }
+
+    StringBuilder print(boolean printHeader)                                    // Print the field
+     {final String  i = printInt();                                             // Format value of field if available
+      final String  n = indent()+name;                                          // Name using indentation to show depth
+      final char    c = fieldType();                                            // First letter of inner most class name to identify type of field
+
+      final StringBuilder s = header(printHeader);                              // Print header if requested
+      s.append(String.format("%c %4d  %4d         %10s   %s\n",                 // Variable
+                             c,  at,  width,      i,     n));
+      return s;                                                                 // Printed field
+     }
 
     public   String toString() {return toString(true);}                         // Print the field with a header
     abstract String toString(boolean printHeader);                              // Print the field with or without a header
@@ -197,6 +215,11 @@ public class Layout extends Test                                                
         n += v ? 1<<i : 0;
        }
       return n;                                                                 // Valid representation of bits as an integer
+     }
+
+    String printInt()                                                           // Print the value of the field as an integer accounting for nulls
+     {final Integer v = asInt();                                                // Value of field
+      return v == null ? "" : String.format("%10d", v);                         // Format value of field if available
      }
 
     void fromString(String value)                                               // Set bits to the little endian value represented by the supplied string
@@ -235,18 +258,8 @@ public class Layout extends Test                                                
       return v;
      }
 
-    public String toString(boolean printHeader)                                 // Print the field
-     {final Integer v = asInt();
-      final String  i = v == null ? "" : String.format("%10d", v);              // Format value of field if available
-      final String  n = indent()+name;
-      final String[]c = getClass().getName().split("\\$");                      // Class name
-      final StringBuilder s = new StringBuilder();
-      if (printHeader) s.append(printHeader());                                 // Headers
-
-      s.append(String.format("%c %4d  %4d        %10s   %s\n",                  // Variable
-                             c[1].charAt(0),  at, width, i, n));
-
-      return s.toString();                                                      // Variable converted to string
+    public String toString(boolean printHeader)                                 // Print the variable
+     {return print(printHeader).toString();
      }
    }
 
@@ -285,22 +298,21 @@ public class Layout extends Test                                                
      }
 
     public String toString(boolean printHeader)                                 // Print the array
-     {final Integer v = asInt();
-      final String  i = v == null ? "" : String.format("%10d", v);              // Format value of field if available
-      final String  n = indent()+name;
-      final String[]c = getClass().getName().split("\\$");                      // Class name
-      final String  h = printHeader();
-      final StringBuilder s = new StringBuilder();
-      if (printHeader) s.append(printHeader());                                 // Headers
+     {final String  n = indent()+name;                                          // Name using indentation to show depth
+      final char    c = fieldType();                                            // First letter of inner most class name to identify type of field
+      final StringBuilder s = header(printHeader);                              // Print header if requested
 
       final int indexSave = index;                                              // Save the array index
       for (int j = 0; j < size; j++)                                            // Each array element
        {setIndex(j);
-        s.append(String.format("%c %4d  %4d        %10s   %s\n",                // Index of the array
-                               c[1].charAt(0),  at, width, j, n));
-        s.append(element.toString(false));                                      // Print the array element
+        final String i = printInt();                                            // Format value of field if available
+        final int    w = width;                                                 // Bits occupied bythe array
+        final int    p = at + element.width * j;                                // Position of the array element
+        s.append(String.format("%c %4d  %4d  %5d  %10s   %s\n",                 // Index of the array
+                               c,  p,   w,   j,   i,     n));
+        s.append(element.toString(false));                                      // Print the array element without headers
        }
-      index = indexSave;
+      index = indexSave;                                                        // Restore the original array index
 
       return s.toString();                                                      // Array as a string
      }
@@ -378,15 +390,8 @@ public class Layout extends Test                                                
      }
 
     public String toString(boolean printHeader)                                 // Print the structure
-     {final Integer v = asInt();
-      final String  i = v == null ? "" : String.format("%10d", v);              // Format value of field if available
-      final String  n = indent()+name;
-      final String[]c = getClass().getName().split("\\$");                      // Class name
-      final StringBuilder s = new StringBuilder();
-      if (printHeader) s.append(printHeader());                                 // Headers
-      s.append(String.format("%c %4d  %4d        %10s   %s\n",
-                             c[1].charAt(0),  at, width, i, n));
-      for(Field f: subStack) s.append(f.toString(false));
+     {final StringBuilder s = print(printHeader);                               // Print line describing structure
+      for(Field f: subStack) s.append(f.toString(false));                       // Print each field of structure
       return s.toString();                                                      // Structure converted to string
      }
    }
@@ -439,18 +444,10 @@ public class Layout extends Test                                                
       return u;
      }
 
-    public String toString(boolean printHeader)                                 // Print the field
-     {final Integer v = asInt();
-      final String  i = v == null ? "" : String.format("%10d", v);              // Format value of field if available
-      final String  n = indent()+name;
-      final String[]c = getClass().getName().split("\\$");                      // Class name
-      final StringBuilder s = new StringBuilder();
-      if (printHeader) s.append(printHeader());                                 // Headers
-      s.append(String.format("%c %4d  %4d        %10s   %s\n",                  // Print Union
-                           c[1].charAt(0),  at, width, i, n));
-
-      for(Field f: subMap.values()) s.append(f.toString(false));                // Print elements of the union
-      return s.toString();                                                      // Union converted to string
+    public String toString(boolean printHeader)                                 // Print the union
+     {final StringBuilder s = print(printHeader);                               // Print line describing structure
+      for(Field f: subMap.values()) s.append(f.toString(false));                // Print each field of structure
+      return s.toString();                                                      // Structure converted to string
      }
    }
 
@@ -475,142 +472,142 @@ public class Layout extends Test                                                
     l.layout(S);
 
     l.ok("""
-T   At  Wide  Size       Value   Field name
-S    0    32                     S
-V    0     4                       d
-A    4    24                 0     A
-S    4     8                         s
-V    4     2                           a
-V    6     2                           b
-V    8     4                           c
-A    4    24                 1     A
-S   12     8                         s
-V   12     2                           a
-V   14     2                           b
-V   16     4                           c
-A    4    24                 2     A
-S   20     8                         s
-V   20     2                           a
-V   22     2                           b
-V   24     4                           c
-V   28     4                       e
+T   At  Wide  Index       Value   Field name
+S    0    32                      S
+V    0     4                        d
+A    4    24      0                 A
+S    4     8                          s
+V    4     2                            a
+V    6     2                            b
+V    8     4                            c
+A   12    24      1                 A
+S   12     8                          s
+V   12     2                            a
+V   14     2                            b
+V   16     4                            c
+A   20    24      2                 A
+S   20     8                          s
+V   20     2                            a
+V   22     2                            b
+V   24     4                            c
+V   28     4                        e
 """);
 
     l.get("S.A").toArray().setIndex(1);
     //stop(l);
     l.ok("""
-T   At  Wide  Size       Value   Field name
-S    0    32                     S
-V    0     4                       d
-A    4    24                 0     A
-S    4     8                         s
-V    4     2                           a
-V    6     2                           b
-V    8     4                           c
-A    4    24                 1     A
-S   12     8                         s
-V   12     2                           a
-V   14     2                           b
-V   16     4                           c
-A    4    24                 2     A
-S   20     8                         s
-V   20     2                           a
-V   22     2                           b
-V   24     4                           c
-V   28     4                       e
+T   At  Wide  Index       Value   Field name
+S    0    32                      S
+V    0     4                        d
+A    4    24      0                 A
+S    4     8                          s
+V    4     2                            a
+V    6     2                            b
+V    8     4                            c
+A   12    24      1                 A
+S   12     8                          s
+V   12     2                            a
+V   14     2                            b
+V   16     4                            c
+A   20    24      2                 A
+S   20     8                          s
+V   20     2                            a
+V   22     2                            b
+V   24     4                            c
+V   28     4                        e
 """);
 
     Layout m = l.duplicate();
     //stop(l);
     l.ok("""
-T   At  Wide  Size       Value   Field name
-S    0    32                     S
-V    0     4                       d
-A    4    24                 0     A
-S    4     8                         s
-V    4     2                           a
-V    6     2                           b
-V    8     4                           c
-A    4    24                 1     A
-S   12     8                         s
-V   12     2                           a
-V   14     2                           b
-V   16     4                           c
-A    4    24                 2     A
-S   20     8                         s
-V   20     2                           a
-V   22     2                           b
-V   24     4                           c
-V   28     4                       e
+T   At  Wide  Index       Value   Field name
+S    0    32                      S
+V    0     4                        d
+A    4    24      0                 A
+S    4     8                          s
+V    4     2                            a
+V    6     2                            b
+V    8     4                            c
+A   12    24      1                 A
+S   12     8                          s
+V   12     2                            a
+V   14     2                            b
+V   16     4                            c
+A   20    24      2                 A
+S   20     8                          s
+V   20     2                            a
+V   22     2                            b
+V   24     4                            c
+V   28     4                        e
 """);
 
     //stop(m);
     m.ok("""
-T   At  Wide  Size       Value   Field name
-S    0    32                     S
-V    0     4                       d
-A    4    24                 0     A
-S    4     8                         s
-V    4     2                           a
-V    6     2                           b
-V    8     4                           c
-A    4    24                 1     A
-S   12     8                         s
-V   12     2                           a
-V   14     2                           b
-V   16     4                           c
-A    4    24                 2     A
-S   20     8                         s
-V   20     2                           a
-V   22     2                           b
-V   24     4                           c
-V   28     4                       e
+T   At  Wide  Index       Value   Field name
+S    0    32                      S
+V    0     4                        d
+A    4    24      0                 A
+S    4     8                          s
+V    4     2                            a
+V    6     2                            b
+V    8     4                            c
+A   12    24      1                 A
+S   12     8                          s
+V   12     2                            a
+V   14     2                            b
+V   16     4                            c
+A   20    24      2                 A
+S   20     8                          s
+V   20     2                            a
+V   22     2                            b
+V   24     4                            c
+V   28     4                        e
 """);
     m.get("S.A").toArray().setIndex(2);
     //stop(l);
     l.ok("""
-T   At  Wide  Size       Value   Field name
-S    0    32                     S
-V    0     4                       d
-A    4    24                 0     A
-S    4     8                         s
-V    4     2                           a
-V    6     2                           b
-V    8     4                           c
-A    4    24                 1     A
-S   12     8                         s
-V   12     2                           a
-V   14     2                           b
-V   16     4                           c
-A    4    24                 2     A
-S   20     8                         s
-V   20     2                           a
-V   22     2                           b
-V   24     4                           c
-V   28     4                       e
+T   At  Wide  Index       Value   Field name
+S    0    32                      S
+V    0     4                        d
+A    4    24      0                 A
+S    4     8                          s
+V    4     2                            a
+V    6     2                            b
+V    8     4                            c
+A   12    24      1                 A
+S   12     8                          s
+V   12     2                            a
+V   14     2                            b
+V   16     4                            c
+A   20    24      2                 A
+S   20     8                          s
+V   20     2                            a
+V   22     2                            b
+V   24     4                            c
+V   28     4                        e
 """);
 
     //stop(m);
     m.ok("""
-T   At  Wide  Size       Value   Field name
-S    0    32                     S
-V    0     4                       d
-A    4    24                 0     A
-S    4     8                         s
-V    4     2                           a
-V    6     2                           b
-V    8     4                           c
-A    4    24                 1     A
-S   12     8                         s
-V   12     2                           a
-V   14     2                           b
-V   16     4                           c
-A    4    24                 2     A
-S   20     8                         s
-V   20     2                           a
-V   22     2                           b
-V   24     4                           c
-V   28     4                       e
+T   At  Wide  Index       Value   Field name
+S    0    32                      S
+V    0     4                        d
+A    4    24      0                 A
+S    4     8                          s
+V    4     2                            a
+V    6     2                            b
+V    8     4                            c
+A   12    24      1                 A
+S   12     8                          s
+V   12     2                            a
+V   14     2                            b
+V   16     4                            c
+A   20    24      2                 A
+S   20     8                          s
+V   20     2                            a
+V   22     2                            b
+V   24     4                            c
+V   28     4                        e
 """);
    }
 
@@ -630,47 +627,47 @@ V   28     4                       e
     A.setIndex(2); a.fromInt(31); b.fromInt(32); c.fromInt(34);
     A.setIndex(1);
     l.ok("""
-T   At  Wide  Size       Value   Field name
-S    0    80                     S
-V    0     4                       d
-A    4    72                 0     A
-S    4    24            920587       s
-V    4     8                11         a
-V   12     8                12         b
-V   20     8                14         c
-A    4    72                 1     A
-S   28    24            197121       s
-V   28     8                 1         a
-V   36     8                 2         b
-V   44     8                 3         c
-A    4    72                 2     A
-S   52    24           2236447       s
-V   52     8                31         a
-V   60     8                32         b
-V   68     8                34         c
-V   76     4                       e
+T   At  Wide  Index       Value   Field name
+S    0    80                      S
+V    0     4                        d
+A    4    72      0                 A
+S    4    24             920587       s
+V    4     8                 11         a
+V   12     8                 12         b
+V   20     8                 14         c
+A   28    72      1                 A
+S   28    24             197121       s
+V   28     8                  1         a
+V   36     8                  2         b
+V   44     8                  3         c
+A   52    72      2                 A
+S   52    24            2236447       s
+V   52     8                 31         a
+V   60     8                 32         b
+V   68     8                 34         c
+V   76     4                        e
 """);
     l.clear();
     l.ok("""
-T   At  Wide  Size       Value   Field name
-S    0    80                 0   S
-V    0     4                 0     d
-A    4    72                 0     A
-S    4    24                 0       s
-V    4     8                 0         a
-V   12     8                 0         b
-V   20     8                 0         c
-A    4    72                 1     A
-S   28    24                 0       s
-V   28     8                 0         a
-V   36     8                 0         b
-V   44     8                 0         c
-A    4    72                 2     A
-S   52    24                 0       s
-V   52     8                 0         a
-V   60     8                 0         b
-V   68     8                 0         c
-V   76     4                 0     e
+T   At  Wide  Index       Value   Field name
+S    0    80                  0   S
+V    0     4                  0     d
+A    4    72      0           0     A
+S    4    24                  0       s
+V    4     8                  0         a
+V   12     8                  0         b
+V   20     8                  0         c
+A   28    72      1           0     A
+S   28    24                  0       s
+V   28     8                  0         a
+V   36     8                  0         b
+V   44     8                  0         c
+A   52    72      2           0     A
+S   52    24                  0       s
+V   52     8                  0         a
+V   60     8                  0         b
+V   68     8                  0         c
+V   76     4                  0     e
 """);
    }
 
@@ -683,10 +680,10 @@ V   76     4                 0     e
 
     l.get("s").toStructure().fromInt(3);
     l.ok("""
-T   At  Wide  Size       Value   Field name
-S    0     8                 3   s
-B    0     1                 1     a
-V    1     7                 1     b
+T   At  Wide  Index       Value   Field name
+S    0     8                  3   s
+B    0     1                  1     a
+V    1     7                  1     b
 """);
     s.get("a").toBit()     .ok(1);
     s.get("b").toVariable().ok(1);
@@ -705,12 +702,12 @@ V    1     7                 1     b
 
     l.get("s").toStructure().fromInt(27);
     l.ok("""
-T   At  Wide  Size       Value   Field name
-S    0     6                27   s
-B    0     1                 1     a
-V    1     2                 1     b
-B    3     1                 1     c
-V    4     2                 1     d
+T   At  Wide  Index       Value   Field name
+S    0     6                 27   s
+B    0     1                  1     a
+V    1     2                  1     b
+B    3     1                  1     c
+V    4     2                  1     d
 """);
     Bits A = l.bits(); A.push(a);       A.push(c);    A.ok(3);
     Bits B = l.bits(); B.push(b, 1, 1); B.push(c, 0); B.ok(2);
