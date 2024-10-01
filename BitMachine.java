@@ -49,7 +49,7 @@ public class BitMachine extends Test                                            
      }
    }
   Copy copy(Layout.Field target, Layout.Field source)                           // Copy bits from source to target
-   {return new Copy(source, target);
+   {return new Copy(target, source);
    }
 
   class Equals extends Instruction                                              // Check that two fields are equal
@@ -357,13 +357,14 @@ B   20     1                 1     cc
     BitMachine m = new BitMachine();
     m.copy(b, a);
     m.copy(c, b);
+    m.execute();
     //stop(l);
     l.ok("""
 T   At  Wide  Size       Value   Field name
-S    0    12                 7   s
+S    0    12              1911   s
 V    0     4                 7     a
-V    4     4                 0     b
-V    8     4                 0     c
+V    4     4                 7     b
+V    8     4                 7     c
 """);
    }
 
@@ -377,7 +378,8 @@ V    8     4                 0     c
    }
 
   static void newTests()                                                        // Tests being worked on
-   {oldTests();
+   {//oldTests();
+    test_copy();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
