@@ -213,24 +213,24 @@ public class BitMachine extends Test                                            
     abstract void Else();                                                       // Else block
    }
 
-  abstract class For extends Instruction                                        // Iterate over an array
-   {Layout.Field array;                                                         // Array being iterated
-    If(Layout.Field Condition)                                                  // Right shift a field by one place fillng with a zero
-     {super("If");
-      condition = Condition;
-      final GoTo else_inst = goTo();
-      Then();
-      final GoTo end_inst = goTo();
-      comeFrom(else_inst);
-      Else();
-      comeFrom(end_inst);
-     }
-    void action()                                                               // Perform instruction
-     {if (condition.get(0)) instructionIndex++;
-     }
-    abstract void Then();                                                       // Then block
-    abstract void Else();                                                       // Else block
-   }
+//  abstract class For extends Instruction                                        // Iterate over an array
+//   {Layout.Field array;                                                         // Array being iterated
+//    If(Layout.Field Condition)                                                  // Right shift a field by one place fillng with a zero
+//     {super("If");
+//      condition = Condition;
+//      final GoTo else_inst = goTo();
+//      Then();
+//      final GoTo end_inst = goTo();
+//      comeFrom(else_inst);
+//      Else();
+//      comeFrom(end_inst);
+//     }
+//    void action()                                                               // Perform instruction
+//     {if (condition.get(0)) instructionIndex++;
+//     }
+//    abstract void Then();                                                       // Then block
+//    abstract void Else();                                                       // Else block
+//   }
 
 //D0                                                                            // Tests: I test, therefore I am.  And so do my mentees.  But most other people, apparently, do not, they live in a half world lit by shadows in which they never know if their code works or not.
 
@@ -523,10 +523,11 @@ V    9     4                 7     e
 
 
     BitMachine m = new BitMachine();
-    m.For(A)
-     {void block()
-       {Then() {m.copy(t, s);}
-       };
+//    m.For(A)
+//     {void block()
+//       {Then() {m.copy(t, s);}
+//       };
+//     };
     m.execute();
     stop(l);
     l.ok("""
