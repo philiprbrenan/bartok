@@ -12,12 +12,11 @@ public class Chip extends Test                                                  
  {final String  name;                                                           // Name of chip
   final Bits   input;                                                           // The logic computed input bits used to load the memory of the chip
   final Bits  output;                                                           // The output bits representing the current state of the memory
-  final Bits   temps;                                                           // The temporary bits driven by the output bits representing the current state of the chip used to load the input bits of the chip which represent the new state of the chip as computed from the current state in a fixed number of steps.
   final int maxSimulationSteps = 1_0;                                           // Maximum number of simulation steps
   final Map<String,Bit>    bit = new TreeMap<>();                               // Bits on the chip
   final Map<String,Gate>  gate = new TreeMap<>();                               // Gates on the chip
-  Layout ioLayout;                                                              // Layout of the permanent memory used  by the chip
-  Layout tempLayout;                                                            // Layout of the permanent memory used  by the chip
+  final Map<String,Chip> chips = new TreeMap<>();                               // Sub chips placed on this chip
+  final Layout          layout;                                                 // Layout of the memory used  by the chip
 
   int                     time = 0;                                             // Number of  steps in time.  We start at time 0 and  continue to increment through subsequent simulations
   int    changedBitsInLastStep = 0;                                             // Changed bits in last step
@@ -26,9 +25,8 @@ public class Chip extends Test                                                  
   Chip(String Name)                                                             // Create a new L<chip>  with the specified memory layout
    {if (Name == null) Name = currentTestNameSuffix();                           // Use the current test name as the chip name if none has been supplied
     name   = Name;                                                              // Name of chip
-    layout = this.layout();                                                          // Layout of memory used by the chip into variables arranged in arrays, structures and unions
+    layout = layout();                                                          // Layout of memory used by the chip into variables arranged in arrays, structures and unions
     if (layout != null) layout.layout();                                        // Position each element in memory
-    if (layout != null) say("PPPP", layout.print());                            // Position each element in memory
     final int width = layout != null ? layout.width : 0;                        // Width of memory in bits required for the memory layout supplied
     input  = bits(Name, "Input" , width);                                       // Create input to memory once the chip has stabilized after a sufficient number of steps
     output = bits(Name, "Output", width);                                       // Create output memory to match input memory
@@ -74,6 +72,268 @@ public class Chip extends Test                                                  
      }
     return s.toString();                                                        // Description of chip at this time
    }
+
+//D1 Layouts                                                                    // Layout memory of the chip as variables, arrays, structures, unions. Dividing the memory in this manner makes it easier to program the chip symbolically.
+
+  abstract class Layout                                                         // Variable/Array/Structure definition.
+   {final String name;                                                          // Name of field
+    int at;                                                                     // Offset of variable from start of memory
+    int width;                                                                  // Number of bits in a field
+    int depth;                                                                  // Depth of field - the number of containing arrays/structures/unions above
+    Layout up;                                                                  // Upward chain to containing array/structure/union
+    Layout superStructure;                                                      // Containing super structure
+    final Stack<Layout> fields = new Stack<>();                                 // Fields in the super structure in the order they appear in the memory layout. Only relevant in the outer most layout == the super structure,  where it is used for printing the structure and locating sub structures.
+
+    Layout(String Name) {name = Name;}                                          // Create a new named memory layout
+
+    Layout width   (int Width) {width = Width; return this;}                    // Set width or layout once it is known
+    Layout position(int At)    {at    = At;    return this;}                    // Reposition array elements to take account of the index applied to the array
+
+    int at()   {return at;}                                                     // Position of field in memory
+    int memorySize() {return width;}                                            // Size of the memory
+
+    Layout layout()                                                             // Layout the structure based on the fields that describe it
+     {fields.clear();                                                           // Clear of chain of fields in this layout
+      layout(0, 0, this);                                                       // Compute field positions
+      for(Layout l : fields) l.superStructure = this;                           // Locate the super structure containing this field
+      return this;
+     }
+
+    abstract void layout(int at, int depth, Layout superStructure);             // Layout this field within the super structure.
+
+    String indent() {return "  ".repeat(depth);}                                // Indentation
+
+    String printEntry()                                                         // Print the memory layout header
+     {return String.format("%4d  %4d        %s  %s", at, width, indent(), name);
+     }
+
+    String print()                                                              // Walk the field list printing the memory layout headers
+     {if (fields == null) return "";                                            // The structure has not been laid out
+      final StringBuilder b = new StringBuilder();
+      b.append(String.format("%4s  %4s  %4s    %s",
+                             "  At", "Wide", "Size", "Field name\n"));
+      for(Layout l : fields) b.append(""+l.printEntry()+"\n");                  // Print all the fields in the structure layout
+      return b.toString();
+     }
+
+    public String toString()                                                    // Part of memory corresponding to this layout as a string of bits in low endian order
+     {final StringBuilder s = new StringBuilder();
+      for (int i = 0; i <  width; ++i)                                          // Index each bit
+       {final Bit     b = output.elementAt(at+i);                               // Bit definition
+        final Boolean v = b.get();                                              // Value of bit
+        s.append(v == null ? '.' : v ? '1' : '0');                              // Represent bit
+       }
+      return s.reverse().toString();                                            // Prints string with lowest bit rightmost because we work in little endian layout
+     }
+
+    Integer toInt()                                                             // Get an integer representing the value of the layout
+     {int n = 0;
+      for (int i = 0; i < width; ++i)
+       {final Bit     b = output.elementAt(at+i);
+        final Boolean v = b.get();
+        if (v == null) return null;                                             // One of the bits is null so the overall value is no longer known
+        if (v && i > Integer.SIZE-1) return null;                               // Value is too big to be represented
+        n += v ? 1<<i : 0;
+       }
+      return n;                                                                 // Valid representation of bits as an integer
+     }
+
+    Layout getField(String path)                                                // Locate a field from its path which must include the outer most element
+     {final String[]names = path.split("\\.");                                  // Split path
+      if (fields == null) return null;                                          // Not compiled
+      search: for (Layout m : fields)                                           // Each field in structure
+       {Layout p = m;                                                           // Start at this field and try to match the path
+        for(int q = names.length; q > 0 && p != null; --q, p = p.up)            // Back track through names
+         {if (!p.name.equals(names[q-1])) continue search;                      // Check path matches
+         }
+        return m;                                                               // Return this field as its path matches
+       }
+      return null;                                                              // No matching path
+     }
+
+    Bits input()                                                                // Get the input bits mapped by the layout
+     {final Bits b = new Bits();
+      for (int i = 0; i < width; i++) b.push( input.elementAt(at + i));
+      return b;
+     }
+
+    Bits output()                                                               // Get the output bits mapped by the layout
+     {final Bits b = new Bits();
+      for (int i = 0; i < width; i++) b.push(output.elementAt(at + i));
+      return b;
+     }
+
+    abstract Layout duplicate(int At);                                          // Duplicate an element of this layout so we can modify it safely
+
+    Layout duplicate()                                                          // Duplicate a set of nested layouts rebasing their start point to zero
+     {final Layout l = duplicate(at);                                           // Duplicate the layout
+      l.layout();                                                               // Layout the structure - it now has its own memory from layout. Its easier to do this than duplicate all of layout logic during duplication and iyt only costs an unnecessary memory allocatc
+      return l;
+     }
+
+    void ok(int expected) {Chip.ok(toInt(), expected);}                         // Check the value of a variable
+   }
+
+  class Variable extends Layout                                                 // Variable
+   {Variable(String name, int Width)
+     {super(name); width(Width);
+     }
+    void layout(int At, int Depth, Layout superStructure)                       // Layout the variable in the structure
+     {at = At; depth = Depth; superStructure.fields.push(this);
+     }
+    Layout duplicate(int At)                                                    // Duplicate a variable so we can modify it safely
+     {final Variable v = new Variable(name, width);
+      v.at = at - At; v.depth = depth; //v.bits = bits;
+      return v;
+     }
+   }
+
+  class Array extends Layout                                                    // Array definition.
+   {int size;                                                                   // Dimension of array
+    int index = 0;                                                              // Index of array element to access
+    Layout element;                                                             // The elements of this array
+
+    Array(String Name, Layout Element, int Size)
+     {super(Name);
+      arraySize(Size).element(Element);
+     }
+
+    Array arraySize(int Size)     {size    = Size;    return this;}             // Set the size of the array
+    Array element(Layout Element) {element = Element; return this;}             // The type of the element in the array
+    int at(int i)                 {return at+i*element.width;}                  // Offset of this array element in the structure
+
+    void layout(int At, int Depth, Layout superStructure)                       // Compile this variable so that the size, width and byte fields are correct
+     {depth = Depth; superStructure.fields.push(this);                          // Relative to super structure
+      element.layout(At, Depth+1, superStructure);                              // Layout sub structure
+      position(at);                                                             // Position on index
+      element.up = this;                                                        // Chain up to containing parent layout
+      width = size * element.width;
+     }
+
+    Layout position(int At)                                                     // Reposition an array
+     {at = At;
+      element.position(at + index * element.width);
+      return this;
+     }
+
+    String printEntry()                                                         // Print the field
+     {return String.format("%4d  %4d  %4d  %s  %s",
+                            at, width, size, indent(), name);
+     }
+
+    void setIndex(int Index)                                                    // Sets the index for the current array element allowing us to set and get this element and all its sub elements.
+     {if (index != Index)
+       {index = Index; position(at);
+       }
+     }
+
+    Layout duplicate(int At)                                                    // Duplicate an array so we can modify it safely
+     {final Array a = new Array(name, element.duplicate(), size);
+      a.width = width; a.at = at - At; a.depth = depth; a.index = index;
+      return a;
+     }
+   }
+
+  class Structure extends Layout                                                // Structure laid out in memory
+   {final Map<String,Layout> subMap   = new TreeMap<>();                        // Unique variables contained inside this variable
+    final Stack     <Layout> subStack = new Stack  <>();                        // Order of variables inside this variable
+
+    Structure(String Name, Layout...Fields)                                     // Fields in the structure
+     {super(Name);
+      for (int i = 0; i < Fields.length; ++i) addField(Fields[i]);              // Each field in this structure
+     }
+
+    void addField(Layout Field)                                                 // Add additional fields
+     {Field.up = this;                                                          // Chain up to containing structure
+      if (subMap.containsKey(Field.name))
+       {stop("Structure already contains field with this name",
+             name, Field.name);
+       }
+      subMap.put (Field.name, Field);                                           // Add as a sub structure by name
+      subStack.push(Field);                                                     // Add as a sub structure in order
+     }
+
+    void layout(int at, int Depth, Layout superStructure)                       // Compile this variable so that the size, width and byte fields are correct
+     {width = 0;
+      depth = Depth;
+      superStructure.fields.push(this);
+      for(Layout v : subStack)                                                  // Layout sub structure
+       {v.at = at+width;
+        v.layout(v.at, Depth+1, superStructure);
+        width += v.width;
+       }
+     }
+
+    Layout position(int At)                                                     // Reposition this structure to allow access to array elements via an index
+     {at = At;
+      int w = 0;
+      for(Layout v : subStack)                                                  // Layout sub structure
+       {v.position(v.at = at+w);                                                // Substructures are laid out sequentially
+        w += v.width;
+       }
+      return this;
+     }
+
+    Layout duplicate(int At)                                                    // Duplicate a structure so we can modify it safely
+     {final Structure s = new Structure(name);
+      s.width = width; s.at = at - At; s.depth = depth;
+      for(Layout L : subStack)
+       {final Layout l = L.duplicate(L.at);
+        s.subMap.put(l.name, l);
+        s.subStack.push(l);
+       }
+      return s;
+     }
+   }
+
+  class Union extends Layout                                                    // Union of structures laid out in memory on top of each other - it is up to you to have a way of deciding which substructure is valid
+   {final Map<String,Layout> subMap = new TreeMap<>();                          // Unique variables contained inside this variable
+
+    Union(String Name, Layout...Fields)                                         // Fields in the union
+     {super(Name);
+      for (int i = 0; i < Fields.length; ++i) addField(Fields[i]);              // Each field in this union
+     }
+
+    void addField(Layout Field)                                                 // Add a field to the union
+     {final String n = Field.name;
+      Field.up = this;                                                          // Chain up to containing structure
+      if (subMap.containsKey(n)) stop(name, "already contains", n);
+      subMap.put (n, Field);                                                    // Add as a sub structure by name
+     }
+
+    void layout(int at, int Depth, Layout superStructure)                       // Compile this variable so that the size, width and byte fields are correct
+     {width = 0;
+      depth = Depth;
+      superStructure.fields.push(this);
+      for(Layout v : subMap.values())                                           // Find largest substructure
+       {v.at = at;                                                              // Substructures are laid out on top of each other
+        v.layout(v.at, Depth+1, superStructure);
+        width = max(width, v.width);                                            // Space occupied is determined by largest element of union
+       }
+     }
+
+    Layout position(int At)                                                     // Position elements of this union to allow arrays to access their elements by an index
+     {at = At;
+      for(Layout v : subMap.values()) v.position(at);
+      return this;
+     }
+
+    Layout duplicate(int At)                                                    // Duplicate a union so we can modify it safely
+     {final Union u = new Union(name);
+      u.width = width; u.at = at - At; u.depth = depth;
+      for(String s : subMap.keySet())
+       {final Layout L = subMap.get(s);
+        final Layout l = L.duplicate(L.at);
+        u.subMap.put(l.name, l);
+       }
+      return u;
+     }
+   }
+
+  Variable  variable (String name, int width)              {return new Variable (name, width);}
+  Array     array    (String name, Layout   ml, int width) {return new Array    (name, ml, width);}
+  Structure structure(String name, Layout...ml)            {return new Structure(name, ml);}
+  Union     union    (String name, Layout...ml)            {return new Union    (name, ml);}
 
 // Name                                                                         // Elements of the chip have names which are part alpabetic and part numeric.  Components of a name are separated by underscores
 
