@@ -35,8 +35,8 @@ public class BitMachine extends Test                                            
     String label;                                                               // Label of the instruction
     int    position;                                                            // Position of the instruction in the instruction stack
 
-    Instruction(String Name)                                                    // Set name of instruction
-     {name  = Name;
+    Instruction()                                                               // Set name of instruction
+     {name  = getClass().getName().split("\\$")[1];                             // Name of instruction from class name representing the instruction
       addInstruction();
      }
 
@@ -49,18 +49,23 @@ public class BitMachine extends Test                                            
    }
 
   class Nop extends Instruction                                                 // No operation
-   {Nop        () {super("No");}
-    void action() {}                                                            // Perform instruction
+   {void action() {}                                                            // Perform instruction
    }
   Nop nop() {return new Nop();}                                                 // No operation
 
-  class GoTo extends Instruction                                                // Goto the specified instruction
+  abstract class Branch extends Instruction                                     // A branch instruction
    {int target;
 
-    GoTo() {super("Goto");}                                                     // Forward goto
+    Branch() {}                                                                 // Forward branch to a come from instruction
+    Branch(Instruction instruction)                                             // Backward goto
+     {target = instruction.position-1;                                          // Record index of instruction before target instruction
+     }
+   }
+
+  class GoTo extends Branch                                                     // Goto the specified instruction
+   {GoTo() {}                                                                   // Forward goto
     GoTo(Instruction instruction)                                               // Backward goto
-     {this();
-      target = instruction.position-1;                                          // Record index of instruction before target instruction
+     {target = instruction.position-1;                                          // Record index of instruction before target instruction
      }
     void action() {instructionIndex = target;}                                  // Set insgruction pointer to continue execution at the next instruction
    }
@@ -68,19 +73,17 @@ public class BitMachine extends Test                                            
   GoTo goTo(Instruction instruction) {return new GoTo(instruction);}            // Jump back to an existing instruction
 
   class ComeFrom extends Instruction                                            // Set the target of the referenced goto instruction
-   {ComeFrom(GoTo source)                                                       // Forward goto to this instruction
-     {super("ComeFrom");
-      source.target = position - 1;                                             // Set goto to jump to the instruction before the target instruction
+   {ComeFrom(Branch source)                                                     // Forward goto to this instruction
+     {source.target = position - 1;                                             // Set goto to jump to the instruction before the target instruction
      }
     void action() {}                                                            // Perform instruction
    }
-  ComeFrom comeFrom(GoTo source) {return new ComeFrom(source);}                 // Goto the specified instruction
+  ComeFrom comeFrom(Branch source) {return new ComeFrom(source);}               // Set the source instruction to jump to this instruction
 
   class Copy extends Instruction                                                // Copy data from the second field to the first field
    {Layout.Field source, target;                                                // Copy source to target
     Copy(Layout.Field Target, Layout.Field Source)                              // Copy source to target
-     {super("Copy");
-      Source.sameSize(Target);
+     {Source.sameSize(Target);
       source = Source; target = Target;
      }
     void action()                                                               // Perform instruction
@@ -95,8 +98,7 @@ public class BitMachine extends Test                                            
    {Layout.Field f1, f2;                                                        // Fields to compare
     Layout.Field result;                                                        // Bit field showing result
     Equals(Layout.Field Result, Layout.Field F1, Layout.Field F2)               // Check two fields and set result
-     {super("Equals");
-      if (Result.width != 1) stop("Result field must be one bit, but it is",
+     {if (Result.width != 1) stop("Result field must be one bit, but it is",
         Result.width, "bits");
       F1.sameSize(F2);
       result = Result; f1 = F1; f2 = F2;
@@ -119,8 +121,7 @@ public class BitMachine extends Test                                            
    {Layout.Field f1, f2;                                                        // Fields to compare
     Layout.Field result;                                                        // Bit field showing result
     LessThan(Layout.Field Result, Layout.Field F1, Layout.Field F2)             // Check two fields and set result
-     {super("LessThan");
-      Result.isBit();
+     {Result.isBit();
       F1.sameSize(F2);
       result = Result; f1 = F1; f2 = F2;
      }
@@ -146,8 +147,7 @@ public class BitMachine extends Test                                            
    {Layout.Field f1, f2;                                                        // Fields to compare
     Layout.Field result;                                                        // Bit field showing result
     LessThanOrEqual(Layout.Field Result, Layout.Field F1, Layout.Field F2)      // Check two fields and set result
-     {super("LessThanOrEqual");
-      Result.isBit();
+     {Result.isBit();
       F1.sameSize(F2);
       result = Result; f1 = F1; f2 = F2;
      }
@@ -173,8 +173,7 @@ public class BitMachine extends Test                                            
   class ShiftLeftOneByOne extends Instruction                                   // Left shift one place and fill by one
    {Layout.Field field;                                                         // Field to shift
     ShiftLeftOneByOne(Layout.Field Field)                                       // Left shift a field by one place fillng with a one
-     {super("ShiftLeftOneByOne");
-      field = Field;
+     {field = Field;
      }
     void action()                                                               // Perform instruction
      {for (int i = field.width-1; i > 0; i--) field.set(i, field.get(i-1));
@@ -188,8 +187,7 @@ public class BitMachine extends Test                                            
   class ShiftRightOneByZero extends Instruction                                 // Shift right one fill with zero
    {Layout.Field field;                                                         // Field to shift
     ShiftRightOneByZero(Layout.Field Field)                                     // Right shift a field by one place fillng with a zero
-     {super("ShiftRightOneByZero");
-      field = Field;
+     {field = Field;
      }
     void action()                                                               // Perform instruction
      {for (int i = field.width-1; i > 0; i--) field.set(i, field.get(i-1));
@@ -205,8 +203,7 @@ public class BitMachine extends Test                                            
   abstract class If extends Instruction                                         // If condition then block else block
    {Layout.Field condition;                                                     // Condition deciding if
     If(Layout.Field Condition)                                                  // Right shift a field by one place fillng with a zero
-     {super("If");
-      condition = Condition;
+     {condition = Condition;
       final GoTo else_inst = goTo();      Then();
       final GoTo end_inst = goTo();
       comeFrom(else_inst);
@@ -231,8 +228,7 @@ public class BitMachine extends Test                                            
     GoTo             finished;
 
     For(Layout.Array Array)                                                     // Iterate over an array
-     {super("ForArray");
-      array   = Array;
+     {array   = Array;
       layout  = new Layout();
       counter = layout.variable ("counter", array.size);
       limit   = layout.variable ("limit",   array.size);
@@ -257,8 +253,7 @@ public class BitMachine extends Test                                            
    {final Layout.Array    array;                                                // Array to index
     final Layout.Variable index;                                                // Index
     SetIndex(Layout.Array Array, Layout.Variable Index)                         // Array, index value
-     {super("SetIndex");
-      array = Array;
+     {array = Array;
       index = Index;
      }
     void action()                                                               // Set index for inducated array from the specified field
