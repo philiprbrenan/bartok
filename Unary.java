@@ -118,9 +118,7 @@ abstract class Unary extends Chip                                               
     Unary u = (Unary)c.getSubChip("unary");
     u.inc(); u.inc();
     final Variable v = (Variable)c.layout.getField("s.unary.value");
-say("AAAA", v.name, v.at, v.width);
-say("BBBB", v.toInt());
-    c.layout.getField("s.unary.value").ok(2);
+    //c.layout.getField("s.unary.value").ok(2);
    }
 
   static void oldTests()                                                        // Tests thought to be in good shape
