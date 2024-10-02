@@ -399,9 +399,13 @@ public class Test                                                               
    }
 
   static void testExit(int expectedFailures)                                    // Exit with a return code showing the number of failed tests if there were an unexpected number of failures
-   {if (expectedFailures == testsFailed) System.exit(0);
+   {if (expectedFailures == testsFailed)
+     {if (expectedFailures > 0) say("Failures are as expected");
+      System.exit(0);
+     }
     say("Expected to fail", expectedFailures,
         "tests, but actually failed", testsFailed);
+    System.exit(1);
    }
 
 //D0                                                                            // Tests
