@@ -28,6 +28,8 @@ public class BitMachine extends Test                                            
 
   void trace() {}                                                               // Trace the execution
 
+  void ok(String expected) {Test.ok(toString(), expected);}                     // Check the code for this machine is as expected
+
 //D1 Instruction                                                                // Instructions recognized by the bit machine
 
   abstract class Instruction                                                    // An instruction to be executed
@@ -36,7 +38,7 @@ public class BitMachine extends Test                                            
     int    position;                                                            // Position of the instruction in the instruction stack
 
     Instruction()                                                               // Set name of instruction
-     {name  = getClass().getName().split("\\$")[1];                             // Name of instruction from class name representing the instruction
+     {name  = getClass().getName().split("\\$")[1];                             // Name of instruction from class name representing the instruction as long as the class has a name
       addInstruction();
      }
 
@@ -234,7 +236,8 @@ public class BitMachine extends Test                                            
   abstract class If extends Instruction                                         // If condition then block else block
    {Layout.Field condition;                                                     // Condition deciding if
     If(Layout.Field Condition)                                                  // Right shift a field by one place fillng with a zero
-     {condition = Condition;
+     {name = "If";
+      condition = Condition;
       final GoTo else_inst = goTo();      Then();
       final GoTo end_inst = goTo();
       comeFrom(else_inst);
@@ -259,7 +262,8 @@ public class BitMachine extends Test                                            
     Branch           finished;
 
     For(Layout.Array Array)                                                     // Iterate over an array
-     {array   = Array;
+     {name    = "For";
+      array   = Array;
       layout  = new Layout();
       counter = layout.variable ("counter", array.size);
       limit   = layout.variable ("limit",   array.size);
@@ -302,7 +306,7 @@ public class BitMachine extends Test                                            
 
 //D1                                                                            // Print program
 
-  String print()                                                                // Print the program
+  public String toString()                                                      // Print the program
    {final StringBuilder s = new StringBuilder();                                //                                                                                //
     final int N = instructions.size();                                          // Number of instrictions
     for (int i = 0; i < N; i++)
@@ -630,6 +634,17 @@ V   88     8                 18       c
        };
      };
 
+    m.ok("""
+   0               For
+   1          LessThan
+   2      BranchIfZero
+   3          SetIndex
+   4              Copy
+   5  ShiftLeftOneByOne
+   6              GoTo
+   7          ComeFrom
+""");
+
     m.execute();
     //stop(l);
     l.ok("""
@@ -671,6 +686,7 @@ V   88     8                 18       c
 
   static void newTests()                                                        // Tests being worked on
    {oldTests();
+    //test_for();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
