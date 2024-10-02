@@ -53,33 +53,6 @@ public class BitMachine extends Test                                            
    }
   Nop nop() {return new Nop();}                                                 // No operation
 
-  abstract class Branch extends Instruction                                     // A branch instruction
-   {int target;
-
-    Branch() {}                                                                 // Forward branch to a come from instruction
-    Branch(Instruction instruction)                                             // Backward goto
-     {target = instruction.position-1;                                          // Record index of instruction before target instruction
-     }
-   }
-
-  class GoTo extends Branch                                                     // Goto the specified instruction
-   {GoTo() {}                                                                   // Forward goto
-    GoTo(Instruction instruction)                                               // Backward goto
-     {target = instruction.position-1;                                          // Record index of instruction before target instruction
-     }
-    void action() {instructionIndex = target;}                                  // Set insgruction pointer to continue execution at the next instruction
-   }
-  GoTo goTo()                        {return new GoTo();}                       // Jump forward to a comeFrom instruction
-  GoTo goTo(Instruction instruction) {return new GoTo(instruction);}            // Jump back to an existing instruction
-
-  class ComeFrom extends Instruction                                            // Set the target of the referenced goto instruction
-   {ComeFrom(Branch source)                                                     // Forward goto to this instruction
-     {source.target = position - 1;                                             // Set goto to jump to the instruction before the target instruction
-     }
-    void action() {}                                                            // Perform instruction
-   }
-  ComeFrom comeFrom(Branch source) {return new ComeFrom(source);}               // Set the source instruction to jump to this instruction
-
   class Copy extends Instruction                                                // Copy data from the second field to the first field
    {Layout.Field source, target;                                                // Copy source to target
     Copy(Layout.Field Target, Layout.Field Source)                              // Copy source to target
@@ -198,6 +171,64 @@ public class BitMachine extends Test                                            
    {return new ShiftRightOneByZero(Field);
    }
 
+//D1 Branch instructions                                                        // Instructions that alter the flow of execution of the code
+
+  abstract class Branch extends Instruction                                     // A branch instruction
+   {final Layout.Bit bit;
+    int target;
+
+    Branch(Layout.Bit Bit) {bit = Bit;}                                         // Forward branch to a come from instruction
+    Branch(Layout.Bit Bit, Instruction instruction)                             // Backward branch
+     {this(Bit);
+      target = instruction.position-1;                                          // Record index of instruction before target instruction
+     }
+   }
+
+  class BranchIfZero extends Branch                                             // Branch if a bit is zero
+   {BranchIfZero(Layout.Bit Bit) {super(Bit);}                                   // Forward branch to a come from instruction
+    BranchIfZero(Layout.Bit Bit, Instruction Instruction)                       // Backward branch
+     {super(Bit, Instruction);
+     }
+    void action() {if (!bit.get(0)) instructionIndex = target;}                 // Set instruction pointer to continue execution at the next instruction
+   }
+  BranchIfZero branchIfZero(Layout.Bit bit)                                     // Jump forward to a come from instruction
+   {return new BranchIfZero(bit);
+   }
+  BranchIfZero branchIfZero(Layout.Bit bit, Instruction instruction)            // Jump back to an existing instruction
+   {return new BranchIfZero(bit, instruction);
+   }
+
+  class BranchIfOne extends Branch                                              // Branch if a bit is one
+   {BranchIfOne(Layout.Bit Bit) {super(Bit);}                                   // Forward branch to a come from instruction
+    BranchIfOne(Layout.Bit Bit, Instruction Instruction)                        // Backward branch
+     {super(Bit, Instruction);
+     }
+    void action() {if (bit.get(0)) instructionIndex = target;}                  // Set instruction pointer to continue execution at the next instruction
+   }
+  BranchIfOne branchIfOne(Layout.Bit bit)                                       // Jump forward to a come from instruction
+   {return new BranchIfOne(bit);
+   }
+  BranchIfOne branchIfOne(Layout.Bit bit, Instruction instruction)              // Jump back to an existing instruction
+   {return new BranchIfOne(bit, instruction);
+   }
+
+  class GoTo extends Branch                                                     // Goto the specified instruction
+   {GoTo() {super(null);}                                                       // Forward goto
+    GoTo(Instruction instruction) {super(null, instruction);}                   // Backward goto
+    void action()   {instructionIndex = target;}                                // Set instruction pointer to continue execution at the next instruction
+   }
+  GoTo goTo()                        {return new GoTo();}                       // Jump forward to a comeFrom instruction
+  GoTo goTo(Instruction instruction) {return new GoTo(instruction);}            // Jump back to an existing instruction
+
+  class ComeFrom extends Instruction                                            // Set the target of the referenced goto instruction
+   {ComeFrom(Branch source)                                                     // Forward goto to this instruction
+     {source.target = position - 1;                                             // Set goto to jump to the instruction before the target instruction
+     }
+    void action() {}                                                            // Perform instruction
+   }
+  ComeFrom comeFrom(Branch source) {return new ComeFrom(source);}               // Set the source instruction to jump to this instruction
+
+
 //D1 Structured Programming                                                     // Structured programming constructs
 
   abstract class If extends Instruction                                         // If condition then block else block
@@ -225,7 +256,7 @@ public class BitMachine extends Test                                            
     Layout.Bit       atEnd;
     Layout.Structure struct;
     Instruction      start;
-    GoTo             finished;
+    Branch           finished;
 
     For(Layout.Array Array)                                                     // Iterate over an array
      {array   = Array;
@@ -237,10 +268,12 @@ public class BitMachine extends Test                                            
       layout.layout(struct);
       limit.ones();
 
-      start = BitMachine.this.equals(atEnd, counter, limit);
+      start = lessThan(atEnd, counter, limit);
+      finished = branchIfZero(atEnd);
+
       setIndex(array, counter);
-      new If(atEnd) {void Then() {finished = goTo();}};
       block();
+
       shiftLeftOneByOne(counter);
       goTo(start);
       comeFrom(finished);
