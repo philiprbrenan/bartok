@@ -230,6 +230,9 @@ public class Layout extends Test                                                
        }
      }
 
+    void zero() {for(int i = 0; i < width; ++i) set(i, false);}                 // Clear all the bits in the field to zero
+    void ones() {for(int i = 0; i < width; ++i) set(i, true); }                 // Set   all the bits in the field to one
+
     void fromInt(int value)                                                     // Set bits to match those of the supplied integer
      {final int N = min(Integer.SIZE-1, width);                                 // Maximum number of bits we can set
       for(int i = 0; i < N; ++i)                                                // Set bits
