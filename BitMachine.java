@@ -9,16 +9,24 @@ import java.util.*;
 //D1 Construct                                                                  // Construct a silicon chip comprised of memory, intermediate bits and logic gates.
 
 public class BitMachine extends Test                                            // A machine whose assembler code is just capable enough to manipulate a b-tree
- {Stack<Instruction> instructions = new Stack<>();                              // Instructions to be executed
+ {final int maxSteps = 50;                                                      // Maximum number of steps to be executed
+  Stack<Instruction> instructions = new Stack<>();                              // Instructions to be executed
   Layout layout;                                                                // Layout of bit memory being manipulated by this bit machine
   int instructionIndex;                                                         // The current instruction
+  int step = 0;                                                                 // The number of the currently executing step
 
   void execute()
    {final int N = instructions.size();
+    step = 0;
     for(instructionIndex = 0; instructionIndex < N; ++instructionIndex)
-     {instructions.elementAt(instructionIndex).action();
+     {final Instruction i = instructions.elementAt(instructionIndex);
+      i.action();
+      trace();
+      if (++step > maxSteps) stop("Terminating after", maxSteps, "steps");
      }
    }
+
+  void trace() {}                                                               // Trace the execution
 
 //D1 Instruction                                                                // Instructions recognized by the bit machine
 
@@ -52,7 +60,7 @@ public class BitMachine extends Test                                            
     GoTo() {super("Goto");}                                                     // Forward goto
     GoTo(Instruction instruction)                                               // Backward goto
      {this();
-      target = instruction.position;                                            // Record index of target instruction
+      target = instruction.position-1;                                          // Record index of instruction before target instruction
      }
     void action() {instructionIndex = target;}                                  // Set insgruction pointer to continue execution at the next instruction
    }
@@ -62,7 +70,7 @@ public class BitMachine extends Test                                            
   class ComeFrom extends Instruction                                            // Set the target of the referenced goto instruction
    {ComeFrom(GoTo source)                                                       // Forward goto to this instruction
      {super("ComeFrom");
-      source.target = position;                                                 // Set goto to jump to this instruction
+      source.target = position - 1;                                             // Set goto to jump to the instruction before the target instruction
      }
     void action() {}                                                            // Perform instruction
    }
@@ -199,8 +207,7 @@ public class BitMachine extends Test                                            
     If(Layout.Field Condition)                                                  // Right shift a field by one place fillng with a zero
      {super("If");
       condition = Condition;
-      final GoTo else_inst = goTo();
-      Then();
+      final GoTo else_inst = goTo();      Then();
       final GoTo end_inst = goTo();
       comeFrom(else_inst);
       Else();
@@ -209,28 +216,73 @@ public class BitMachine extends Test                                            
     void action()                                                               // Perform instruction
      {if (condition.get(0)) instructionIndex++;
      }
-    abstract void Then();                                                       // Then block
-    abstract void Else();                                                       // Else block
+    abstract void Then();                                                       // Then block is required
+             void Else() {}                                                     // Else block is optional
    }
 
-//  abstract class For extends Instruction                                        // Iterate over an array
-//   {Layout.Field array;                                                         // Array being iterated
-//    If(Layout.Field Condition)                                                  // Right shift a field by one place fillng with a zero
-//     {super("If");
-//      condition = Condition;
-//      final GoTo else_inst = goTo();
-//      Then();
-//      final GoTo end_inst = goTo();
-//      comeFrom(else_inst);
-//      Else();
-//      comeFrom(end_inst);
-//     }
-//    void action()                                                               // Perform instruction
-//     {if (condition.get(0)) instructionIndex++;
-//     }
-//    abstract void Then();                                                       // Then block
-//    abstract void Else();                                                       // Else block
-//   }
+  abstract class For extends Instruction                                        // Iterate over an array
+   {Layout.Array     array;                                                     // Array being iterated
+    Layout           layout;
+    Layout.Variable  counter;
+    Layout.Variable  limit;
+    Layout.Bit       atEnd;
+    Layout.Structure struct;
+    Instruction      start;
+    GoTo             finished;
+
+    For(Layout.Array Array)                                                     // Iterate over an array
+     {super("ForArray");
+      array   = Array;
+      layout  = new Layout();
+      counter = layout.variable ("counter", array.size);
+      limit   = layout.variable ("limit",   array.size);
+      atEnd   = layout.bit      ("atEnd");
+      struct  = layout.structure("struct",  counter, limit, atEnd);
+      layout.layout(struct);
+      limit.ones();
+
+      start = BitMachine.this.equals(atEnd, counter, limit);
+      setIndex(array, counter);
+      new If(atEnd) {void Then() {finished = goTo();}};
+      block();
+      shiftLeftOneByOne(counter);
+      goTo(start);
+      comeFrom(finished);
+     }
+    void action() {counter.zero();}                                             // Initialize for loop
+    abstract void block();                                                      // Block of code to execute on each iteration
+   }
+
+  class SetIndex extends Instruction                                            // Set the index of an array from a field
+   {final Layout.Array    array;                                                // Array to index
+    final Layout.Variable index;                                                // Index
+    SetIndex(Layout.Array Array, Layout.Variable Index)                         // Array, index value
+     {super("SetIndex");
+      array = Array;
+      index = Index;
+     }
+    void action()                                                               // Set index for inducated array from the specified field
+     {final int N = index.width;
+      int ones = N;                                                             // Faulte de mieux
+      for (int i = 0; i < N; ++i) if (!index.get(i)) {ones = i; break;}         // First zero
+      array.setIndex(ones);                                                     // Set the array index
+     }
+   }
+  SetIndex setIndex(Layout.Array Array, Layout.Variable Index)                  // Array, index value
+   {return new SetIndex(Array, Index);
+   }
+
+//D1                                                                            // Print program
+
+  String print()                                                                // Print the program
+   {final StringBuilder s = new StringBuilder();                                //                                                                                //
+    final int N = instructions.size();                                          // Number of instrictions
+    for (int i = 0; i < N; i++)
+     {final Instruction I = instructions.elementAt(i);
+      s.append(String.format("%4d  %16s\n", i, I.name));
+     }
+    return s.toString();
+   }
 
 //D0                                                                            // Tests: I test, therefore I am.  And so do my mentees.  But most other people, apparently, do not, they live in a half world lit by shadows in which they never know if their code works or not.
 
@@ -242,7 +294,7 @@ public class BitMachine extends Test                                            
     a.fromInt(0b1010);
 
     BitMachine m = new BitMachine();
-    m.new ShiftLeftOneByOne(a);
+    m.shiftLeftOneByOne(a);
     m.execute();
     a.ok(0b0101);
    }
@@ -294,20 +346,20 @@ public class BitMachine extends Test                                            
     m.execute();
     //stop(l);
     l.ok("""
-T   At  Wide  Size       Value   Field name
-S    0    21           1397025   s
-V    0     4                 1     a
-V    4     4                 2     b
-V    8     4                 1     c
-B   12     1                 1     aa
-B   13     1                 0     ab
-B   14     1                 1     ac
-B   15     1                 0     ba
-B   16     1                 1     bb
-B   17     1                 0     bc
-B   18     1                 1     ca
-B   19     1                 0     cb
-B   20     1                 1     cc
+T   At  Wide  Index       Value   Field name
+S    0    21            1397025   s
+V    0     4                  1     a
+V    4     4                  2     b
+V    8     4                  1     c
+B   12     1                  1     aa
+B   13     1                  0     ab
+B   14     1                  1     ac
+B   15     1                  0     ba
+B   16     1                  1     bb
+B   17     1                  0     bc
+B   18     1                  1     ca
+B   19     1                  0     cb
+B   20     1                  1     cc
 """);
    }
 
@@ -345,20 +397,20 @@ B   20     1                 1     cc
     m.execute();
     //stop(l);
     l.ok("""
-T   At  Wide  Size       Value   Field name
-S    0    21            532769   s
-V    0     4                 1     a
-V    4     4                 2     b
-V    8     4                 1     c
-B   12     1                 0     aa
-B   13     1                 1     ab
-B   14     1                 0     ac
-B   15     1                 0     ba
-B   16     1                 0     bb
-B   17     1                 0     bc
-B   18     1                 0     ca
-B   19     1                 1     cb
-B   20     1                 0     cc
+T   At  Wide  Index       Value   Field name
+S    0    21             532769   s
+V    0     4                  1     a
+V    4     4                  2     b
+V    8     4                  1     c
+B   12     1                  0     aa
+B   13     1                  1     ab
+B   14     1                  0     ac
+B   15     1                  0     ba
+B   16     1                  0     bb
+B   17     1                  0     bc
+B   18     1                  0     ca
+B   19     1                  1     cb
+B   20     1                  0     cc
 """);
    }
 
@@ -396,20 +448,20 @@ B   20     1                 0     cc
     m.execute();
     //stop(l);
     l.ok("""
-T   At  Wide  Size       Value   Field name
-S    0    21           1929505   s
-V    0     4                 1     a
-V    4     4                 2     b
-V    8     4                 1     c
-B   12     1                 1     aa
-B   13     1                 1     ab
-B   14     1                 1     ac
-B   15     1                 0     ba
-B   16     1                 1     bb
-B   17     1                 0     bc
-B   18     1                 1     ca
-B   19     1                 1     cb
-B   20     1                 1     cc
+T   At  Wide  Index       Value   Field name
+S    0    21            1929505   s
+V    0     4                  1     a
+V    4     4                  2     b
+V    8     4                  1     c
+B   12     1                  1     aa
+B   13     1                  1     ab
+B   14     1                  1     ac
+B   15     1                  0     ba
+B   16     1                  1     bb
+B   17     1                  0     bc
+B   18     1                  1     ca
+B   19     1                  1     cb
+B   20     1                  1     cc
 """);
    }
 
@@ -434,11 +486,11 @@ B   20     1                 1     cc
     m.execute();
     //stop(l);
     l.ok("""
-T   At  Wide  Size       Value   Field name
-S    0    12              1911   s
-V    0     4                 7     a
-V    4     4                 7     b
-V    8     4                 7     c
+T   At  Wide  Index       Value   Field name
+S    0    12               1911   s
+V    0     4                  7     a
+V    4     4                  7     b
+V    8     4                  7     c
 """);
    }
 
@@ -464,12 +516,12 @@ V    8     4                 7     c
     m.execute();
     //stop(l);
     l.ok("""
-T   At  Wide  Size       Value   Field name
-S    0    13               239   x
-B    0     1                 1     i
-V    1     4                 7     s
-V    5     4                 7     t
-V    9     4                 0     e
+T   At  Wide  Index       Value   Field name
+S    0    13                239   x
+B    0     1                  1     i
+V    1     4                  7     s
+V    5     4                  7     t
+V    9     4                  0     e
 """);
    }
 
@@ -495,12 +547,12 @@ V    9     4                 0     e
     m.execute();
     //stop(l);
     l.ok("""
-T   At  Wide  Size       Value   Field name
-S    0    13              3598   x
-B    0     1                 0     i
-V    1     4                 7     s
-V    5     4                 0     t
-V    9     4                 7     e
+T   At  Wide  Index       Value   Field name
+S    0    13               3598   x
+B    0     1                  0     i
+V    1     4                  7     s
+V    5     4                  0     t
+V    9     4                  7     e
 """);
    }
 
@@ -520,23 +572,60 @@ V    9     4                 7     e
       b.fromInt(2*(i+2));
       c.fromInt(3*(i+3));
      }
-
-
-    BitMachine m = new BitMachine();
-//    m.For(A)
-//     {void block()
-//       {Then() {m.copy(t, s);}
-//       };
-//     };
-    m.execute();
-    stop(l);
     l.ok("""
-T   At  Wide  Size       Value   Field name
-S    0    13              3598   x
-B    0     1                 0     i
-V    1     4                 7     s
-V    5     4                 0     t
-V    9     4                 7     e
+T   At  Wide  Index       Value   Field name
+A    0    96      0               A
+S    0    24             590849     s
+V    0     8                  1       a
+V    8     8                  4       b
+V   16     8                  9       c
+A   24    96      1               A
+S   24    24             787970     s
+V   24     8                  2       a
+V   32     8                  6       b
+V   40     8                 12       c
+A   48    96      2               A
+S   48    24             985091     s
+V   48     8                  3       a
+V   56     8                  8       b
+V   64     8                 15       c
+A   72    96      3               A
+S   72    24            1182212     s
+V   72     8                  4       a
+V   80     8                 10       b
+V   88     8                 18       c
+""");
+    BitMachine m = new BitMachine();
+    m.new For(A)
+     {void block()
+       {m.copy(b, a);
+       };
+     };
+
+    m.execute();
+    //stop(l);
+    l.ok("""
+T   At  Wide  Index       Value   Field name
+A    0    96      0               A
+S    0    24             590081     s
+V    0     8                  1       a
+V    8     8                  1       b
+V   16     8                  9       c
+A   24    96      1               A
+S   24    24             786946     s
+V   24     8                  2       a
+V   32     8                  2       b
+V   40     8                 12       c
+A   48    96      2               A
+S   48    24             983811     s
+V   48     8                  3       a
+V   56     8                  3       b
+V   64     8                 15       c
+A   72    96      3               A
+S   72    24            1180676     s
+V   72     8                  4       a
+V   80     8                  4       b
+V   88     8                 18       c
 """);
    }
 
@@ -549,11 +638,11 @@ V    9     4                 7     e
     test_less_than_equal();
     test_if_then();
     test_if_else();
+    test_for();
    }
 
   static void newTests()                                                        // Tests being worked on
    {oldTests();
-    test_for();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
