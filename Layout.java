@@ -266,7 +266,11 @@ public class Layout extends Test                                                
      }
    }
 
-  class Bit extends Variable {Bit(String name) {super(name, 1);}}               // A variable of unit width is a boolean. could have called it a boolean but decied to callit abool instead becuase it was shorter and more like
+  class Bit extends Variable                                                    // A variable of unit width is a boolean. could have called it a boolean but decied to callit abool instead becuase it was shorter and more like
+   {Bit(String name) {super(name, 1);}
+    Boolean get()              {return get(0);}                                 // Get bit value as Boolean
+    void    set(Boolean value) {       set(0, value);}                          // Set bit value from Boolean
+   }
 
   class Array extends Field                                                     // Layout an array definition.
    {int size;                                                                   // Dimension of array
@@ -690,6 +694,9 @@ V    1     7                  1     b
 """);
     s.get("a").toBit()     .ok(1);
     s.get("b").toVariable().ok(1);
+    ok( a.get());
+    a.set(false);
+    ok(!a.get());
    }
 
   static void test_bits()
