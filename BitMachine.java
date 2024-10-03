@@ -57,16 +57,28 @@ public class BitMachine extends Test                                            
 
   class Copy extends Instruction                                                // Copy data from the second field to the first field
    {Layout.Field source, target;                                                // Copy source to target
+    final int sOff, tOff, length;                                               // Copy source to target
     Copy(Layout.Field Target, Layout.Field Source)                              // Copy source to target
      {Source.sameSize(Target);
       source = Source; target = Target;
+      sOff = 0; tOff = 0; length = source.width;
+     }
+    Copy(Layout.Field Target, int TOff,                                         // Copy some bits from source plus offset to target plus offset
+         Layout.Field Source, int SOff, int Length)
+     {source = Source; target = Target;
+      sOff = SOff; tOff = TOff; length = Length;
      }
     void action()                                                               // Perform instruction
-     {for (int i = source.width-1; i >= 0; i--) target.set(i, source.get(i));   // Copy each bit assuming no overlap
+     {for(int i = length-1; i >= 0; i--) target.set(tOff+i, source.get(sOff+i));// Copy each bit assuming no overlap
      }
    }
   Copy copy(Layout.Field target, Layout.Field source)                           // Copy bits from source to target
    {return new Copy(target, source);
+   }
+
+  Copy copy(Layout.Field Target, int TOff,                                      // Copy some bits from source plus offset to target plus offset
+            Layout.Field Source, int SOff, int Length)
+   {return new Copy(Target, TOff, Source, SOff, Length);
    }
 
   class Equals extends Instruction                                              // Check that two fields are equal
@@ -169,9 +181,34 @@ public class BitMachine extends Test                                            
       field.set(0, true);
      }
    }
-  ShiftRightOneByZero shiftRLeftOneByOne(Layout.Field Field)                    // Shift right one fill with zero
+  ShiftRightOneByZero shiftRightOneByZero(Layout.Field Field)                   // Shift right one fill with zero
    {return new ShiftRightOneByZero(Field);
    }
+
+//D1 Arithmetic                                                                 // Arithemetic instructions
+
+  class Zero extends Instruction                                                // Clear a field to zero
+   {final Layout.Field field;                                                   // Field to clear
+    Zero(Layout.Field Field) {field = Field;}                                   // Set field to clear
+    void action() {field.zero();}                                               // Clear field
+   }
+  Zero zero(Layout.Field Field) {return new Zero(Field);}                       // Clear a field
+
+  class Ones extends Instruction                                                // Set a field to ones
+   {final Layout.Field field;                                                   // Field to set
+    Ones(Layout.Field Field) {field = Field;}                                   // Set field to set
+    void action() {field.ones();}                                               // Set field
+   }
+  Ones ones(Layout.Field Field) {return new Ones(Field);}                       // Set a field to ones
+
+  class Not extends Instruction                                                 // Invert a field
+   {final Layout.Field field;                                                   // Field to invert
+    Not(Layout.Field Field) {field = Field;}                                    // Set field to invert
+    void action()                                                               // Invert fields
+     {for (int i = 0; i < field.width; i++) field.set(i, !field.get(i));        // Invert the field bit by bit
+     }
+   }
+  Not not(Layout.Field Field) {return new Not(Field);}                          // Invert a field
 
 //D1 Branch instructions                                                        // Instructions that alter the flow of execution of the code
 
@@ -317,6 +354,37 @@ public class BitMachine extends Test                                            
    }
 
 //D0                                                                            // Tests: I test, therefore I am.  And so do my mentees.  But most other people, apparently, do not, they live in a half world lit by shadows in which they never know if their code works or not.
+
+  static void test_zero_and_ones()
+   {Layout           l = new Layout();
+    Layout.Variable  a = l.variable ("a", 4);
+    Layout.Variable  b = l.variable ("b", 4);
+    Layout.Structure s = l.structure("s", a, b);
+    l.layout(s);
+
+    BitMachine m = new BitMachine();
+    m.zero(a);
+    m.ones(b);
+    m.execute();
+    //stop(l);
+    l.ok("""
+T   At  Wide  Index       Value   Field name
+S    0     8                240   s
+V    0     4                  0     a
+V    4     4                 15     b
+""");
+   }
+
+  static void test_invert()
+   {Layout           l = new Layout();
+    Layout.Variable  a = l.variable ("a", 4);
+    l.layout(a);
+    a.fromString("0101");
+
+    BitMachine m = new BitMachine();
+    m.not(a);
+    a.ok("1010");
+   }
 
   static void test_shift_left_oneByOne()
    {Layout          l = new Layout();
@@ -526,6 +594,32 @@ V    8     4                  7     c
 """);
    }
 
+  static void test_copy_off()
+   {Layout           l = new Layout();
+    Layout.Variable  a = l.variable ("a", 4);
+    Layout.Bit       b = l.bit      ("b");
+    Layout.Bit       c = l.bit      ("c");
+    Layout.Structure s = l.structure("s", a, b, c);
+    l.layout(s);
+
+    a.fromInt(7);
+    b.ones();
+    c.ones();
+
+    BitMachine m = new BitMachine();
+    m.copy(b, 0, a, 0, 1);
+    m.copy(c, 0, a, 3, 1);
+    m.execute();
+    //stop(l);
+    l.ok("""
+T   At  Wide  Index       Value   Field name
+S    0     6                 23   s
+V    0     4                  7     a
+B    4     1                  1     b
+B    5     1                  0     c
+""");
+   }
+
   static void test_if_then()
    {Layout           l = new Layout();
     Layout.Variable  s = l.variable ("s", 4);
@@ -673,7 +767,10 @@ V   88     8                 18       c
    }
 
   static void oldTests()                                                        // Tests thought to be in good shape
-   {test_copy();
+   {test_zero_and_ones();
+    test_invert();
+    test_copy();
+    test_copy_off();
     test_shift_left_oneByOne();
     test_shift_right_oneByZero();
     test_equal();
@@ -686,7 +783,6 @@ V   88     8                 18       c
 
   static void newTests()                                                        // Tests being worked on
    {oldTests();
-    //test_for();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
