@@ -1,129 +1,80 @@
 //------------------------------------------------------------------------------
-// Unary arithmetic using boolean arrays.
+// Unary arithmetic using boolean arrays in BitMachine assembler.
 // Philip R Brenan at appaapps dot com, Appa Apps Ltd Inc., 2024
 //------------------------------------------------------------------------------
 package com.AppaApps.Silicon;                                                   // Design, simulate and layout a binary tree on a silicon chip.
 
-abstract class Unary extends Chip                                               // Unary arithmetic on a chip
- {final String      name;                                                       // Name of the chip
-  final Variable notZero;                                                       // Not zero if true
-  final Variable   atMax;                                                       // At the maximum value
-  final Variable   value;                                                       // The value of the unary number
-  final Structure  unary;                                                       // Structure representing a unary number
-  final Bit    decrement;                                                       // If true decrement the unary number
-  final Bit    increment;                                                       // If true increment the unary number
-  final Bits     incBits;                                                       // Result of an increment
-  final Bits     decBits;                                                       // Result of a decrement
-  final Bits   enIncBits;                                                       // Enable result of an increment
-  final Bits   enDecBits;                                                       // Enable result of a decrement
+class UnaryBM extends BitMachine                                                // Unary arithmetic on a chip
+ {final Layout          layout;                                                 // The layout of the unary number
+  final Layout.Variable value;                                                  // The value of the unary number
 
 //D1 Construction                                                               // Create a unary number
 
-
-  Unary(String Name)                                                            // Create a unary number of specified size
-   {super(Name);                                                                // Structure definition
-    if (max() <= 0) stop("Unary size must be at least one, not", max());        // Size check
-    name       = Name;                                                          // Name of the chip
-    notZero    = (Variable) layout.getField("unary.notZero");                   // Not zero if true
-    atMax      = (Variable) layout.getField("unary.atMax");                     // At the maximum value
-    value      = (Variable) layout.getField("unary.value");                     // The value of the unary number
-    unary      = (Structure)layout.getField("unary");                           // The value of the unary number
-    increment  = bit(name, "increment");                                        // Increment the value of the unary number if true
-    decrement  = bit(name, "decrement");                                        // Decrement the value of the unary number if true
-    incBits    = bits("incBits",   max());                                      // Result of an increment
-    decBits    = bits("decBits",   max());                                      // Result of a decrement
-    enIncBits  = bits("enIncBits", max());                                      // Enabled increment
-    enDecBits  = bits("enDecBits", max());                                      // Disabled increment
-
-    incBits.shiftLeftOnceByOne  (value.output());                               // Increment
-    decBits.shiftRightOnceByZero(value.output());                               // Decrement
-
-    enIncBits.enable(incBits, increment);                                       // Enable increment if requested
-    enDecBits.enable(incBits, decrement);                                       // Enable decrement if requested
-    value.input().or(enIncBits, enDecBits);                                     // Assemble result
+  UnaryBM(int Max)                                                              // Create a unary number of specified size
+   {if (Max <= 0) stop("Unary size must be at least one, not", Max);            // Size check
+    layout = new Layout();
+    value  = layout.variable("value", Max);                                     // The value of the unary number
+    layout.layout(value);                                                       // Layout memory
    }
+  static UnaryBM unaryBM(int Max) {return new UnaryBM(Max);}                    // Create a unary number
 
-  Layout layout()                                                               // Memory layout of a unary number
-   {final Variable  notZero = variable("notZero", 1);                           // Not zero if true
-    final Variable  atMax   = variable("atMax",   1);                           // At the maximum value
-    final Variable  value   = variable("value", max()) ;                        // The value of the unary number
-    final Structure unary   = structure("unary", value, notZero, atMax);        // Structure representing a unary number
-    return unary;
-   }
+  int max() {return value.width;}                                               // The maximum value of the unary number - override this method to set a non zero size
 
-  static Unary unary(String name, int max)                                      // Create a unary number of specified size
-   {return new Unary(name)
-     {int max() {return max;}
-     };
-   }
+  void ok(int n) {ok(value.asInt(), n);}                                        // Check that a unary number has the expected value
 
-  abstract int max();                                                           // The maximum value of the unary number - override this method to set a non zero size
-
-  void ok(int n) {ok(get(), n);}                                                // Check that a unary number has the expected value
-
-  int get()                                                                     // Get the unary number
-   {int n = 0;
-    for (Bit b : value.output()) if (b.value) ++n;
-    return n;
-   }
+  Layout.Variable get() {return value;}                                         // Get the unary number
 
 //D1 Arithmetic                                                                 // Arithmetic using unary numbers
 
-  boolean canInc() {return !value.output(). lastElement().value;}               // Unary has at space for at least one more element so we can increment
-  boolean canDec() {return  value.output().firstElement().value;}               // Unary is at least one so we can decrement
+  void zero() {zero(value);}                                                    // Clear unary number to all zeros
+  void ones() {ones(value);}                                                    // Set unary number to all ones
 
-  void inc()                                                                    // Increment the unary number
-   {increment.set(true);
-    decrement.set(false);
-    simulate();
-   }
+  void canInc(Layout.Bit result) {copy(result, 0, value, 0, 1); not(result);}   // Unary contains at least one one
+  void canDec(Layout.Bit result) {copy(result, 0, value, 0, 1);}                // Unary contains at least one zero
 
-  void dec()                                                                    // Decrement the unary number
-   {increment.set(false);
-    decrement.set(true);
-    simulate();
-   }
+  void inc() {shiftLeftOneByOne  (value);}                                      // Increment the unary number
+  void dec() {shiftRightOneByZero(value);}                                      // Decrement the unary number
 
 //D1 Print                                                                      // Print a unary number
 
-  public String toString()
-   {return "Unary(notZero:"+notZero.toInt()+                                    // Print a unary number
-                 ", atMax:"+atMax.toInt()+
-                 ", value:"+get()+
-                   ", max:"+max()+")";
-   }
+  public String toString() {return value.asString();}                           // Return the string
 
 //D0 Tests                                                                      // Test unary numbers
 
   static void test_unary()
-   {Unary u = unary("Unary", 4);
-              u.ok(0); ok( u.canInc()); ok(!u.canDec());
-    u.inc();  u.ok(1); ok( u.canInc()); ok( u.canDec());
-    u.inc();  u.ok(2); ok( u.canInc()); ok( u.canDec());
-    u.inc();  u.ok(3); ok( u.canInc()); ok( u.canDec());
-    u.inc();  u.ok(4); ok(!u.canInc()); ok( u.canDec());
-   }
+   {Layout           l = new Layout();
+    Layout.Bit       a = l.bit      ("a");
+    Layout.Bit       b = l.bit      ("b");
+    Layout.Bit       c = l.bit      ("c");
+    Layout.Bit       d = l.bit      ("d");
+    Layout.Structure s = l.structure("s", a, b, c, d);
+    l.layout(s);
 
-  static void test_sub_unary()
-   {final int N = 4;
-    Chip      c = new Chip("Unary")
-     {Layout layout()
-       {Variable  a = variable ("a", N);
-        Unary     u = unary("unary", N);
-        Structure s = structure("s", a, u.layout);
-        addSubChip(u);
-        return s;
-       }
-     };
-    Unary u = (Unary)c.getSubChip("unary");
-    u.inc(); u.inc();
-    final Variable v = (Variable)c.layout.getField("s.unary.value");
-    //c.layout.getField("s.unary.value").ok(2);
+    UnaryBM   u = unaryBM(4);
+    u.zero();
+    u.canDec(a);
+    u.canInc(b);
+    u.inc();
+    u.inc();
+    u.inc();
+    u.inc();
+    u.canDec(c);
+    u.canInc(d);
+    u.execute();
+    u.ok("1111");
+    //stop(l);
+    l.ok("""
+T   At  Wide  Index       Value   Field name
+S    0     4                  6   s
+B    0     1                  0     a
+B    1     1                  1     b
+B    2     1                  1     c
+B    3     1                  0     d
+""");
    }
 
   static void oldTests()                                                        // Tests thought to be in good shape
    {test_unary();
-    test_sub_unary();
    }
 
   static void newTests()                                                        // Tests being worked on
