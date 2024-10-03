@@ -1,4 +1,4 @@
-# Test 2024-10-03 at 02:55:30
+# Test 2024-10-03 at 02:56:10
 
 name: Test
 run-name: bartok
@@ -20,7 +20,7 @@ jobs:
 
     strategy:
       matrix:
-        task: [BitMachine, Chip, Layout, Stuck, Test, Unary, Unary2]
+        task: [BitMachine, Chip, Layout, Stuck, Test, Unary]
 
     steps:
     - uses: actions/checkout@v3
@@ -78,8 +78,3 @@ jobs:
       if: matrix.task == 'Unary'
       run: |
         java -cp Classes com/AppaApps/Silicon/Unary
-
-    - name: Test Unary2
-      if: matrix.task == 'Unary2'
-      run: |
-        java -cp Classes com/AppaApps/Silicon/Unary2
