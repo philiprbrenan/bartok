@@ -20,7 +20,7 @@ public class BitMachine extends Test                                            
     step = 0;
     for(instructionIndex = 0; instructionIndex < N; ++instructionIndex)
      {final Instruction i = instructions.elementAt(instructionIndex);
-say("AAAA", step, i.position, i.name);
+//say("AAAA", step, i.position, i.name);
       i.action();
       trace();
       if (++step > maxSteps) stop("Terminating after", maxSteps, "steps");
@@ -70,7 +70,7 @@ say("AAAA", step, i.position, i.name);
       sOff = SOff; tOff = TOff; length = Length;
      }
     void action()                                                               // Perform instruction
-     {say("CCCC", target.name, source.name, length, source.at);
+     {//say("CCCC", target.name, target.at, source.name, source.at, length);
       for(int i = length-1; i >= 0; i--)                                        // Copy each bit assuming no overlap
        {final Boolean b = source.get(sOff+i);
         target.set(tOff+i, b);
@@ -182,8 +182,9 @@ say("AAAA", step, i.position, i.name);
      {field = Field;
      }
     void action()                                                               // Perform instruction
-     {for (int i = field.width-1; i > 0; i--) field.set(i, field.get(i-1));
-      field.set(0, true);
+     {final int N  = field.width;
+      for (int i = 1; i < N; ++i) field.set(i-1, field.get(i));
+      field.set(N-1, false);
      }
    }
   ShiftRightOneByZero shiftRightOneByZero(Layout.Field Field)                   // Shift right one fill with zero
