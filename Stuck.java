@@ -252,6 +252,7 @@ V   24     4                 15     unary
       value = l.variable("value", W);
     final Layout.Structure S = l.structure("S", v1, v2, v3, v4, value);
     l.layout(S);
+    S.zero();
 
     Stuck s = stuck(M, W);
     s.shiftLeftOneByOne(value); s.push(value);
@@ -262,11 +263,28 @@ V   24     4                 15     unary
     s.pop(v2);
     s.pop(v3);
     s.pop(v4);
-say("SSSS\n", s.layout);
-say("LLLL\n", l);
     s.execute();
-stop(l);
+    s.layout.ok("""
+T   At  Wide  Index       Value   Field name
+S    0    28            3961025   structure
+A    0    24      0     3961025     array
+V    0     6                  1       element
+A    6    24      1     3961025     array
+V    6     6                  3       element
+A   12    24      2     3961025     array
+V   12     6                  7       element
+A   18    24      3     3961025     array
+V   18     6                 15       element
+V   24     4                  0     unary
+""");
     l.ok("""
+T   At  Wide  Index       Value   Field name
+S    0    30          251933135   S
+V    0     6                 15     v1
+V    6     6                  7     v2
+V   12     6                  3     v3
+V   18     6                  1     v4
+V   24     6                 15     value
 """);
    }
 
