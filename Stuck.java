@@ -1,293 +1,245 @@
 //------------------------------------------------------------------------------
-// A fixed size stack of ordered bit keys controlled by a unary number.
+// A fixed size stack of ordered bit keys on a bit machine.
 // Philip R Brenan at appaapps dot com, Appa Apps Ltd Inc., 2024
 //------------------------------------------------------------------------------
 package com.AppaApps.Silicon;                                                   // Design, simulate and layout  a binary tree on a silicon chip.
 
 import java.util.*;
 
-class Stuck extends Memory.Structure                                            // Stuck: a fixed size stack controlled by a unary number. The unary number zero indicates an empty stuck stack.
- {final Unary unary;                                                            // The layout of the stuck stack
-  final Memory.Variable found;                                                  //o Whether the latest find actually found the specified element
-  final Memory.Variable full;                                                   //o Whether the stuck is full
-  final Memory.Variable notEmpty;                                               //o Whether the stuck contains at least one element or not
-  final Memory.Variable index;                                                  //i Index to an element wanted in the stuck
-  final Memory.Variable outdex;                                                 //o Index to an element found in the stuck
-  final Memory.Variable input;                                                  //i A buffer used to provide input to the stack
-  final Memory.Variable output;                                                 //o A buffer holding an output from the stuck
-  final Memory.Variable element;                                                // An element of the stuck stack
-  final Memory.Array    array;                                                  // The array holding the elements of the stuck stack
+class Stuck extends BitMachine                                                  // Stuck: a fixed size stack controlled by a unary number. The unary number zero indicates an empty stuck stack.
+ {final Unary             unary;                                                // The layout of the stuck stack
+  final Layout.Field    element;                                                // An element of the stuck stack
+  final Layout.Array      array;                                                // The array holding the elements of the stuck stack
+  final Layout.Structure  stuck;                                                // The array holding the elements of the stuck stack
+  final Layout           layout;                                                // The array holding the elements of the stuck stack
+
+  final Layout.Variable    zero;                                                // Stuck is full flag
+  final Layout.Variable   index;                                                // Stuck is full flag
+  final Layout.Variable  source;                                                // Stuck is full flag
+  final Layout.Variable  target;                                                // Stuck is full flag
+  final Layout.Variable  buffer;                                                // Stuck is full flag
+  final Layout.Structure   temp;                                                // Temporary data structure
+  final Layout          tempLay;                                                // Layout of temporary data
+
   final int max;                                                                // The maximum number of entries in the stuck stack.
   final int width;                                                              // The width of each object in the stuck in bits
-  final Chip chip;                                                              // Chip implementing the stuck
+
+  BitMachine bitMachine = this;                                                 // The bit machine in which to load instructions
 
 //D1 Construction                                                               // Create a stuck stack
 
-  Stuck(String Name, int Max, int Width)                                        // Create the stuck stack
-   {super(Name);                                                                // Containing structure layout
-    width    = Width; max = Max;
+  Stuck(int Max, int Width)                                                     // Create the stuck stack
+   {width    = Width; max = Max;
     unary    = Unary.unary(max);                                                // Unary number showing which elements in the stack are valid
-    found    = variable("found",       1);                                      // Whether the latest find actually found the specified element
-    full     = variable("full",        1);                                      // Whether the stuck is full
-    notEmpty = variable("notEmpty",    1);                                      // Whether the stuck contains at least one element or not
-    index    = variable("index",   width);                                      // Index to an element wanted in the stuck
-    outdex   = variable("outdex",  width);                                      // Index to an element found in the stuck
-    input    = variable("input",   width);                                      // A buffer used to load the stuck
-    output   = variable("output",  width);                                      // A buffer used to unload the stuck
-    element  = variable("element", width);                                      // An element of the stuck stack
-    array    = array   ("array",   element, max);                               // An array of elements comprising the stuck stack
-    addField(found);                                                            // Whether the latest find actually found the specified element
-    addField(full);                                                             // Whether the stuck is full
-    addField(notEmpty);                                                         // Whether the stuck contains at least one element or not
-    addField(index);                                                            // Index to an element wanted in the stuck
-    addField(outdex);                                                           // Index to an element found in the stuck
-    addField(input);                                                            // A buffer used to load the stuck
-    addField(output);                                                           // A buffer used to unload the stuck
-    addField(unary);                                                            // The unary number representing the usage of the stuck
-    addField(array);                                                            // Array of nodes
-    layout();                                                                   // Layout the structure of the stuck stack
-
-    chip = stuck_chip();                                                        // Create a chip
+    unary.bitMachine = this;                                                    // Unary instructions to be placed in this machine
+    layout   = new Layout();                                                    // An element of the stuck stack
+    element  = layout.variable ("element",   width);                            // An element of the stuck stack
+    array    = layout.array    ("array",     element, max);                     // An array of elements comprising the stuck stack
+    stuck    = layout.structure("structure", array,   unary.layout.top);        // An array of elements comprising the stuck stack
+    layout.layout(stuck);                                                       // Layout the structure of the stuck stack
+    unary.layout.memory = layout.memory;                                        // Make our memory superceded the default memeory created with unary.
+    stuck.zero();
+    tempLay  = new Layout();                                                    // Temporary storage
+    zero     = tempLay.variable ("zero",    max);                               // Stuck is full flag
+    index    = tempLay.variable ("index",   max);                               // Stuck is full flag
+    source   = tempLay.variable ("source",  max);                               // Stuck is full flag
+    target   = tempLay.variable ("target",  max);                               // Stuck is full flag
+    buffer   = tempLay.variable ("buffer",  width);                             // Stuck is full flag
+    temp     = tempLay.structure("structure", zero, index,                      // An array of elements comprising the stuck stack
+      source, target, buffer);
+    tempLay.layout(temp);                                                       // Layout the structure of the stuck stack
+    temp.zero();                                                                // Clear temporary storage
    }
 
-  Chip stuck_chip()
-   {final int      D = 12;
-    final Chip     c = new Chip();
-    final int      N = width;
-    final Pulse    p = c.pulse("p").period(0).delay(D).on(D).b();
-    final Register stuckRegister = c.register(n(name, "memory"), N, p);
+  static Stuck stuck(int Max, int Width) {return new Stuck(Max, Width);}        // Create the stuck stack
 
-    return c;
-   }
-
-  static Stuck stuck(int max, int width)                                        // Create a stuck stack
-   {return new Stuck("Stuck", max, width);
-   }
-
-  void clear() {zero();}                                                        // Clear a stuck stack
-
-//D1 Characteristics                                                            // Characteristics of the stuck stack
-
-  int  stuckSize() {return unary.get();}                                        // The current size of the stuck stack
-  void StuckSize() {index.set(unary.get());}                                    // The current size of the stuck stack via the index field
+  void clear() {zero(stuck);}                                                   // Clear a stuck stack
 
   public void ok(String expected) {ok(toString(), expected);}                   // Check the stuck stack
 
-  boolean isFull()  {return stuckSize() >= max;}                                // Check the stuck stack is full
-  boolean isEmpty() {return stuckSize() <= 0;}                                  // Check the stuck stack is empty
+//D1 Characteristics                                                            // Characteristics of the stuck stack
 
-  void Full()     {full.set(stuckSize() >= max  ? 1 : 0);}                      // Indicate whether the stuck is full or not
-  void NotEmpty() {notEmpty.set(stuckSize() > 0 ? 1 : 0);}                      // Indicate the stuck contains at least one element or not
-
-  void setIndex (int Element)   {index .set(memoryFromInt(width, Element));}    // Set the index from an integer
-  void setIndex (Memory memory) {index .set(memory);}                           // Set the index from memory
-
-  void setInput(int Element)   {input.set(memoryFromInt(width, Element));}      // Set the buffer from an integer
-  void setInput(Memory memory) {input.set(memory);}                             // Set the buffer from memory
+  void isFull (Layout.Bit result) {unary.canNotInc(result);}                    // Check the stuck stack is full
+  void isEmpty(Layout.Bit result) {unary.canNotDec(result);}                    // Check the stuck stack is empty
 
 //D1 Actions                                                                    // Place and remove data to/from stuck stack
 
-  void push(Memory ElementToPush)                                               // Push an element as memory onto the stuck stack
-   {if (!unary.canInc()) stop("Stuck is full");                                 // Check there is room on the stack
-    final int n = stuckSize();                                                  // Current size of  Stuck Stack
-    array.setIndex(n);                                                          // Index stuck memory
-    element.set(ElementToPush);                                                 // Set memory of stuck stack from supplied memory
+  void push(Layout.Field ElementToPush)                                         // Push an element as memory onto the stuck stack
+   {setIndex(array, unary.value);                                               // Index stuck memory
+    copy(element, ElementToPush);                                               // Set memory of stuck stack from supplied memory
     unary.inc();                                                                // Show new slot in use
-    NotEmpty(); Full();                                                         // Show whether empty or full
    }
 
-  void Push() {push(input);}                                                    // Push the buffer onto the stuck stack
-  void push(int Value) {push(memoryFromInt(width, Value));}                     // Push an integer onto the stuck stack
+  void pop(Layout.Field PoppedElement)                                          // Pop an element as memory from the stuck stack
+   {unary.dec();                                                                // New number of elements on stuck stack
+    setIndex(array, unary.value);                                               // Index stuck memory
+    copy(PoppedElement, element);                                               // Set memory of stuck stack from supplied memory
+   }
 
-  Memory pop()                                                                  // Pop an element as memory from the stuck stack
-   {if (!unary.canDec()) stop("Stuck is empty");                                // Confirm there is an element to pop on the stuck stack
+  void shift(Layout.Field ShiftedElement)                                       // Shift an element as memory from the stuck stack
+   {zero(target);
+    copy(ShiftedElement, target);                                              // Copy the slice of memory
+    zero(source);
+    shiftLeftOneByOne(source);
+
+    for (int i = 1; i < max; i++)                                               // Shift the stuck stack down place
+     {setIndex(array, source);
+      copy(buffer, element);                                                    // Copy the slice of memory
+      setIndex(array, target);
+      copy(element, buffer);                                                    // Copy the slice of memory
+      shiftLeftOneByOne(source);
+      shiftLeftOneByOne(target);
+     }
     unary.dec();                                                                // New number of elements on stuck stack
-    final int n = stuckSize();                                                  // Current size of  Stuck Stack
-    array.setIndex(n);                                                          // Index stuck memory
-    NotEmpty(); Full();                                                         // Show whether empty or full
-    return element.memory();                                                    // Get memory from stuck stack
    }
 
-  void Pop() {output.set(pop());}                                               // Pop an element as memory from the stuck stack
+  void unshift(Layout.Field ElementToUnShift)                                   // Unshift an element as memory onto the stuck stack
+   {zero(source);
+    zero(target);
 
-  Memory shift()                                                                // Shift an element as memory from the stuck stack
-   {if (!unary.canDec()) stop("Stuck is empty");                                // Confirm there is an element to shift on the stuck stack
-    unary.dec();                                                                // New number of elements on stuck stack
-    array.setIndex(0);                                                          // Index stuck memory
-    Memory m = element.memory().duplicate();                                    // Copy the slice of memory
-    final int N = stuckSize();                                                  // Current size of  Stuck Stack
-    for (int i = 0; i < N; i++)                                                 // Shift the stuck stack down place
-     {array.setIndex(i+1);                                                      // Upper element
-      Memory e = element.memory();                                              // Get reference to upper element
-      array.setIndex(i);                                                        // Index stuck memory
-      element.set(e);                                                           // Get referenced element
+    for (int i = 0; i < max; i++)                                               // Shift the stuck stack down place
+     {shiftLeftOneByOne(source);
+      shiftLeftOneByOne(target);
      }
-    NotEmpty(); Full();                                                         // Show whether empty or full
-    return m;                                                                   // Return memory of shifted element
-   }
+    shiftRightOneByZero(source);
 
-  void Shift() {output.set(shift());}                                           // Shift an element as memory from the stuck stack
-
-  void unshift(Memory ElementToUnShift)                                         // Unshift an element as memory onto the stuck stack
-   {if (!unary.canInc()) stop("Stuck is full");                                 // Confirm there is room for another element  in the stuck stack
-    final int N = stuckSize();                                                  // Current size of stuck stack
-    for (int i = N; i > 0; i--)                                                 // Shift the stuck stack down place
-     {array.setIndex(i-1);                                                      // Lower element
-      Memory n = element.memory();                                              // Get reference to lower element
-      array.setIndex(i);                                                        // Index upper element
-      element.set(n);                                                           // Set upper element
+    for (int i = max; i > 1; --i)                                               // Shift the stuck stack down place
+     {setIndex(array, source);
+      copy(buffer, element);                                                    // Copy the slice of memory
+      setIndex(array, target);
+      copy(element, buffer);                                                    // Copy the slice of memory
+      shiftRightOneByZero(source);
+      shiftRightOneByZero(target);
      }
-    array.setIndex(0);                                                          // Index first element
-    element.set(ElementToUnShift);
-    unary.inc();
-    NotEmpty(); Full();                                                         // Show whether empty or full
+    setIndex(array, zero);
+    copy(element, ElementToUnShift);                                            // Copy the slice of memory
+    unary.inc();                                                                // New number of elements on stuck stack
    }
 
-  void Unshift() {unshift(input);}                                              // Unshift an element as memory onto the stuck stack
-
-  void unshift(int    Value) {unshift(memoryFromInt(width, Value));}            // Unshift an integer onto the stuck stack
-  void unshift(String Value) {unshift(memoryFromString(Value));}                // Unshift an Memory onto the stuck stack
-
-  Memory elementAt(int i)                                                       // Return the element at the indicated index
-   {if (!unary.canDec()) stop("Stuck is empty");                                // Confirm there is an element to shift on the stuck stack
-    final int N = stuckSize();                                                  // Current size of stuck stack
-    if (i < 0 || i > N) stop("Index out of range", i, N);
-    array.setIndex(i);                                                          // Upper element
-    return element.memory();                                                    // Get reference to upper element
+  void elementAt(Layout.Field elementOut, int n)                                // Return the element at the indicated constant index
+   {zero(index);
+    for (int i = 0; i < n; i++) shiftLeftOneByOne(index);                       // Shift the stuck stack down place
+    copy(elementOut, element);
    }
 
-  void ElementAt() {output.set(elementAt(index.toInt()));}                      // Return the element at the indicated index
-
-  void setElementAt(Memory Element, int i)                                      // Set an element of the stuck stack
-   {final int N = stuckSize();                                                  // Current size of stuck stack
-    if (i > N) stop("Too far up");
-    if (i < 0) stop("Too far down");
-    array.setIndex(i);                                                          // Index stuck memory
-    element.set(Element);                                                       // Set memory of stuck stack from supplied memory
-    if (i == N) unary.inc();                                                    // Creating a new top element
-    NotEmpty(); Full();                                                         // Show whether empty or full
+  void setElementAt(Layout.Field elementIn, int n)                              // Return the element at the indicated constant index
+   {zero(index);
+    for (int i = 0; i < n; i++) shiftLeftOneByOne(index);                       // Shift the stuck stack down place
+    copy(element, elementIn);
    }
 
-  void SetElementAt() {setElementAt(input, index.toInt());}                     // Set an element of the stuck stack
-
-  void setElementAt(int Value, int index)                                       // Unshift an integer onto the stuck stack
-   {setElementAt(memoryFromInt(width, Value), index);
-   }
-  void setElementAt(String Value, int index)                                    // Unshift an Memory onto the stuck stack
-   {setElementAt(memoryFromString(Value), index);
-   }
-
-  void insertElementAt(Memory elementToInsert, int i)                           // Insert an element represented as memory into the stuck stack at the indicated 0-based index after moving the elements above up one position
-   {final int N = stuckSize();                                                  // Current size of stuck stack
-    if (!unary.canInc()) stop("Stuck is full");
-    if (i > N) stop("Too far up");
-    if (i < 0) stop("Too far down");
-    for (int j = N; j > i; j--)
-     {array.setIndex(j-1);
-      final Memory m = element.memory();
-      array.setIndex(j);
-      element.set(m);
-     }
-    array.setIndex(i);
-    element.set(elementToInsert);
-    unary.inc();
-    NotEmpty(); Full();                                                         // Show whether empty or full
+  void insertElementAt(Layout.Field elementToInsert, Layout.Field i)            // Insert an element represented as memory into the stuck stack at the indicated 0-based index after moving the elements above up one position
+   {ones(target);                                                               // Top of stuck stack
+    ones(source);                                                               // Top of stuck stack
+    final BranchOnCompare test = branchIfEqual(target, i);                      // Test for finish of shifting phase
+      shiftRightOneByZero(source);                                              // One step down on source
+      setIndex(array, source);
+      copy(buffer, element);
+      setIndex(array, target);
+      copy(element, buffer);
+      shiftRightOneByZero(target);                                              //
+    goTo(test);
+    comeFromComparison(test);
    }
 
-  void insertElementAt(int    Value, int index)                                 // Push an integer onto the stuck stack
-   {insertElementAt(memoryFromInt(width, Value), index);
+  void removeElementAt(Layout.Field i)                                          // Remove the Memory at 0 based index i and shift the Memorys above down one position
+   {copy(target, i);                                                            // Target of removal
+    copy(source, target);                                                       // Source of removeal
+    final Branch test = branchIfAllOnes(target);                                // Test for finish of shifting phase
+      shiftLeftOneByOne(source);                                                // One step down on source
+      setIndex(array, source);
+      copy(buffer, element);
+      setIndex(array, target);
+      copy(element, buffer);
+      shiftLeftOneByOne(target);                                                //
+    goTo(test);
+    comeFrom(test);
    }
 
-  void insertElementAt(String Value, int index)                                 // Push an Memory onto the stuck stack
-   {insertElementAt(memoryFromString(Value), index);
+  void firstElement(Layout.Field FirstElement)                                  // Get the first element
+   {setIndex(array, zero);
+    copy(FirstElement, element);
    }
 
-  void insertElementAt() {insertElementAt(input.toInt(), index.toInt());}       // Push an Memory onto the stuck stack
-
-  Memory removeElementAt(int i)                                                 // Remove the Memory at 0 based index i and shift the Memorys above down one position
-   {if (!unary.canDec()) stop("Stuck is empty");
-    final int N = stuckSize();
-    if (i > N) stop("Too far up");
-    if (i < 0) stop("Too far down");
-    array.setIndex(i);
-    final Memory r = elementAt(i).duplicate();
-    for (int j = i; j < N-1; j++)
-     {array.setIndex(j+1);
-      final Memory p = element.memory();
-      array.setIndex(j);
-      element.set(p);
-     }
-    unary.dec();
-    NotEmpty(); Full();                                                         // Show whether empty or full
-    return r;
+  void lastElement(Layout.Field LastElement)                                    // Get the last active element
+   {setIndex(array, unary.value);
+    copy(LastElement, element);
    }
-
-  Memory RemoveElementAt() {return removeElementAt(index.toInt());}             // Remove the Memory at 0 based index i and shift the Memorys above down one position
-
-  Memory firstElement() {return elementAt(0);}                                  // Get the value of the first Memory
-  Memory  lastElement() {return elementAt(stuckSize()-1);}                      // Get the value of the last Memory
-
-  void   FirstElement() {output.set(elementAt(0));}                             // Get the value of the first Memory
-  void    LastElement() {output.set(elementAt(stuckSize()-1));}                 // Get the value of the last Memory
 
 //D1 Search                                                                     // Search a stuck stack.
 
-  int indexOf(Memory elementToFind)                                             // Set found to true and index to the 0 based index of the indicated memory else -1 if the memory is not present in the stuck stack.
-   {final int N = stuckSize();
-    for (int i = 0; i < N; i++)
-     {final Memory m = elementAt(i);
-      if (m.equals(elementToFind)) return i;
+  void indexOf                                                                  // Find the index of an element in the stuck and set the found flag to true else if no such element is found the found flag is set to false
+   (Layout.Field elementToFind, Layout.Bit found, Layout.Variable index)        // Set found to true and index to the 0 based index of the indicated memory else -1 if the memory is not present in the stuck stack.
+   {zero(found);
+    zero(index);
+    Branch equal = null;
+    for (int i = 0; i < max; i++)
+     {setIndex(array, index);
+      equals(found, elementToFind, element);                                    // Test for the element to be found
+      equal = branchIfOne(found);
+      shiftLeftOneByOne(index);
      }
-    return -1;                                                                  // Not found
+    comeFrom(equal);
    }
-
-  void IndexOf()                                                                // Return 0 based index of the indicated memory else -1 if the memory is not present in the stuck stack.
-   {final Memory elementToFind = input;
-    final int N = stuckSize();
-    for (int i = 0; i < N; i++)
-     {final Memory m = elementAt(i);
-      if (m.equals(elementToFind))
-       {outdex.set(i);
-        found.set(1);
-        return;
-       }
-     }
-    found.set(0);
-    return;
-   }
-
-  int indexOf(int    Value) {return indexOf(memoryFromInt(width, Value));}      // Zero based index of an integer in a stuck stack
-  int indexOf(String Value) {return indexOf(memoryFromString(Value));}          // Zero based index of a string in a stuck stack
 
 //D1 Print                                                                      // Print a stuck stack
-
-  String print(String Name, String End)                                         // Print a stuck stack
-   {final StringBuilder b = new StringBuilder(Name);
-    final int N = stuckSize();
-    for (int i = 0; i < N; i++) b.append(""+elementAt(i).toInt()+", ");
-    if (N > 0) b.setLength(b.length()-2);
-    b.append(End);
-    return b.toString();
-   }
-
-  public String toString() {return print("Stuck(", ")");}                       // Print a stuck stack with label
 
 //D0 Tests                                                                      // Test stuck stack
 
   static void test_push()
-   {final int W = 4, M = 4;
-    Stuck s = stuck(M, W);
-    ok(s.isEmpty()); s.notEmpty.ok(0); s.full.ok(0); s.ok("Stuck()");
-    s.push(1);       s.notEmpty.ok(1); s.full.ok(0); s.ok("Stuck(1)");
-    s.push(2);       s.notEmpty.ok(1); s.full.ok(0); s.ok("Stuck(1, 2)");
-    s.push(3);       s.notEmpty.ok(1); s.full.ok(0); s.ok("Stuck(1, 2, 3)");
-    s.push(12);      s.notEmpty.ok(1); s.full.ok(1); s.ok("Stuck(1, 2, 3, 12)");
-    ok(s.stuckSize(), 4);
-    s.StuckSize(); s.index.ok(4);
-    ok(s.isFull());
-    s.ok("Stuck(1, 2, 3, 12)");
-   }
+   {final int W = 6, M = 4;
 
+    final Layout l = new Layout();                                              // An element of the stuck stack
+    final Layout.Bit                                                            // An element of the stuck stack
+      e0 = l.bit("e0"), f0 = l.bit("f0"),                                       // An array of elements comprising the stuck stack
+      e1 = l.bit("e1"), f1 = l.bit("f1"),                                       // An array of elements comprising the stuck stack
+      e2 = l.bit("e2"), f2 = l.bit("f2"),                                       // An array of elements comprising the stuck stack
+      e3 = l.bit("e3"), f3 = l.bit("f3"),                                       // An array of elements comprising the stuck stack
+      e4 = l.bit("e4"), f4 = l.bit("f4");                                       // An array of elements comprising the stuck stack
+    final Layout.Variable value = l.variable("value", W);
+    final Layout.Structure    S = l.structure("structure", e0, e1, e2, e3, e4,
+       value,                                              f0, f1, f2, f3, f4);
+    l.layout(S);                                                                // Layout the structure of the stuck stack
+
+    Stuck s = stuck(M, W);
+    s.isEmpty(e0);
+    s.isFull(f0);
+    s.zero(value);              s.push(value);  s.isEmpty(e1); s.isFull(f1);
+    s.shiftLeftOneByOne(value); s.push(value);  s.isEmpty(e2); s.isFull(f2);
+    s.shiftLeftOneByOne(value); s.push(value);  s.isEmpty(e3); s.isFull(f3);
+    s.shiftLeftOneByOne(value); s.push(value);  s.isEmpty(e4); s.isFull(f4);
+    //stop(s);
+    s.execute();
+    l.ok("""
+T   At  Wide  Index       Value   Field name
+S    0    16              32993   structure
+B    0     1                  1     e0
+B    1     1                  0     e1
+B    2     1                  0     e2
+B    3     1                  0     e3
+B    4     1                  0     e4
+V    5     6                  7     value
+B   11     1                  0     f0
+B   12     1                  0     f1
+B   13     1                  0     f2
+B   14     1                  0     f3
+B   15     1                  1     f4
+""");
+    s.layout.ok("""
+T   At  Wide  Index       Value   Field name
+S    0    28          253505600   structure
+A    0    24      0     1847360     array
+V    0     6                  0       element
+A    6    24      1     1847360     array
+V    6     6                  1       element
+A   12    24      2     1847360     array
+V   12     6                  3       element
+A   18    24      3     1847360     array
+V   18     6                  7       element
+V   24     4                 15     unary
+""");
+   }
+/*
   static void test_push_buffer()
    {final int W = 4, M = 4;
     Stuck s = stuck(M, W);
@@ -508,20 +460,20 @@ class Stuck extends Memory.Structure                                            
     s.setInput(6); s.setIndex(2); s.SetElementAt(); s.ok("Stuck(4, 5, 6)");
     s.setInput(7); s.setIndex(0); s.SetElementAt(); s.ok("Stuck(7, 5, 6)");
    }
-
+*/
   static void oldTests()                                                        // Tests thought to be in good shape
-   {test_push();               test_push_buffer();
-    test_pop();                test_pop_buffer();
-    test_shift();              test_shift_buffer();
-    test_unshift();            test_unshift_buffer();
-    test_element_at();         test_element_at_buffer();
-    test_insert_element_at();  test_insert_element_at_buffer();
-    test_remove_element_at();  test_remove_element_at_buffer();
-    test_first_last();         test_first_last_buffer();
-    test_index_of();           test_index_of_buffer();
-    test_clear();
-    test_print();
-    test_set_element_at();
+   {test_push();               //test_push_buffer();
+    //test_pop();                test_pop_buffer();
+    //test_shift();              test_shift_buffer();
+    //test_unshift();            test_unshift_buffer();
+    //test_element_at();         test_element_at_buffer();
+    //test_insert_element_at();  test_insert_element_at_buffer();
+    //test_remove_element_at();  test_remove_element_at_buffer();
+    //test_first_last();         test_first_last_buffer();
+    //test_index_of();           test_index_of_buffer();
+    //test_clear();
+    //test_print();
+    //test_set_element_at();
    }
 
   static void newTests()                                                        // Tests being worked on
