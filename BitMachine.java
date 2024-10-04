@@ -597,12 +597,12 @@ V    4     4                 15     b
     Layout.Variable a = l.variable ("a", 4);
     l.layout(a);
 
-    a.fromInt(0b1010);
+    a.fromInt(0b1100);
 
     BitMachine m = new BitMachine();
     m.new ShiftRightOneByZero(a);
     m.execute();
-    a.ok(0b0101);
+    a.ok(0b0110);
    }
 
   static void test_equal()
