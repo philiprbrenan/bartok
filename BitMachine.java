@@ -20,6 +20,7 @@ public class BitMachine extends Test                                            
     step = 0;
     for(instructionIndex = 0; instructionIndex < N; ++instructionIndex)
      {final Instruction i = instructions.elementAt(instructionIndex);
+say("AAAA", step, i.position, i.name);
       i.action();
       trace();
       if (++step > maxSteps) stop("Terminating after", maxSteps, "steps");
@@ -69,7 +70,11 @@ public class BitMachine extends Test                                            
       sOff = SOff; tOff = TOff; length = Length;
      }
     void action()                                                               // Perform instruction
-     {for(int i = length-1; i >= 0; i--) target.set(tOff+i, source.get(sOff+i));// Copy each bit assuming no overlap
+     {say("CCCC", target.name, source.name, length, source.at);
+      for(int i = length-1; i >= 0; i--)                                        // Copy each bit assuming no overlap
+       {final Boolean b = source.get(sOff+i);
+        target.set(tOff+i, b);
+       }
      }
    }
   Copy copy(Layout.Field target, Layout.Field source)                           // Copy bits from source to target
