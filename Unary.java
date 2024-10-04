@@ -1,22 +1,23 @@
 //------------------------------------------------------------------------------
-// Unary arithmetic using boolean arrays in BitMachine assembler.
+// Unary arithmetic using boolean arrays on a bit machine.
 // Philip R Brenan at appaapps dot com, Appa Apps Ltd Inc., 2024
 //------------------------------------------------------------------------------
 package com.AppaApps.Silicon;                                                   // Design, simulate and layout a binary tree on a silicon chip.
 
-class UnaryBM extends BitMachine                                                // Unary arithmetic on a chip
+class Unary extends BitMachine                                                  // Unary arithmetic on a chip
  {final Layout          layout;                                                 // The layout of the unary number
   final Layout.Variable value;                                                  // The value of the unary number
+  BitMachine bitMachine = this;                                                 // The bit machine in which to load instructions
 
 //D1 Construction                                                               // Create a unary number
 
-  UnaryBM(int Max)                                                              // Create a unary number of specified size
+  Unary(int Max)                                                                // Create a unary number of specified size
    {if (Max <= 0) stop("Unary size must be at least one, not", Max);            // Size check
     layout = new Layout();
-    value  = layout.variable("value", Max);                                     // The value of the unary number
+    value  = layout.variable("unary", Max);                                     // The value of the unary number
     layout.layout(value);                                                       // Layout memory
    }
-  static UnaryBM unaryBM(int Max) {return new UnaryBM(Max);}                    // Create a unary number
+  static Unary unary(int Max) {return new Unary(Max);}                          // Create a unary number
 
   int max() {return value.width;}                                               // The maximum value of the unary number - override this method to set a non zero size
 
@@ -29,11 +30,13 @@ class UnaryBM extends BitMachine                                                
   void zero() {zero(value);}                                                    // Clear unary number to all zeros
   void ones() {ones(value);}                                                    // Set unary number to all ones
 
-  void canInc(Layout.Bit result) {copy(result, 0, value, 0, 1); not(result);}   // Unary contains at least one one
-  void canDec(Layout.Bit result) {copy(result, 0, value, 0, 1);}                // Unary contains at least one zero
+  void canInc(   Layout.Bit result) {bitMachine.copy(result, 0, value, value.width-1, 1); bitMachine.not(result);} // Unary contains at least one one
+  void canNotInc(Layout.Bit result) {bitMachine.copy(result, 0, value, value.width-1, 1);}                         // Unary contains at least one one
+  void canDec   (Layout.Bit result) {bitMachine.copy(result, 0, value, 0,             1);}                         // Unary contains at least one zero
+  void canNotDec(Layout.Bit result) {bitMachine.copy(result, 0, value, 0,             1); bitMachine.not(result);} // Unary contains at least one zero
 
-  void inc() {shiftLeftOneByOne  (value);}                                      // Increment the unary number
-  void dec() {shiftRightOneByZero(value);}                                      // Decrement the unary number
+  void inc() {bitMachine.shiftLeftOneByOne  (value);}                           // Increment the unary number
+  void dec() {bitMachine.shiftRightOneByZero(value);}                           // Decrement the unary number
 
 //D1 Print                                                                      // Print a unary number
 
@@ -50,7 +53,7 @@ class UnaryBM extends BitMachine                                                
     Layout.Structure s = l.structure("s", a, b, c, d);
     l.layout(s);
 
-    UnaryBM   u = unaryBM(4);
+    Unary   u = unary(4);
     u.zero();
     u.canDec(a);
     u.canInc(b);
