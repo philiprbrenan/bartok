@@ -78,7 +78,8 @@ class Stuck extends BitMachine                                                  
 
   void shift(Layout.Field ShiftedElement)                                       // Shift an element as memory from the stuck stack
    {zero(target);
-    copy(ShiftedElement, target);                                              // Copy the slice of memory
+    setIndex(array, target);
+    copy(ShiftedElement, element);                                              // Copy the slice of memory
     zero(source);
     shiftLeftOneByOne(source);
 
@@ -288,17 +289,55 @@ V   24     6                 15     value
 """);
    }
 
-/*
   static void test_shift()
-   {final int W = 4, M = 4;
+   {final int W = 6, M = 4;
+
+    final Layout l = new Layout();
+    final Layout.Variable
+      v1    = l.variable("v1",    W),
+      v2    = l.variable("v2",    W),
+      v3    = l.variable("v3",    W),
+      v4    = l.variable("v4",    W),
+      value = l.variable("value", W);
+    final Layout.Structure S = l.structure("S", v1, v2, v3, v4, value);
+    l.layout(S);
+    S.zero();
+
     Stuck s = stuck(M, W);
-    s.push(1); s.push(2); s.push(3); s.push(12);
-                                    ok(s.stuckSize(), 4); s.ok("Stuck(1, 2, 3, 12)");
-    Memory a = s.shift(); a.ok( 1); ok(s.stuckSize(), 3); s.ok("Stuck(2, 3, 12)");
-    Memory b = s.shift(); b.ok( 2); ok(s.stuckSize(), 2); s.ok("Stuck(3, 12)");
-    Memory c = s.shift(); c.ok( 3); ok(s.stuckSize(), 1); s.ok("Stuck(12)");
-    Memory d = s.shift(); d.ok(12); ok(s.stuckSize(), 0); s.ok("Stuck()");
+    s.shiftLeftOneByOne(value); s.push(value);
+    s.shiftLeftOneByOne(value); s.push(value);
+    s.shiftLeftOneByOne(value); s.push(value);
+    s.shiftLeftOneByOne(value); s.push(value);
+    s.shift(v1);
+    s.shift(v2);
+    s.shift(v3);
+    s.shift(v4);
+    s.execute();
+    s.layout.ok("""
+T   At  Wide  Index       Value   Field name
+S    0    28            3994575   structure
+A    0    24      0     3994575     array
+V    0     6                 15       element
+A    6    24      1     3994575     array
+V    6     6                 15       element
+A   12    24      2     3994575     array
+V   12     6                 15       element
+A   18    24      3     3994575     array
+V   18     6                 15       element
+V   24     4                  0     unary
+""");
+
+    l.ok("""
+T   At  Wide  Index       Value   Field name
+S    0    30          255619265   S
+V    0     6                  1     v1
+V    6     6                  3     v2
+V   12     6                  7     v3
+V   18     6                 15     v4
+V   24     6                 15     value
+""");
    }
+/*
 
   static void test_unshift()
    {final int W = 4, M = 4;
@@ -410,7 +449,7 @@ V   24     6                 15     value
 
   static void newTests()                                                        // Tests being worked on
    {//oldTests();
-    test_pop();
+    test_shift();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
