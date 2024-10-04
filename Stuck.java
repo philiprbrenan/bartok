@@ -189,25 +189,25 @@ class Stuck extends BitMachine                                                  
   static void test_push()
    {final int W = 6, M = 4;
 
-    final Layout l = new Layout();                                              // An element of the stuck stack
-    final Layout.Bit                                                            // An element of the stuck stack
-      e0 = l.bit("e0"), f0 = l.bit("f0"),                                       // An array of elements comprising the stuck stack
-      e1 = l.bit("e1"), f1 = l.bit("f1"),                                       // An array of elements comprising the stuck stack
-      e2 = l.bit("e2"), f2 = l.bit("f2"),                                       // An array of elements comprising the stuck stack
-      e3 = l.bit("e3"), f3 = l.bit("f3"),                                       // An array of elements comprising the stuck stack
-      e4 = l.bit("e4"), f4 = l.bit("f4");                                       // An array of elements comprising the stuck stack
+    final Layout l = new Layout();
+    final Layout.Bit
+      e0 = l.bit("e0"), f0 = l.bit("f0"),
+      e1 = l.bit("e1"), f1 = l.bit("f1"),
+      e2 = l.bit("e2"), f2 = l.bit("f2"),
+      e3 = l.bit("e3"), f3 = l.bit("f3"),
+      e4 = l.bit("e4"), f4 = l.bit("f4");
     final Layout.Variable value = l.variable("value", W);
     final Layout.Structure    S = l.structure("structure", e0, e1, e2, e3, e4,
        value,                                              f0, f1, f2, f3, f4);
-    l.layout(S);                                                                // Layout the structure of the stuck stack
+    l.layout(S);
 
     Stuck s = stuck(M, W);
     s.isEmpty(e0);
     s.isFull(f0);
-    s.zero(value);              s.push(value);  s.isEmpty(e1); s.isFull(f1);
-    s.shiftLeftOneByOne(value); s.push(value);  s.isEmpty(e2); s.isFull(f2);
-    s.shiftLeftOneByOne(value); s.push(value);  s.isEmpty(e3); s.isFull(f3);
-    s.shiftLeftOneByOne(value); s.push(value);  s.isEmpty(e4); s.isFull(f4);
+    s.zero(value);              s.push(value); s.isEmpty(e1); s.isFull(f1);
+    s.shiftLeftOneByOne(value); s.push(value); s.isEmpty(e2); s.isFull(f2);
+    s.shiftLeftOneByOne(value); s.push(value); s.isEmpty(e3); s.isFull(f3);
+    s.shiftLeftOneByOne(value); s.push(value); s.isEmpty(e4); s.isFull(f4);
     //stop(s);
     s.execute();
     l.ok("""
@@ -239,39 +239,38 @@ V   18     6                  7       element
 V   24     4                 15     unary
 """);
    }
-/*
-  static void test_push_buffer()
-   {final int W = 4, M = 4;
-    Stuck s = stuck(M, W);
-    s.setInput(1); s.Push(); s.ok("Stuck(1)");
-    s.setInput(2); s.Push(); s.ok("Stuck(1, 2)");
-    s.setInput(3); s.Push(); s.ok("Stuck(1, 2, 3)");
-   }
 
   static void test_pop()
-   {final int W = 4, M = 4;
+   {final int W = 6, M = 4;
+
+    final Layout l = new Layout();
+    final Layout.Variable
+      v1    = l.variable("v1",    W),
+      v2    = l.variable("v2",    W),
+      v3    = l.variable("v3",    W),
+      v4    = l.variable("v4",    W),
+      value = l.variable("value", W);
+    final Layout.Structure S = l.structure("S", v1, v2, v3, v4, value);
+    l.layout(S);
+
     Stuck s = stuck(M, W);
-    s.push(1); s.push(2); s.push(3); s.push(12);
-                    ok(s.stuckSize(), 4);
-    s.pop().ok(12); ok(s.stuckSize(), 3);
-    s.pop().ok( 3); ok(s.stuckSize(), 2);
-    s.pop().ok( 2); ok(s.stuckSize(), 1);
-    s.pop().ok( 1); ok(s.stuckSize(), 0);
+    s.shiftLeftOneByOne(value); s.push(value);
+    s.shiftLeftOneByOne(value); s.push(value);
+    s.shiftLeftOneByOne(value); s.push(value);
+    s.shiftLeftOneByOne(value); s.push(value);
+    s.pop(v1);
+    s.pop(v2);
+    s.pop(v3);
+    s.pop(v4);
+say("SSSS\n", s.layout);
+say("LLLL\n", l);
+    s.execute();
+stop(l);
+    l.ok("""
+""");
    }
 
-  static void test_pop_buffer()
-   {final int W = 4, M = 4;
-    Stuck s = stuck(M, W);
-    s.push(1); s.push(2); s.push(3); s.push(12);
-                    ok(s.stuckSize(), 4);
-    s.Pop();
-    s.output.ok(12);
-    ok(s.stuckSize(), 3);
-    s.Pop(); s.output.ok( 3); ok(s.stuckSize(), 2);
-    s.Pop(); s.output.ok( 2); ok(s.stuckSize(), 1);
-    s.Pop(); s.output.ok( 1); ok(s.stuckSize(), 0);
-   }
-
+/*
   static void test_shift()
    {final int W = 4, M = 4;
     Stuck s = stuck(M, W);
@@ -281,17 +280,6 @@ V   24     4                 15     unary
     Memory b = s.shift(); b.ok( 2); ok(s.stuckSize(), 2); s.ok("Stuck(3, 12)");
     Memory c = s.shift(); c.ok( 3); ok(s.stuckSize(), 1); s.ok("Stuck(12)");
     Memory d = s.shift(); d.ok(12); ok(s.stuckSize(), 0); s.ok("Stuck()");
-   }
-
-  static void test_shift_buffer()
-   {final int W = 4, M = 4;
-    Stuck s = stuck(M, W);
-    s.push(1); s.push(2); s.push(3); s.push(12);
-
-    s.Shift(); s.output.ok( 1);
-    s.Shift(); s.output.ok( 2);
-    s.Shift(); s.output.ok( 3);
-    s.Shift(); s.output.ok(12);
    }
 
   static void test_unshift()
@@ -304,16 +292,6 @@ V   24     4                 15     unary
     s.unshift(9); ok(s.stuckSize(), 4); s.ok("Stuck(9, 3, 2, 1)");
    }
 
-  static void test_unshift_buffer()
-   {final int W = 4, M = 4;
-    Stuck s = stuck(M, W);
-                  ok(s.stuckSize(), 0);
-    s.input.set(1); s.Unshift(); ok(s.stuckSize(), 1); s.ok("Stuck(1)");
-    s.input.set(2); s.Unshift(); ok(s.stuckSize(), 2); s.ok("Stuck(2, 1)");
-    s.input.set(3); s.Unshift(); ok(s.stuckSize(), 3); s.ok("Stuck(3, 2, 1)");
-    s.input.set(9); s.Unshift(); ok(s.stuckSize(), 4); s.ok("Stuck(9, 3, 2, 1)");
-   }
-
   static void test_element_at()
    {final int W = 4, M = 4;
     Stuck s = stuck(M, W);
@@ -322,16 +300,6 @@ V   24     4                 15     unary
     s.elementAt(1).ok(2);
     s.elementAt(2).ok(3);
     s.elementAt(3).ok(12);
-   }
-
-  static void test_element_at_buffer()
-   {final int W = 4, M = 4;
-    Stuck s = stuck(M, W);
-    s.push(1); s.push(2); s.push(3); s.push(12);
-    s.index.set(0); s.ElementAt(); s.output.ok(1);
-    s.index.set(1); s.ElementAt(); s.output.ok(2);
-    s.index.set(2); s.ElementAt(); s.output.ok(3);
-    s.index.set(3); s.ElementAt(); s.output.ok(12);
    }
 
   static void test_insert_element_at()
@@ -343,15 +311,6 @@ V   24     4                 15     unary
     s.insertElementAt(4, 1); s.ok("Stuck(3, 4, 2, 1)");
    }
 
-  static void test_insert_element_at_buffer()
-   {final int W = 4, M = 8;
-    Stuck s = stuck(M, W);
-    s.setInput(3); s.setIndex(0); s.insertElementAt(); s.ok("Stuck(3)");
-    s.setInput(2); s.setIndex(1); s.insertElementAt(); s.ok("Stuck(3, 2)");
-    s.setInput(1); s.setIndex(2); s.insertElementAt(); s.ok("Stuck(3, 2, 1)");
-    s.setInput(4); s.setIndex(1); s.insertElementAt(); s.ok("Stuck(3, 4, 2, 1)");
-   }
-
   static void test_remove_element_at()
    {final int W = 4, M = 4;
     Stuck s = stuck(M, W);
@@ -360,16 +319,6 @@ V   24     4                 15     unary
     s.removeElementAt(1).ok(3);   s.ok("Stuck(1, 12)");
     s.removeElementAt(0).ok(1);   s.ok("Stuck(12)");
     s.removeElementAt(0).ok(12);  s.ok("Stuck()");
-   }
-
-  static void test_remove_element_at_buffer()
-   {final int W = 4, M = 4;
-    Stuck s = stuck(M, W);
-    s.push(1); s.push(2); s.push(3); s.push(12);
-    s.setIndex(1); s.RemoveElementAt().ok(2);   s.ok("Stuck(1, 3, 12)");
-    s.setIndex(1); s.RemoveElementAt().ok(3);   s.ok("Stuck(1, 12)");
-    s.setIndex(0); s.RemoveElementAt().ok(1);   s.ok("Stuck(12)");
-    s.setIndex(0); s.RemoveElementAt().ok(12);  s.ok("Stuck()");
    }
 
   static void test_first_last()
@@ -384,14 +333,6 @@ V   24     4                 15     unary
     s.lastElement() .ok(12);
    }
 
-  static void test_first_last_buffer()
-   {final int W = 4, M = 4;
-    Stuck s = stuck(M, W);
-    s.push(1); s.push(2); s.push(3); s.push(12);
-    s.FirstElement(); s.output.ok(1);
-    s.LastElement();  s.output.ok(12);
-   }
-
   static void test_index_of()
    {final int W = 4, M = 4;
     Stuck s = stuck(M, W);
@@ -401,20 +342,6 @@ V   24     4                 15     unary
     ok(s.indexOf(3),  2);
     ok(s.indexOf(6),  3);
     ok(s.indexOf(7), -1);
-   }
-
-  static void test_index_of_buffer()
-   {final int W = 4, M = 4;
-    Stuck s = stuck(M, W);
-    s.push(1); s.push(2); s.push(3); s.push(6);
-    s.setInput(1); s.IndexOf(); s.found.ok(1); s.outdex.ok( 0);
-    s.setInput(2);
-      s.IndexOf();
-        s.found.ok(1);
-          s.outdex.ok( 1);
-    s.setInput(3); s.IndexOf(); s.found.ok(1); s.outdex.ok( 2);
-    s.setInput(6); s.IndexOf(); s.found.ok(1); s.outdex.ok( 3);
-    s.setInput(7); s.IndexOf(); s.found.ok(0);
    }
 
   static void test_clear()
@@ -447,37 +374,25 @@ V   24     4                 15     unary
     s.setElementAt(6, 2); s.ok("Stuck(4, 5, 6)");
     s.setElementAt(7, 0); s.ok("Stuck(7, 5, 6)");
    }
-
-  static void test_set_element_at_buffer()
-   {final int W = 4, M = 8;
-    Stuck s = stuck(M, W);
-
-    s.setInput(1); s.setIndex(0); s.SetElementAt(); s.ok("Stuck(1)");
-    s.setInput(2); s.setIndex(1); s.SetElementAt(); s.ok("Stuck(1, 2)");
-    s.setInput(3); s.setIndex(2); s.SetElementAt(); s.ok("Stuck(1, 2, 3)");
-    s.setInput(4); s.setIndex(0); s.SetElementAt(); s.ok("Stuck(4, 2, 3)");
-    s.setInput(5); s.setIndex(1); s.SetElementAt(); s.ok("Stuck(4, 5, 3)");
-    s.setInput(6); s.setIndex(2); s.SetElementAt(); s.ok("Stuck(4, 5, 6)");
-    s.setInput(7); s.setIndex(0); s.SetElementAt(); s.ok("Stuck(7, 5, 6)");
-   }
 */
   static void oldTests()                                                        // Tests thought to be in good shape
-   {test_push();               //test_push_buffer();
-    //test_pop();                test_pop_buffer();
-    //test_shift();              test_shift_buffer();
-    //test_unshift();            test_unshift_buffer();
-    //test_element_at();         test_element_at_buffer();
-    //test_insert_element_at();  test_insert_element_at_buffer();
-    //test_remove_element_at();  test_remove_element_at_buffer();
-    //test_first_last();         test_first_last_buffer();
-    //test_index_of();           test_index_of_buffer();
+   {test_push();
+    test_pop();
+    //test_shift();
+    //test_unshift();
+    //test_element_at();
+    //test_insert_element_at();
+    //test_remove_element_at();
+    //test_first_last();
+    //test_index_of();
     //test_clear();
     //test_print();
     //test_set_element_at();
    }
 
   static void newTests()                                                        // Tests being worked on
-   {oldTests();
+   {//oldTests();
+    test_pop();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
