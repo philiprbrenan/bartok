@@ -42,7 +42,7 @@ public class BitMachine extends Test                                            
       addInstruction();
      }
 
-    abstract void action();                                                     // Action performed by the instruction
+    void action() {}                                                            // Action performed by the instruction. Composite  instructuins liek If or For use other instructions to implement their processing as this simplifies the instruction set
 
     void addInstruction()                                                       // Add the instruction to the instruction stack
      {position = instructions.size();                                           // Position of instruction in stack of instructions
@@ -212,19 +212,21 @@ public class BitMachine extends Test                                            
 
 //D1 Branch instructions                                                        // Instructions that alter the flow of execution of the code
 
+//D2 Constant comparison                                                        // Compare the value of a field  with a constant value to determine whether to branch or not
+
   abstract class Branch extends Instruction                                     // A branch instruction
-   {final Layout.Bit bit;
+   {final Layout.Field bit;
     int target;
 
-    Branch(Layout.Bit Bit) {bit = Bit;}                                         // Forward branch to a come from instruction
-    Branch(Layout.Bit Bit, Instruction instruction)                             // Backward branch
+    Branch(Layout.Field Bit) {bit = Bit;}                                       // Forward branch to a come from instruction
+    Branch(Layout.Field Bit, Instruction instruction)                           // Backward branch
      {this(Bit);
       target = instruction.position-1;                                          // Record index of instruction before target instruction
      }
    }
 
   class BranchIfZero extends Branch                                             // Branch if a bit is zero
-   {BranchIfZero(Layout.Bit Bit) {super(Bit);}                                   // Forward branch to a come from instruction
+   {BranchIfZero(Layout.Bit Bit) {super(Bit);}                                  // Forward branch to a come from instruction
     BranchIfZero(Layout.Bit Bit, Instruction Instruction)                       // Backward branch
      {super(Bit, Instruction);
      }
@@ -235,6 +237,45 @@ public class BitMachine extends Test                                            
    }
   BranchIfZero branchIfZero(Layout.Bit bit, Instruction instruction)            // Jump back to an existing instruction
    {return new BranchIfZero(bit, instruction);
+   }
+
+  class BranchIfAllZero extends Branch                                          // Branch if all the bits in a field are zero
+   {BranchIfAllZero(Layout.Field Field) {super(Field);}                         // Forward branch to a come from instruction
+    BranchIfAllZero(Layout.Field Field, Instruction Instruction)                // Backward branch
+     {super(Field, Instruction);
+     }
+    void action()                                                               // Set instruction pointer to continue execution at the next instruction
+     {for (int i = 0; i <  bit.width; i++) if (bit.get(i)) return;              // Non zero bit
+      instructionIndex = target;                                                // Set instruction pointer to continue execution at the next instruction becuase all biots are zero
+     }
+   }
+  BranchIfAllZero branchIfAllZero(Layout.Field field)                           // Jump forward to a come from instruction
+   {return new BranchIfAllZero(field);
+   }
+  BranchIfAllZero branchIfAllZero(Layout.Field field, Instruction instruction)  // Jump back to an existing instruction
+   {return new BranchIfAllZero(field, instruction);
+   }
+
+  class BranchIfNotAllZero extends Branch                                       // Branch if not all the bits in a field are zero
+   {BranchIfNotAllZero(Layout.Field Field) {super(Field);}                      // Forward branch to a come from instruction
+    BranchIfNotAllZero(Layout.Field Field, Instruction Instruction)             // Backward branch
+     {super(Field, Instruction);
+     }
+    void action()                                                               // Set instruction pointer to continue execution at the next instruction
+     {for (int i = 0; i <  bit.width; i++)                                      // Examine each bit
+       {if (bit.get(i))                                                         // Found a bit that is not zero so branch
+         {instructionIndex = target;                                            // Set instruction pointer to continue execution at the next instruction becuase all biots are zero
+          return;
+         }
+       }
+     }
+   }
+  BranchIfNotAllZero branchIfNotAllZero(Layout.Field field)                     // Jump forward to a come from instruction
+   {return new BranchIfNotAllZero(field);
+   }
+  BranchIfNotAllZero branchIfNotAllZero                                         // Jump back to an existing instruction
+   (Layout.Field field, Instruction instruction)
+   {return new BranchIfNotAllZero(field, instruction);
    }
 
   class BranchIfOne extends Branch                                              // Branch if a bit is one
@@ -250,6 +291,112 @@ public class BitMachine extends Test                                            
   BranchIfOne branchIfOne(Layout.Bit bit, Instruction instruction)              // Jump back to an existing instruction
    {return new BranchIfOne(bit, instruction);
    }
+
+  class BranchIfAllOnes extends Branch                                          // Branch if all the bits in a field are one
+   {BranchIfAllOnes(Layout.Field Field) {super(Field);}                         // Forward branch to a come from instruction
+    BranchIfAllOnes(Layout.Field Field, Instruction Instruction)                // Backward branch
+     {super(Field, Instruction);
+     }
+    void action()                                                               // Set instruction pointer to continue execution at the next instruction
+     {for (int i = 0; i <  bit.width; i++) if (!bit.get(i)) return;             // Zero bit
+      instructionIndex = target;                                                // Set instruction pointer to continue execution at the next instruction becuase all biots are zero
+     }
+   }
+  BranchIfAllOnes branchIfAllOnes(Layout.Field field)                           // Jump forward to a come from instruction
+   {return new BranchIfAllOnes(field);
+   }
+  BranchIfAllOnes branchIfAllOnes(Layout.Field field, Instruction instruction)  // Jump back to an existing instruction
+   {return new BranchIfAllOnes(field, instruction);
+   }
+
+  class BranchIfNotAllOnes extends Branch                                       // Branch if not all the bits in a field are one
+   {BranchIfNotAllOnes(Layout.Field Field) {super(Field);}                      // Forward branch to a come from instruction
+    BranchIfNotAllOnes(Layout.Field Field, Instruction Instruction)             // Backward branch
+     {super(Field, Instruction);
+     }
+    void action()                                                               // Set instruction pointer to continue execution at the next instruction
+     {for (int i = 0; i <  bit.width; i++)                                      // Examine each bit
+       {if (!bit.get(i))                                                        // Zero bit
+         {instructionIndex = target;                                            // Set instruction pointer to continue execution at the next instruction becuase all biots are zero
+          return;             // Zero bit
+         }
+       }
+     }
+   }
+  BranchIfNotAllOnes branchIfNotAllOnes(Layout.Field field)                     // Jump forward to a come from instruction
+   {return new BranchIfNotAllOnes(field);
+   }
+  BranchIfNotAllOnes branchIfNotAllOnes                                         // Jump back to an existing instruction
+   (Layout.Field field, Instruction instruction)
+   {return new BranchIfNotAllOnes(field, instruction);
+   }
+
+//D2 Variable comparison                                                        // Branch based on the comparison of the values of two fields
+
+  abstract class BranchOnCompare extends Instruction                            // A branch instruction based on the comparison of two fields
+   {final Layout.Field first, second;                                           // The two fields to comapare
+    int target;
+
+    BranchOnCompare(Layout.Field First, Layout.Field Second)                    // Forward branch to a come from instruction
+     {First.sameSize(Second);
+       first = First; second = Second;
+     }
+    BranchOnCompare(Layout.Field First, Layout.Field Second,                    // Backward branch
+                    Instruction instruction)
+     {this(First, Second);
+      target = instruction.position-1;                                          // Record index of instruction before target instruction
+     }
+   }
+
+  class BranchIfEqual extends BranchOnCompare                                   // Branch if two fields are equal
+   {BranchIfEqual(Layout.Field First, Layout.Field Second)                      // Forward branch to a come from instruction
+     {super(First, Second);
+     }
+    BranchIfEqual                                                               // Backward branch
+     (Layout.Field First, Layout.Field Second, Instruction Instruction)
+     {super(First, Second, Instruction);
+     }
+    void action()                                                               // Set instruction pointer to continue execution at the next instruction
+     {for (int i = 0; i < first.width; i++)                                     // Check each bit  in the same  sized fields
+       {if (first.get(i) != second.get(i)) return;                              // Bits differ at this position so no branch required
+       }
+      instructionIndex = target;                                                // All bits equal, update the instruction pointer to effect the branch
+     }
+   }
+  BranchIfEqual branchIfEqual(Layout.Field first, Layout.Field second)          // Jump forward to a come from instruction
+   {return new BranchIfEqual(first, second);
+   }
+  BranchIfEqual branchIfEqual                                                   // Jump back to an existing instruction
+   (Layout.Field first, Layout.Field second, Instruction instruction)
+   {return new BranchIfEqual(first, second, instruction);
+   }
+
+  class BranchIfNotEqual extends BranchOnCompare                                // Branch if two fields are equal
+   {BranchIfNotEqual(Layout.Field First, Layout.Field Second)                   // Forward branch to a come from instruction
+     {super(First, Second);
+     }
+    BranchIfNotEqual                                                            // Backward branch
+     (Layout.Field First, Layout.Field Second, Instruction Instruction)
+     {super(First, Second, Instruction);
+     }
+    void action()                                                               // Set instruction pointer to continue execution at the next instruction
+     {for (int i = 0; i < first.width; i++)                                     // Check each bit  in the same  sized fields
+       {if (first.get(i) != second.get(i))                                      // Bits differ at this position so branch is required
+         {instructionIndex = target;                                            // At least one bit differs so update the instruction pointer to effect the branch
+          return;
+         }
+       }
+     }
+   }
+  BranchIfNotEqual branchIfNotEqual(Layout.Field first, Layout.Field second)    // Jump forward to a come from instruction
+   {return new BranchIfNotEqual(first, second);
+   }
+  BranchIfNotEqual branchIfNotEqual                                             // Jump back to an existing instruction
+   (Layout.Field first, Layout.Field second, Instruction instruction)
+   {return new BranchIfNotEqual(first, second, instruction);
+   }
+
+//D2 Unconditional                                                              // Unconditiona branch
 
   class GoTo extends Branch                                                     // Goto the specified instruction
    {GoTo() {super(null);}                                                       // Forward goto
@@ -267,25 +414,64 @@ public class BitMachine extends Test                                            
    }
   ComeFrom comeFrom(Branch source) {return new ComeFrom(source);}               // Set the source instruction to jump to this instruction
 
+  class ComeFromComparison extends Instruction                                  // Set the target of branch on comparison instruction
+   {ComeFromComparison(BranchOnCompare source)                                  // Forward goto to this instruction
+     {source.target = position - 1;                                             // Set goto to jump to the instruction before the target instruction
+     }
+    void action() {}                                                            // Perform instruction
+   }
+  ComeFromComparison comeFromComparison(BranchOnCompare source)                 // Set the source instruction to jump to this instruction
+   {return new ComeFromComparison(source);
+   }
+
 
 //D1 Structured Programming                                                     // Structured programming constructs
 
-  abstract class If extends Instruction                                         // If condition then block else block
-   {Layout.Field condition;                                                     // Condition deciding if
-    If(Layout.Field Condition)                                                  // Right shift a field by one place fillng with a zero
+  abstract class If extends Instruction                                         // If condition then block
+   {Layout.Bit condition;                                                       // Condition deciding if
+    If(Layout.Bit Condition)                                                    // Right shift a field by one place fillng with a zero
      {name = "If";
       condition = Condition;
-      final GoTo else_inst = goTo();      Then();
-      final GoTo end_inst = goTo();
-      comeFrom(else_inst);
-      Else();
-      comeFrom(end_inst);
-     }
-    void action()                                                               // Perform instruction
-     {if (condition.get(0)) instructionIndex++;
+      final Branch test = branchIfZero(condition);
+      Then();
+      comeFrom(test);
      }
     abstract void Then();                                                       // Then block is required
-             void Else() {}                                                     // Else block is optional
+   }
+
+  abstract class IfElse extends Instruction                                     // If condition then block else block
+   {Layout.Bit condition;                                                       // Condition deciding if
+    IfElse(Layout.Bit Condition)                                                // Right shift a field by one place fillng with a zero
+     {name = "IfElse";
+      condition = Condition;
+      final Branch test = branchIfZero(condition);
+      Then();
+      final Branch endThen = goTo();
+      comeFrom(test);
+      Else();
+      comeFrom(endThen);
+     }
+    abstract void Then();                                                       // Then block is required
+    abstract void Else();                                                       // Else block is required
+   }
+
+  abstract class DownTo extends Instruction                                     // Iterate a unary value from its maximum value  to a specified value
+   {Layout.Field counter;                                                       // The variable we are going to decrement
+    Layout.Field limit;                                                         // The variable we are going to increment
+
+    DownTo(Layout.Field Counter, Layout.Field Limit)                            // Iterate down from maximum value down to limit
+     {name    = "DownTo";
+      counter = Counter;                                                        // Field to be used as a counter
+      limit   = Limit;                                                          // Field to be used as limit
+      ones(counter);                                                            // Start the counter at the maximum
+      final BranchOnCompare test = branchIfEqual(counter, limit);               // Exit the loop if we are at the limit
+      block();                                                                  // Block of code supplied by caller
+      shiftRightOneByZero(counter);                                             // Next counter value
+      goTo(test);                                                               // Restart loop
+      comeFromComparison(test);                                                 // Exit the loop
+     }
+    void action() {}
+    abstract void block();                                                      // Block of code to execute on each iteration
    }
 
   abstract class For extends Instruction                                        // Iterate over an array
@@ -345,10 +531,11 @@ public class BitMachine extends Test                                            
 
   public String toString()                                                      // Print the program
    {final StringBuilder s = new StringBuilder();                                //                                                                                //
+    s.append(String.format("%4s  %24s\n", "Line", "OpCode"));                   // Titles
     final int N = instructions.size();                                          // Number of instrictions
     for (int i = 0; i < N; i++)
      {final Instruction I = instructions.elementAt(i);
-      s.append(String.format("%4d  %16s\n", i, I.name));
+      s.append(String.format("%4d  %24s\n", i+1, I.name));
      }
     return s.toString();
    }
@@ -625,7 +812,7 @@ B    5     1                  0     c
     Layout.Variable  s = l.variable ("s", 4);
     Layout.Variable  t = l.variable ("t", 4);
     Layout.Variable  e = l.variable ("e", 4);
-    Layout.Variable  i = l.bit      ("i");
+    Layout.Bit       i = l.bit      ("i");
     Layout.Structure x = l.structure("x", i, s, t, e);
     l.layout(x);
 
@@ -656,7 +843,7 @@ V    9     4                  0     e
     Layout.Variable  s = l.variable ("s", 4);
     Layout.Variable  t = l.variable ("t", 4);
     Layout.Variable  e = l.variable ("e", 4);
-    Layout.Variable  i = l.bit      ("i");
+    Layout.Bit       i = l.bit      ("i");
     Layout.Structure x = l.structure("x", i, s, t, e);
     l.layout(x);
 
@@ -666,7 +853,7 @@ V    9     4                  0     e
     e.fromInt(0);
 
     BitMachine m = new BitMachine();
-    m.new If(i)
+    m.new IfElse(i)
      {void Then() {m.copy(t, s);}
       void Else() {m.copy(e, s);}
      };
@@ -729,14 +916,15 @@ V   88     8                 18       c
      };
 
     m.ok("""
-   0               For
-   1          LessThan
-   2      BranchIfZero
-   3          SetIndex
-   4              Copy
-   5  ShiftLeftOneByOne
-   6              GoTo
-   7          ComeFrom
+Line                    OpCode
+   1                       For
+   2                  LessThan
+   3              BranchIfZero
+   4                  SetIndex
+   5                      Copy
+   6         ShiftLeftOneByOne
+   7                      GoTo
+   8                  ComeFrom
 """);
 
     m.execute();
@@ -766,6 +954,60 @@ V   88     8                 18       c
 """);
    }
 
+  static void test_branchIfEqual()
+   {Layout           l = new Layout();
+    Layout.Variable  a = l.variable ("a", 4);
+    Layout.Variable  b = l.variable ("b", 4);
+    Layout.Variable  c = l.variable ("c", 4);
+    Layout.Structure s = l.structure("s", a, b, c);
+    l.layout(s);
+
+    a.fromInt(3);
+    b.fromInt(3);
+    c.fromInt(0);
+
+    BitMachine      m = new BitMachine();
+    BranchOnCompare e = m.branchIfEqual(a, b);
+    m.copy(c, a);
+    m.comeFromComparison(e);
+    m.execute();
+    //stop(l);
+    l.ok("""
+T   At  Wide  Index       Value   Field name
+S    0    12                 51   s
+V    0     4                  3     a
+V    4     4                  3     b
+V    8     4                  0     c
+""");
+   }
+
+  static void test_branchIfNotEqual()
+   {Layout           l = new Layout();
+    Layout.Variable  a = l.variable ("a", 4);
+    Layout.Variable  b = l.variable ("b", 4);
+    Layout.Variable  c = l.variable ("c", 4);
+    Layout.Structure s = l.structure("s", a, b, c);
+    l.layout(s);
+
+    a.fromInt(3);
+    b.fromInt(3);
+    c.fromInt(0);
+
+    BitMachine      m = new BitMachine();
+    BranchOnCompare e = m.branchIfNotEqual(a, b);
+    m.copy(c, a);
+    m.comeFromComparison(e);
+    m.execute();
+    //stop(l);
+    l.ok("""
+T   At  Wide  Index       Value   Field name
+S    0    12                819   s
+V    0     4                  3     a
+V    4     4                  3     b
+V    8     4                  3     c
+""");
+   }
+
   static void oldTests()                                                        // Tests thought to be in good shape
    {test_zero_and_ones();
     test_invert();
@@ -779,6 +1021,8 @@ V   88     8                 18       c
     test_if_then();
     test_if_else();
     test_for();
+    test_branchIfEqual();
+    test_branchIfNotEqual();
    }
 
   static void newTests()                                                        // Tests being worked on
