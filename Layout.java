@@ -1,5 +1,5 @@
 //------------------------------------------------------------------------------
-// Bit memory laid out as variables, arrays, structures, and unions
+// Bit machine memory laid out as variables, arrays, structures, and unions
 // Philip R Brenan at appaapps dot com, Appa Apps Ltd Inc., 2024
 //------------------------------------------------------------------------------
 package com.AppaApps.Silicon;                                                   // Simulate a silicon chip.
