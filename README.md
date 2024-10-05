@@ -11,5 +11,10 @@ http://prb.appaapps.com/zesal/pitchdeck/pitchDeck.html
 # Files
 
 ```
-Test  - Methods used for testing and debugging
+BitMachine - A bit machine to run the BTree algorithm once written in assembler
+Chip       - Describe a chip capable of running the BTree algorithm at the register transfer level
+Layout     - Layout memory for a bit machine
+Stuck      - A fixed size stack written in bit assembler
+Test       - Methods used for testing and debugging
+Unary      - Unary arithmetic in bit assembler
 ```
