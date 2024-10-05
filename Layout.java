@@ -8,17 +8,18 @@ import java.util.*;
 
 //D1 Construct                                                                  // Layout a description of the memory used by a chip
 
-public class Layout extends Test                                                // A Memory layout for a chip. There might be several such layouts representing parts of the chip.
+public class Layout extends Test implements Test.LayoutAble                     // A Memory layout for a chip. There might be several such layouts representing parts of the chip.
  {Field top;                                                                    // The top most field in a set of nested fields describing memory.
-  final Stack<     Field> fields    = new Stack<>();                            // Fields in in-order
   final Map<String,Field> fullNames = new TreeMap<>();                          // Fields by full name
   Stack<Boolean>             memory = new Stack<>();                            // A sample memory that can be freed if not wanted by assigning null to this non final field.
+  final Stack<Layout>       layouts = new Stack<>();                            // All the sub layouts added to this layout so we can unify their memory
 
   void layout(Field field)                                                      // Create a new Layout loaded from a set of definitions
    {top  = field;                                                               // Record layout
     field.layout(0, 0, null);                                                   // Locate field positions
     for (int i = 0; i < field.width; i++) memory.push(null);                    // Create a matching memory.
-    indexNames();                                                               // Index the names of the fields
+    indexNames(fullNames);                                                      // Index the names of the fields
+    for (Layout l: layouts) l.memory = memory;                                  // This layout and all its sub layouts now use the memory of this layout
    }
 
   Field get(String path) {return fullNames.get(path);}                          // Locate a field from its full name path which must include the top most field
@@ -27,8 +28,7 @@ public class Layout extends Test                                                
    {final Layout d = new Layout();                                              // New layout
     if (top == null) return d;                                                  // No fields to duplicate
     d.top = top.duplicate(d);                                                   // Copy each field into this layout
-    d.top.order();                                                              // Order the fields
-    d.indexNames();                                                             // Index the names of the fields
+    d.indexNames(fullNames);                                                    // Index the names of the fields
     d.memory = memory;
     return d;
    }
@@ -42,11 +42,23 @@ public class Layout extends Test                                                
    {return top.toString();
    }
 
-  void indexNames() {for(Field f : fields) f.fullName();}                       // Index field names in each containing structure so fields can be accessed by a unique structured name
+  void indexNames(Map<String,Field> names) {top.indexNames(names, null);}       // Index field names in each containing structure so fields can be accessed by a unique structured name
 
   int size() {return top == null ? 0 : top.width;}                              // Size of memory
 
   Field asFields() {return top;}                                                // Get field definitions associated with memory
+
+  Field field(LayoutAble field)
+   {if      (field instanceof Layout l) return l.top;
+    else if (field instanceof Field  f) return f;
+    stop(field.getClass().getSimpleName(), "cannot be converted to 'Layout'");
+    return null;
+   }
+
+  void unifyMemory()                                                            // Unify the memory of all declared layouts with the memory of this layout
+   {for (Layout l : layouts) l.memory = memory;                                 // Unify the memory of each layout
+    layouts.clear();                                                            // Remove all the layouts unified
+   }
 
   void clear()                                                                  // Clear memory
    {final int N = top != null ? top.width : 0;
@@ -122,7 +134,7 @@ public class Layout extends Test                                                
 
 //D1 Layouts                                                                    // Field memory of the chip as variables, arrays, structures, unions. Dividing the memory in this manner makes it easier to program the chip symbolically.
 
-  abstract class Field                                                          // Variable/Array/Structure/Union definition.
+  abstract class Field implements Test.LayoutAble                               // Variable/Array/Structure/Union definition.
    {final String name;                                                          // Name of field
     int at;                                                                     // Offset of field from start of memory
     int width;                                                                  // Number of bits in a field
@@ -135,14 +147,13 @@ public class Layout extends Test                                                
     int at   () {return at;}                                                    // Position of field in memory
     int width() {return width;}                                                 // Size of the memory in bits occupied by this field
 
-    void fullName()                                                             // The full name of a field
-     {String n = name;
-      for(Field p = up; p != null; p = p.up)                                    // Up through containing fields
-       {p.fullNames.put(n, this);                                               // Full name from this field
-        n = p.name + "."+n;
-       }
-      Layout.this.fullNames.put(n, this);                                       // Full name from outer most to inner most
+    String indexName(Map<String,Field> names, String prefix)                    // The full name of a field
+     {final String n = prefix != null ? prefix+"."+name : name;
+      names.put(n, this);
+      return n;
      }
+
+    abstract void indexNames(Map<String,Field> names, String prefix);           // Set the full names of all the fields in a layout
 
     Field get(String path) {return fullNames.get(path);}                        // Address a contained field by name
 
@@ -159,7 +170,6 @@ public class Layout extends Test                                                
      }
 
     abstract void layout(int at, int depth, Field superStructure);              // Layout this field
-    abstract void order();                                                      // Add this field to the tree of fields
 
     void position(int At) {at = At;}                                            // Reposition a field after an index of a containing array has been changed
 
@@ -249,10 +259,12 @@ public class Layout extends Test                                                
      {super(name); width = Width;
      }
 
-    void order() {fields.push(this);}                                           // Order the variable in the layout
+    void indexNames(Map<String,Field> names, String prefix)                     // Index the name of this field
+     {indexName(names, prefix);
+     }
 
     void layout(int At, int Depth, Field superStructure)                        // Layout the variable in the structure
-     {at = At; depth = Depth; fields.push(this);
+     {at = At; depth = Depth;
      }
 
     Field duplicate(Layout d)                                                   // Duplicate a variable so we can modify it safely
@@ -277,26 +289,28 @@ public class Layout extends Test                                                
     int index = 0;                                                              // Index of array field to access
     Field element;                                                              // The elements of this array are of this type
 
-    Array(String Name, Field Element, int Size)                                 // Create the array definition
-     {super(Name);
-      size = Size;
-      element = Element;
+    Array(String Name, Test.LayoutAble Element, int Size)                       // Create the array definition
+     {super(Name);                                                              // Name of array
+      size = Size;                                                              // Size of array
+      element = field(Element);                                                 // Field definition associated with this layout
+      if (Element instanceof Layout l) layouts.push(l);                         // Add the element to the list of sub layouts if it is a sub layout
      }
 
     int at(int i) {return at+i*element.width;}                                  // Offset of this array field in the structure
 
     void layout(int At, int Depth, Field superStructure)                        // Position this array within the layout
      {depth = Depth;                                                            // Depth of field in the layout
-      fields.push(this);                                                        // Relative to super structure
       element.layout(At, Depth+1, superStructure);                              // Field sub structure
       at = At;                                                                  // Position on index
       element.up = this;                                                        // Chain up to containing parent field
       width = size * element.width;                                             // The size of the array is the sie of its element times the number of elements in the array
      }
 
-    void order()                                                                // Order the array in the layout
-     {fields.push(this);                                                        // Relative to super structure
-      element.order();                                                          // Field sub structure
+    void indexNames(Map<String,Field> names, String prefix)                     // Index the name of this field and its sub fields
+     {final String n = indexName(names, prefix);
+      element.indexNames(names,                 n);                             // Full names of sub fields relative to outer most layout
+      element.indexNames(Layout.this.fullNames, n);                             // Full names of sub fields relative to this layout
+      element.indexNames(fullNames,             null);                          // Index name in this array
      }
 
     void position(int At)                                                       // Reposition this array after an index of a containing array has been changed
@@ -339,30 +353,35 @@ public class Layout extends Test                                                
      }
    }
 
-  class Structure extends Field                                                 // Layout a structure in memory
-   {final Map<String,Field> subMap   = new TreeMap<>();                         // Unique variables contained inside this variable
-    final Stack     <Field> subStack = new Stack  <>();                         // Order of variables inside this variable
+  class Structure extends Field                                                 // Layout a structure
+   {final Map<String,Field> subMap   = new TreeMap<>();                         // Unique variables contained inside this structure
+    final Stack     <Field> subStack = new Stack  <>();                         // Order of fields inside this structure
 
-    Structure(String Name, Field...Fields)                                      // Fields in the structure
+    Structure(String Name, LayoutAble...Fields)                                 // Fields in the structure
      {super(Name);
-      for (int i = 0; i < Fields.length; ++i) addField(Fields[i]);              // Each field in this structure
+      for (int i = 0; i < Fields.length; ++i)                                   // Each field supplied
+       {final LayoutAble f = Fields[i];                                         // Supplied field
+        addField(field(f));                                                     // Add field to this structure
+        if (f instanceof Layout l) layouts.push(l);                             // Add the element to the list of sub layouts if it is a sub layout
+       }
      }
 
-    void addField(Field Field)                                                  // Add additional fields
-     {Field.up = this;                                                          // Chain up to containing structure
-      if (subMap.containsKey(Field.name))
+    void addField(LayoutAble layout)                                            // Add additional fields
+     {final Field field = field(layout);                                        // Field associated with this layout
+      field.up = this;                                                          // Chain up to containing structure
+      if (subMap.containsKey(field.name))
        {stop("Structure:", name, "already contains field with this name:",
-             Field.name);
+             field.name);
        }
-      subMap.put (Field.name, Field);                                           // Add as a sub structure by name
-      subStack.push(Field);                                                     // Add as a sub structure in order
+      subMap.put   (field.name, field);                                         // Add as a field by name to this structure
+      subStack.push(field);                                                     // Add as a field in order to this structure
+      if (layout instanceof Layout) layouts.push((Layout)layout);               // Add the element to the list of sub layouts if it is a sub layout
      }
 
     void layout(int At, int Depth, Field superStructure)                        // Place the structure in the layout
      {at = At;
       width = 0;
       depth = Depth;
-      fields.push(this);
       for(Field v : subStack)                                                   // Field sub structure
        {v.at = at+width;
         v.layout(v.at, Depth+1, superStructure);
@@ -370,9 +389,13 @@ public class Layout extends Test                                                
        }
      }
 
-    void order()                                                                // Order structure in layout
-     {fields.push(this);
-      for(Field v : subStack) v.order();
+    void indexNames(Map<String,Field> names, String prefix)                     // Index the name of this structure and its sub fields
+     {final String n = indexName(names, prefix);                                // Index the name of this structure
+      for (Field f : subStack)                                                  // Each fierld in the structure
+       {f.indexNames(names, n);                                                 // Index name in outermost layout
+        f.indexNames(Layout.this.fullNames, n);                                 // Index name in this layout
+        f.indexNames(fullNames, null);                                          // Index name in this structure
+       }
      }
 
     void position(int At)                                                       // Reposition this structure after an index of a containing array has been changed
@@ -403,30 +426,16 @@ public class Layout extends Test                                                
      }
    }
 
-  class Union extends Field                                                     // Union of structures laid out in memory on top of each other - it is up to you to have a way of deciding which substructure is valid
+  class Union extends Structure                                                 // Union of fields laid out in memory on top of each other - it is up to you to have a way of deciding which fields are valid
    {final Map<String,Field> subMap = new TreeMap<>();                           // Unique variables contained inside this variable
 
-    Union(String Name, Field...Fields)                                          // Fields in the union
-     {super(Name);
-      for (int i = 0; i < Fields.length; ++i) addField(Fields[i]);              // Each field in this union
-     }
-
-    void addField(Field Field)                                                  // Add a field to the union
-     {final String n = Field.name;
-      Field.up = this;                                                          // Chain up to containing structure
-      if (subMap.containsKey(n)) stop(name, "already contains", n);
-      subMap.put (n, Field);                                                    // Add as a sub structure by name
-     }
-
-    void order()                                                                // Order the union in the layout
-     {fields.push(this);
-      for(Field v : subMap.values()) v.order();                                 // Find largest substructure
+    Union(String Name, LayoutAble...Fields)                                     // Fields in the union
+     {super(Name, Fields);
      }
 
     void layout(int at, int Depth, Field superStructure)                        // Compile this variable so that the size, width and byte fields are correct
      {width = 0;
       depth = Depth;
-      fields.push(this);
       for(Field v : subMap.values())                                            // Find largest substructure
        {v.at = at;                                                              // Substructures are laid out on top of each other
         v.layout(v.at, Depth+1, superStructure);
@@ -438,31 +447,13 @@ public class Layout extends Test                                                
      {at = At;
       for(Field v : subMap.values()) v.position(at);
      }
-
-    Field duplicate(Layout d)                                                   // Duplicate a union so we can modify it safely
-     {final Union u = d.new Union(name);
-      u.width = width; u.at = at; u.depth = depth;
-      for(String s : subMap.keySet())
-       {final Field L = subMap.get(s);
-        final Field l = L.duplicate(d);
-        u.subMap.put(l.name, l);
-        l.up = this;
-       }
-      return u;
-     }
-
-    public String toString(boolean printHeader)                                 // Print the union
-     {final StringBuilder s = print(printHeader);                               // Print line describing structure
-      for(Field f: subMap.values()) s.append(f.toString(false));                // Print each field of structure
-      return s.toString();                                                      // Structure converted to string
-     }
    }
 
-  Bit       bit      (String name)                       {return new Bit      (name);}
-  Variable  variable (String name, int width)            {return new Variable (name, width);}
-  Array     array    (String name, Field   ml, int size) {return new Array    (name, ml, size);}
-  Structure structure(String name, Field...ml)           {return new Structure(name, ml);}
-  Union     union    (String name, Field...ml)           {return new Union    (name, ml);}
+  Bit       bit      (String name)                            {return new Bit      (name);}
+  Variable  variable (String name, int width)                 {return new Variable (name, width);}
+  Array     array    (String name, LayoutAble   ml, int size) {return new Array    (name, ml, size);}
+  Structure structure(String name, LayoutAble...ml)           {return new Structure(name, ml);}
+  Union     union    (String name, LayoutAble...ml)           {return new Union    (name, ml);}
 
 //D0                                                                            // Tests: I test, therefore I am.  And so do my mentees.  But most other people, apparently, do not, they live in a half world lit by shadows in which they never know if their code actually works or not.
 
@@ -724,15 +715,54 @@ V    4     2                  1     d
     ok(a.sameSize(c) == a.width);
    }
 
+  static void test_sub_layout()
+   {Layout l = new Layout();
+    var a = l.bit      ("a");
+    var b = l.variable ("b", 7);
+    var s = l.structure("s", a, b);
+    l.layout(s);
+
+    Layout L = new Layout();
+    var A = L.variable ("A", 4);
+    var B = L.variable ("B", 4);
+    var S = L.structure("S", A, l, B);
+    L.layout(S);
+
+    L.ok("""
+T   At  Wide  Index       Value   Field name
+S    0    16                      S
+V    0     4                        A
+S    4     8                        s
+B    4     1                          a
+V    5     7                          b
+V   12     4                        B
+""");
+
+    L.get("S.s.a").toBit().fromInt(1);
+
+    //stop(L);
+    L.ok("""
+T   At  Wide  Index       Value   Field name
+S    0    16                      S
+V    0     4                        A
+S    4     8                        s
+B    4     1                  1       a
+V    5     7                          b
+V   12     4                        B
+""");
+   }
+
   static void oldTests()                                                        // Tests thought to be in good shape
    {test_1();
     test_memory();
     test_bit();
     test_bits();
+    test_sub_layout();
    }
 
   static void newTests()                                                        // Tests being worked on
    {oldTests();
+    //test_bit();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
