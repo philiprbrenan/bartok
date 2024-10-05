@@ -9,7 +9,7 @@ import java.util.*;
 //D1 Construct                                                                  // Construct a silicon chip comprised of memory, intermediate bits and logic gates.
 
 public class BitMachine extends Test                                            // A machine whose assembler code is just capable enough to manipulate a b-tree
- {final int maxSteps = 150;                                                      // Maximum number of steps to be executed
+ {final int maxSteps = 999;                                                     // Maximum number of steps to be executed
   Stack<Instruction> instructions = new Stack<>();                              // Instructions to be executed
   Layout layout;                                                                // Layout of bit memory being manipulated by this bit machine
   int instructionIndex;                                                         // The current instruction
