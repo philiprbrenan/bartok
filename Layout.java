@@ -351,8 +351,8 @@ public class Layout extends Test                                                
     void addField(Field Field)                                                  // Add additional fields
      {Field.up = this;                                                          // Chain up to containing structure
       if (subMap.containsKey(Field.name))
-       {stop("Structure already contains field with this name",
-             name, Field.name);
+       {stop("Structure:", name, "already contains field with this name:",
+             Field.name);
        }
       subMap.put (Field.name, Field);                                           // Add as a sub structure by name
       subStack.push(Field);                                                     // Add as a sub structure in order
