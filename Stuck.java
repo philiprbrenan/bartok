@@ -6,12 +6,13 @@ package com.AppaApps.Silicon;                                                   
 
 import java.util.*;
 
-class Stuck extends BitMachine                                                  // Stuck: a fixed size stack controlled by a unary number. The unary number zero indicates an empty stuck stack.
- {final Unary             unary;                                                // The layout of the stuck stack
-  final Layout.Field    element;                                                // An element of the stuck stack
-  final Layout.Array      array;                                                // The array holding the elements of the stuck stack
-  final Layout.Structure  stuck;                                                // The stuck stack
-  final Layout           layout;                                                // Layout of the stuck stack
+class Stuck extends BitMachine                                                  // Stuck: a fixed size stack controlled by a unary number. The unary number zero indicates an empty stuck.
+ {final String             name;                                                // The lname of the stuc: it does not have to be globally unique
+  final Unary             unary;                                                // The layout of the stuck
+  final Layout.Field    element;                                                // An element of the stuck
+  final Layout.Array      array;                                                // The array holding the elements of the stuck
+  final Layout.Structure  stuck;                                                // The stuck
+  final Layout           layout;                                                // Layout of the stuck
 
   final Layout.Variable  source;                                                // Source index
   final Layout.Variable  target;                                                // Target index
@@ -19,43 +20,46 @@ class Stuck extends BitMachine                                                  
   final Layout.Structure   temp;                                                // Temporary data structure
   final Layout          tempLay;                                                // Layout of temporary data
 
-  final int max;                                                                // The maximum number of entries in the stuck stack.
+  final int max;                                                                // The maximum number of entries in the stuck.
   final int width;                                                              // The width of each object in the stuck in bits
 
   BitMachine bitMachine = this;                                                 // The bit machine in which to load instructions
 
-//D1 Construction                                                               // Create a stuck stack
+//D1 Construction                                                               // Create a stuck
 
-  Stuck(int Max, int Width)                                                     // Create the stuck stack
-   {width    = Width; max = Max;
+  Stuck(String Name, int Max, int Width)                                        // Create the stuck
+   {name = Name; width = Width; max = Max;                                      // Parameterize the stuck
     unary    = Unary.unary(max);                                                // Unary number showing which elements in the stack are valid
     unary.bitMachine = this;                                                    // Unary instructions to be placed in this machine
-    layout   = new Layout();                                                    // An element of the stuck stack
-    element  = layout.variable ("element",   width);                            // An element of the stuck stack
-    array    = layout.array    ("array",     element, max);                     // An array of elements comprising the stuck stack
-    stuck    = layout.structure("structure", array,   unary.layout.top);        // An array of elements comprising the stuck stack
-    layout.layout(stuck);                                                       // Layout the structure of the stuck stack
+    layout   = new Layout();                                                    // An element of the stuck
+    element  = layout.variable ("element", width);                              // An element of the stuck
+    array    = layout.array    ("array",   element, max);                       // An array of elements comprising the stuck
+    stuck    = layout.structure(name,      array,   unary.layout.top);          // An array of elements comprising the stuck
+    layout.layout(stuck);                                                       // Layout the structure of the stuck
     unary.layout.memory = layout.memory;                                        // Make our memory superceded the default memeory created with unary.
     stuck.zero();
     tempLay  = new Layout();                                                    // Temporary storage
-    source   = tempLay.variable ("source",  max);                               // Source index
-    target   = tempLay.variable ("target",  max);                               // Target index
-    buffer   = tempLay.variable ("buffer",  width);                             // Buffer for moving data in and out of the stuck
+    source   = tempLay.variable ("source", max);                                // Source index
+    target   = tempLay.variable ("target", max);                                // Target index
+    buffer   = tempLay.variable ("buffer", width);                              // Buffer for moving data in and out of the stuck
     temp     = tempLay.structure("structure", source, target, buffer);          // Temporary structure
     tempLay.layout(temp);                                                       // Layout of temporary storage
     temp.zero();                                                                // Clear temporary storage
    }
 
-  static Stuck stuck(int Max, int Width) {return new Stuck(Max, Width);}        // Create the stuck stack
+  Layout.Field layout() {return layout.top;}                                    // Get the topmost structure
+  static Stuck stuck(String Name, int Max, int Width)                           // Create the stuck
+   {return new Stuck(Name, Max, Width);
+   }
 
-  void clear() {zero(stuck);}                                                   // Clear a stuck stack
+  void clear() {zero(stuck);}                                                   // Clear a stuck
 
-  public void ok(String expected) {ok(toString(), expected);}                   // Check the stuck stack
+  public void ok(String expected) {ok(toString(), expected);}                   // Check the stuck
 
-//D1 Characteristics                                                            // Characteristics of the stuck stack
+//D1 Characteristics                                                            // Characteristics of the stuck
 
-  void isFull (Layout.Bit result) {unary.canNotInc(result);}                    // Check the stuck stack is full
-  void isEmpty(Layout.Bit result) {unary.canNotDec(result);}                    // Check the stuck stack is empty
+  void isFull (Layout.Bit result) {unary.canNotInc(result);}                    // Check the stuck is full
+  void isEmpty(Layout.Bit result) {unary.canNotDec(result);}                    // Check the stuck is empty
 
 //D1 Actions                                                                    // Place and remove data to/from stuck
 
@@ -122,8 +126,8 @@ class Stuck extends BitMachine                                                  
    }
 
   void insertElementAt(Layout.Field elementToInsert, Layout.Variable index)     // Insert an element represented as memory into the stuckstack at the indicated zero based index after moving the elements above up one position
-   {ones(target);                                                               // Top of stuck stack
-    ones(source);                                                               // Top of stuck stack
+   {ones(target);                                                               // Top of stuck
+    ones(source);                                                               // Top of stuck
     shiftRightOneByZero(target);                                                // One step down on target
     shiftRightOneByZero(source);                                                // One step down on source
       final BranchOnCompare test = branchIfEqual(target, index);                // Test for finish of shifting phase
@@ -168,10 +172,10 @@ class Stuck extends BitMachine                                                  
     copy(LastElement, element);                                                 // Copy of top most element
    }
 
-//D1 Search                                                                     // Search a stuck stack.
+//D1 Search                                                                     // Search a stuck.
 
   void indexOf                                                                  // Find the index of an element in the stuck and set the found flag to true else if no such element is found the found flag is set to false
-   (Layout.Field elementToFind, Layout.Bit found, Layout.Variable index)        // Set found to true and index to the 0 based index of the indicated memory else -1 if the memory is not present in the stuck stack.
+   (Layout.Field elementToFind, Layout.Bit found, Layout.Variable index)        // Set found to true and index to the 0 based index of the indicated memory else -1 if the memory is not present in the stuck.
    {zero(found);
     zero(index);
     Branch[]equal = new Branch[max];
@@ -184,9 +188,9 @@ class Stuck extends BitMachine                                                  
     for (int i = 0; i < max; i++) comeFrom(equal[i]);
    }
 
-//D1 Print                                                                      // Print a stuck stack
+//D1 Print                                                                      // Print a stuck
 
-//D0 Tests                                                                      // Test stuck stack
+//D0 Tests                                                                      // Test stuck
 
   static void test_push()
    {final int W = 6, M = 4;
@@ -203,7 +207,7 @@ class Stuck extends BitMachine                                                  
        value,                                              f0, f1, f2, f3, f4);
     l.layout(S);
 
-    Stuck s = stuck(M, W);
+    Stuck s = stuck("s", M, W);
     s.isEmpty(e0);
     s.isFull(f0);
     s.zero(value);              s.push(value); s.isEmpty(e1); s.isFull(f1);
@@ -229,7 +233,7 @@ B   15     1                  1     f4
 """);
     s.layout.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    28          253505600   structure
+S    0    28          253505600   s
 A    0    24      0     1847360     array
 V    0     6                  0       element
 A    6    24      1     1847360     array
@@ -256,7 +260,7 @@ V   24     4                 15     unary
     l.layout(S);
     S.zero();
 
-    Stuck s = stuck(M, W);
+    Stuck s = stuck("s", M, W);
     s.shiftLeftOneByOne(value); s.push(value);
     s.shiftLeftOneByOne(value); s.push(value);
     s.shiftLeftOneByOne(value); s.push(value);
@@ -268,7 +272,7 @@ V   24     4                 15     unary
     s.execute();
     s.layout.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    28            3961025   structure
+S    0    28            3961025   s
 A    0    24      0     3961025     array
 V    0     6                  1       element
 A    6    24      1     3961025     array
@@ -304,7 +308,7 @@ V   24     6                 15     value
     l.layout(S);
     S.zero();
 
-    Stuck s = stuck(M, W);
+    Stuck s = stuck("s", M, W);
     s.shiftLeftOneByOne(value); s.push(value);
     s.shiftLeftOneByOne(value); s.push(value);
     s.shiftLeftOneByOne(value); s.push(value);
@@ -316,7 +320,7 @@ V   24     6                 15     value
     s.execute();
     s.layout.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    28            3994575   structure
+S    0    28            3994575   s
 A    0    24      0     3994575     array
 V    0     6                 15       element
 A    6    24      1     3994575     array
@@ -346,7 +350,7 @@ V   24     6                 15     value
     final Layout.Variable value = l.variable("value", W);
     l.layout(value);
 
-    Stuck s = stuck(M, W);
+    Stuck s = stuck("s", M, W);
     s.zero(value);
     s.shiftLeftOneByOne(value); s.unshift(value);
     s.shiftLeftOneByOne(value); s.unshift(value);
@@ -356,7 +360,7 @@ V   24     6                 15     value
 
     s.layout.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    28          251933135   structure
+S    0    28          251933135   s
 A    0    24      0      274895     array
 V    0     6                 15       element
 A    6    24      1      274895     array
@@ -383,7 +387,7 @@ V   24     4                 15     unary
       value, v1, v2, v3, v4, index);
     l.layout(S);
 
-    Stuck s = stuck(M, W);
+    Stuck s = stuck("s", M, W);
     s.zero(value);
     s.shiftLeftOneByOne(value); s.unshift(value);
     s.shiftLeftOneByOne(value); s.unshift(value);
@@ -397,7 +401,7 @@ V   24     4                 15     unary
 
     s.layout.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    28          251933135   structure
+S    0    28          251933135   s
 A    0    24      0      274895     array
 V    0     6                 15       element
 A    6    24      1      274895     array
@@ -454,7 +458,7 @@ V   28     4                  1     i1
 V   32     4                  3     i2
 """);
 
-    Stuck s = stuck(M, W);
+    Stuck s = stuck("s", M, W);
     s.insertElementAt(v3, i0);
     s.insertElementAt(v2, i1);
     s.insertElementAt(v1, i2);
@@ -464,7 +468,7 @@ V   32     4                  3     i2
     //stop(s.layout);
     s.layout.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    28            2976545   structure
+S    0    28            2976545   s
 A    0    24      0     2976545     array
 V    0     6                 33       element
 A    6    24      1     2976545     array
@@ -490,7 +494,7 @@ V   24     4                  0     unary
     i1.fromInt(1);
     i2.fromInt(3);
 
-    Stuck s = stuck(M, W);
+    Stuck s = stuck("s", M, W);
 
     s.array.zero();
     s.array.setIndex(0); s.element.fromInt(11);
@@ -502,7 +506,7 @@ V   24     4                  0     unary
     //stop(s.layout);
     s.layout.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    28          263329163   structure
+S    0    28          263329163   s
 A    0    24      0    11670923     array
 V    0     6                 11       element
 A    6    24      1    11670923     array
@@ -519,7 +523,7 @@ V   24     4                 15     unary
     //stop(s.layout);
     s.layout.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    28          129157195   structure
+S    0    28          129157195   s
 A    0    24      0    11716683     array
 V    0     6                 11       element
 A    6    24      1    11716683     array
@@ -531,7 +535,7 @@ V   18     6                 44       element
 V   24     4                  7     unary
 """);
 
-    Stuck t = stuck(M, W);
+    Stuck t = stuck("t", M, W);
 
     t.array.zero();
     t.array.setIndex(0); t.element.fromInt(11);
@@ -547,7 +551,7 @@ V   24     4                  7     unary
     //stop(t.layout);
     t.layout.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    28           62049035   structure
+S    0    28           62049035   t
 A    0    24      0    11717387     array
 V    0     6                 11       element
 A    6    24      1    11717387     array
@@ -559,7 +563,7 @@ V   18     6                 44       element
 V   24     4                  3     unary
 """);
 
-    Stuck u = stuck(M, W);
+    Stuck u = stuck("u", M, W);
 
     u.array.zero();
     u.array.setIndex(0); u.element.fromInt(11);
@@ -576,7 +580,7 @@ V   24     4                  3     unary
     //stop(u.layout);
     u.layout.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    28           28494636   structure
+S    0    28           28494636   u
 A    0    24      0    11717420     array
 V    0     6                 44       element
 A    6    24      1    11717420     array
@@ -588,7 +592,7 @@ V   18     6                 44       element
 V   24     4                  1     unary
 """);
 
-    Stuck v = stuck(M, W);
+    Stuck v = stuck("v", M, W);
 
     v.array.zero();
     v.array.setIndex(0); v.element.fromInt(11);
@@ -606,7 +610,7 @@ V   24     4                  1     unary
     //stop(v.layout);
     v.layout.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    28           11717420   structure
+S    0    28           11717420   v
 A    0    24      0    11717420     array
 V    0     6                 44       element
 A    6    24      1    11717420     array
@@ -622,7 +626,7 @@ V   24     4                  0     unary
   static void test_first()
    {final int W = 6, M = 4;
 
-    Stuck s = stuck(M, W);
+    Stuck s = stuck("s", M, W);
 
     s.array.zero();
     s.array.setIndex(0); s.element.fromInt(11);
@@ -644,7 +648,7 @@ V   24     4                  0     unary
   static void test_last()
    {final int W = 6, M = 4;
 
-    Stuck s = stuck(M, W);
+    Stuck s = stuck("s", M, W);
 
     s.array.zero();
     s.array.setIndex(0); s.element.fromInt(11);
@@ -666,7 +670,7 @@ V   24     4                  0     unary
   static void test_index_of()
    {final int W = 6, M = 4;
 
-    Stuck s = stuck(M, W);
+    Stuck s = stuck("s", M, W);
 
     s.array.zero();
     s.array.setIndex(0); s.element.fromInt(11);
@@ -693,7 +697,7 @@ V   24     4                  0     unary
   static void test_index_of_notFound()
    {final int W = 6, M = 4;
 
-    Stuck s = stuck(M, W);
+    Stuck s = stuck("s", M, W);
 
     s.array.zero();
     s.array.setIndex(0); s.element.fromInt(11);
@@ -719,7 +723,7 @@ V   24     4                  0     unary
   static void test_set_element_at()
    {final int W = 6, M = 4;
 
-    Stuck s = stuck(M, W);
+    Stuck s = stuck("s", M, W);
 
     s.array.zero();
     s.array.setIndex(0); s.element.fromInt(11);
@@ -742,7 +746,7 @@ V   24     4                  0     unary
     //stop(s.layout);
     s.layout.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    28          263419275   structure
+S    0    28          263419275   s
 A    0    24      0    11761035     array
 V    0     6                 11       element
 A    6    24      1    11761035     array
