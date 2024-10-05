@@ -74,6 +74,23 @@ B    1     1                  1     b
 B    2     1                  1     c
 B    3     1                  0     d
 """);
+
+    //stop(u.layout);
+    u.layout.ok("""
+T   At  Wide  Index       Value   Field name
+V    0     4                 15   unary
+""");
+
+    Unary u1 = unary(4);
+    u1.layout.memory = u.layout.memory;
+    u1.dec();
+    u1.dec();
+    u1.execute();
+    //stop(u1.layout);
+    u1.layout.ok("""
+T   At  Wide  Index       Value   Field name
+V    0     4                  3   unary
+""");
    }
 
   static void oldTests()                                                        // Tests thought to be in good shape
