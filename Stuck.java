@@ -1,5 +1,5 @@
 //------------------------------------------------------------------------------
-// A fixed size stack of ordered bit keys on a bit machine.
+// A fixed size stack of ordered bit keys in assembler on a bit machine.
 // Philip R Brenan at appaapps dot com, Appa Apps Ltd Inc., 2024
 //------------------------------------------------------------------------------
 package com.AppaApps.Silicon;                                                   // Design, simulate and layout  a binary tree on a silicon chip.
