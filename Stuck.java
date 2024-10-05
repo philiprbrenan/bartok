@@ -34,7 +34,7 @@ class Stuck extends BitMachine                                                  
     layout   = new Layout();                                                    // An element of the stuck
     element  = layout.variable ("element", width);                              // An element of the stuck
     array    = layout.array    ("array",   element, max);                       // An array of elements comprising the stuck
-    stuck    = layout.structure(name,      array,   unary.layout.top);          // An array of elements comprising the stuck
+    stuck    = layout.structure(name,      array,   unary.layout());            // An array of elements comprising the stuck
     layout.layout(stuck);                                                       // Layout the structure of the stuck
     unary.layout.memory = layout.memory;                                        // Make our memory superceded the default memeory created with unary.
     stuck.zero();
