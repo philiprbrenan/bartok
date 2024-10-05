@@ -1,5 +1,5 @@
 //------------------------------------------------------------------------------
-// Emulate assembler code sufficient to manipulate a BTree
+// Implement a BTree in assembler on a bit machine
 // Philip R Brenan at appaapps dot com, Appa Apps Ltd Inc., 2024
 //------------------------------------------------------------------------------
 package com.AppaApps.Silicon;                                                   // Simulate a silicon chip.
