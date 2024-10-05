@@ -13,7 +13,6 @@ class Stuck extends BitMachine                                                  
   final Layout.Structure  stuck;                                                // The array holding the elements of the stuck stack
   final Layout           layout;                                                // The array holding the elements of the stuck stack
 
-  final Layout.Variable    zero;                                                // Stuck is full flag
   final Layout.Variable   index;                                                // Stuck is full flag
   final Layout.Variable  source;                                                // Stuck is full flag
   final Layout.Variable  target;                                                // Stuck is full flag
@@ -40,12 +39,11 @@ class Stuck extends BitMachine                                                  
     unary.layout.memory = layout.memory;                                        // Make our memory superceded the default memeory created with unary.
     stuck.zero();
     tempLay  = new Layout();                                                    // Temporary storage
-    zero     = tempLay.variable ("zero",    max);                               // Stuck is full flag
     index    = tempLay.variable ("index",   max);                               // Stuck is full flag
     source   = tempLay.variable ("source",  max);                               // Stuck is full flag
     target   = tempLay.variable ("target",  max);                               // Stuck is full flag
     buffer   = tempLay.variable ("buffer",  width);                             // Stuck is full flag
-    temp     = tempLay.structure("structure", zero, index,                      // An array of elements comprising the stuck stack
+    temp     = tempLay.structure("structure", index,                            // An array of elements comprising the stuck stack
       source, target, buffer);
     tempLay.layout(temp);                                                       // Layout the structure of the stuck stack
     temp.zero();                                                                // Clear temporary storage
@@ -161,7 +159,8 @@ class Stuck extends BitMachine                                                  
    }
 
   void firstElement(Layout.Field FirstElement)                                  // Get the first element
-   {setIndex(array, zero);
+   {zero(index);
+    setIndex(array, index);
     copy(FirstElement, element);
    }
 
