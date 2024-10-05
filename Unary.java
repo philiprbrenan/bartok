@@ -24,6 +24,7 @@ class Unary extends BitMachine                                                  
   void ok(int n) {ok(value.asInt(), n);}                                        // Check that a unary number has the expected value
 
   Layout.Variable get() {return value;}                                         // Get the unary number
+  Layout.Field layout() {return layout.top;}                                    // Get the topmost structure
 
 //D1 Arithmetic                                                                 // Arithmetic using unary numbers
 
