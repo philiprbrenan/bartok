@@ -10,13 +10,12 @@ class Stuck extends BitMachine                                                  
  {final Unary             unary;                                                // The layout of the stuck stack
   final Layout.Field    element;                                                // An element of the stuck stack
   final Layout.Array      array;                                                // The array holding the elements of the stuck stack
-  final Layout.Structure  stuck;                                                // The array holding the elements of the stuck stack
-  final Layout           layout;                                                // The array holding the elements of the stuck stack
+  final Layout.Structure  stuck;                                                // The stuck stack
+  final Layout           layout;                                                // Layout of the stuck stack
 
-  final Layout.Variable   index;                                                // Stuck is full flag
-  final Layout.Variable  source;                                                // Stuck is full flag
-  final Layout.Variable  target;                                                // Stuck is full flag
-  final Layout.Variable  buffer;                                                // Stuck is full flag
+  final Layout.Variable  source;                                                // Source index
+  final Layout.Variable  target;                                                // Target index
+  final Layout.Variable  buffer;                                                // Temporary buffer for moving data in or out of the stuck
   final Layout.Structure   temp;                                                // Temporary data structure
   final Layout          tempLay;                                                // Layout of temporary data
 
@@ -39,13 +38,11 @@ class Stuck extends BitMachine                                                  
     unary.layout.memory = layout.memory;                                        // Make our memory superceded the default memeory created with unary.
     stuck.zero();
     tempLay  = new Layout();                                                    // Temporary storage
-    index    = tempLay.variable ("index",   max);                               // Stuck is full flag
-    source   = tempLay.variable ("source",  max);                               // Stuck is full flag
-    target   = tempLay.variable ("target",  max);                               // Stuck is full flag
-    buffer   = tempLay.variable ("buffer",  width);                             // Stuck is full flag
-    temp     = tempLay.structure("structure", index,                            // An array of elements comprising the stuck stack
-      source, target, buffer);
-    tempLay.layout(temp);                                                       // Layout the structure of the stuck stack
+    source   = tempLay.variable ("source",  max);                               // Source index
+    target   = tempLay.variable ("target",  max);                               // Target index
+    buffer   = tempLay.variable ("buffer",  width);                             // Buffer for moving data in and out of the stuck
+    temp     = tempLay.structure("structure", source, target, buffer);          // Temporary structure
+    tempLay.layout(temp);                                                       // Layout of temporary storage
     temp.zero();                                                                // Clear temporary storage
    }
 
@@ -60,115 +57,115 @@ class Stuck extends BitMachine                                                  
   void isFull (Layout.Bit result) {unary.canNotInc(result);}                    // Check the stuck stack is full
   void isEmpty(Layout.Bit result) {unary.canNotDec(result);}                    // Check the stuck stack is empty
 
-//D1 Actions                                                                    // Place and remove data to/from stuck stack
+//D1 Actions                                                                    // Place and remove data to/from stuck
 
-  void push(Layout.Field ElementToPush)                                         // Push an element as memory onto the stuck stack
-   {setIndex(array, unary.value);                                               // Index stuck memory
-    copy(element, ElementToPush);                                               // Set memory of stuck stack from supplied memory
-    unary.inc();                                                                // Show new slot in use
+  void push(Layout.Field ElementToPush)                                         // Push an element onto the stuck
+   {setIndex(array, unary.value);                                               // Index stuck
+    copy(element, ElementToPush);                                               // Copy data into the stuck
+    unary.inc();                                                                // Show next free slot
    }
 
-  void pop(Layout.Field PoppedElement)                                          // Pop an element as memory from the stuck stack
-   {unary.dec();                                                                // New number of elements on stuck stack
-    setIndex(array, unary.value);                                               // Index stuck memory
-    copy(PoppedElement, element);                                               // Set memory of stuck stack from supplied memory
+  void pop(Layout.Field PoppedElement)                                          // Pop an element from the stuck
+   {unary.dec();                                                                // Index of top most element
+    setIndex(array, unary.value);                                               // Set index of topmost element
+    copy(PoppedElement, element);                                               // Copy data out of the stuck
    }
 
-  void shift(Layout.Field ShiftedElement)                                       // Shift an element as memory from the stuck stack
-   {zero(target);
-    setIndex(array, target);
-    copy(ShiftedElement, element);                                              // Copy the slice of memory
-    zero(source);
-    shiftLeftOneByOne(source);
+  void shift(Layout.Field ShiftedElement)                                       // Shift an element from the stuck
+   {zero(target);                                                               // Index of the first element
+    setIndex(array, target);                                                    // Index of first element
+    copy(ShiftedElement, element);                                              // Copy shifted element out
+    zero(source);                                                               // Index the start of the stuck
+    shiftLeftOneByOne(source);                                                  // Index first element of stuck
 
-    for (int i = 1; i < max; i++)                                               // Shift the stuck stack down place
-     {setIndex(array, source);
-      copy(buffer, element);                                                    // Copy the slice of memory
-      setIndex(array, target);
-      copy(element, buffer);                                                    // Copy the slice of memory
-      shiftLeftOneByOne(source);
-      shiftLeftOneByOne(target);
+    for (int i = 1; i < max; i++)                                               // Shift the stuck down one place
+     {setIndex(array, source);                                                  // Source index
+      copy(buffer, element);                                                    // Copy element at source
+      setIndex(array, target);                                                  // Taregt index is one less than source index
+      copy(element, buffer);                                                    // Copy the copy of the source element into the target position
+      shiftLeftOneByOne(source);                                                // Next source
+      shiftLeftOneByOne(target);                                                // Next target
      }
-    unary.dec();                                                                // New number of elements on stuck stack
+    unary.dec();                                                                // New number of elements on stuck after one has been shifted out
    }
 
-  void unshift(Layout.Field ElementToUnShift)                                   // Unshift an element as memory onto the stuck stack
-   {ones(source);
-    ones(target);
+  void unshift(Layout.Field ElementToUnShift)                                   // Unshift an element from the stuck by moving all the elements up one place
+   {ones(source);                                                               // Start the source at the top
+    ones(target);                                                               // Start the target at the top
 
-    shiftRightOneByZero(target);
-    shiftRightOneByZero(source);
-    shiftRightOneByZero(source);
+    shiftRightOneByZero(target);                                                // Last slot
+    shiftRightOneByZero(source);                                                // Last slot
+    shiftRightOneByZero(source);                                                // Second to last slot
 
-    for (int i = 1; i < max; ++i)                                               // Shift the stuck stack up one place
-     {setIndex(array, source);
-      copy(buffer, element);                                                    // Copy the slice of memory
-      setIndex(array, target);
-      copy(element, buffer);                                                    // Copy the slice of memory
-      shiftRightOneByZero(source);
-      shiftRightOneByZero(target);
+    for (int i = 1; i < max; ++i)                                               // Shift the stuck up one place
+     {setIndex(array, source);                                                  // Index source
+      copy(buffer, element);                                                    // Copy source
+      setIndex(array, target);                                                  // Index target
+      copy(element, buffer);                                                    // Copy target
+      shiftRightOneByZero(source);                                              // Move target down one
+      shiftRightOneByZero(target);                                              // Move source down one
      }
-    zero(target);
-    setIndex(array, target);
-    copy(element, ElementToUnShift);                                            // Copy the slice of memory
-    unary.inc();                                                                // New number of elements on stuck stack
+    zero(target);                                                               // Index of the first element
+    setIndex(array, target);                                                    // Index the first element
+    copy(element, ElementToUnShift);                                            // Copy in the new element
+    unary.inc();                                                                // New number of elements on stuck
    }
 
-  void elementAt(Layout.Field elementOut, Layout.Variable index)                // Return the element at the indicated index
-   {setIndex(array, index);
-    copy(elementOut, element);
+  void elementAt(Layout.Field elementOut, Layout.Variable index)                // Return the element at the indicated zero based index
+   {setIndex(array, index);                                                     // Index of required element
+    copy(elementOut, element);                                                  // Copy element out
    }
 
-  void setElementAt(Layout.Field elementIn, Layout.Variable index)              // Set the element at the indicated constant index
-   {setIndex(array, index);
-    copy(element, elementIn);
+  void setElementAt(Layout.Field elementIn, Layout.Variable index)              // Set the element at the indicated zero based index
+   {setIndex(array, index);                                                     // Index of element to set
+    copy(element, elementIn);                                                   // Copy element in
    }
 
-  void insertElementAt(Layout.Field elementToInsert, Layout.Variable index)     // Insert an element represented as memory into the stuck stack at the indicated 0-based index after moving the elements above up one position
+  void insertElementAt(Layout.Field elementToInsert, Layout.Variable index)     // Insert an element represented as memory into the stuckstack at the indicated zero based index after moving the elements above up one position
    {ones(target);                                                               // Top of stuck stack
     ones(source);                                                               // Top of stuck stack
     shiftRightOneByZero(target);                                                // One step down on target
     shiftRightOneByZero(source);                                                // One step down on source
-      final BranchOnCompare test = branchIfEqual(target, index);                  // Test for finish of shifting phase
+      final BranchOnCompare test = branchIfEqual(target, index);                // Test for finish of shifting phase
       shiftRightOneByZero(source);                                              // One step down on source
-      setIndex(array, source);
-      copy(buffer, element);
-      setIndex(array, target);
-      copy(element, buffer);
-      shiftRightOneByZero(target);                                              //
-      goTo(test);
-    comeFromComparison(test);
-    setIndex(array, index);
-    copy(element, elementToInsert);
+      setIndex(array, source);                                                  // Index of source
+      copy(buffer, element);                                                    // Copy source into buffer
+      setIndex(array, target);                                                  // Index of target
+      copy(element, buffer);                                                    // Copy copy of osurce into target slot
+      shiftRightOneByZero(target);                                              // One step down on target
+      goTo(test);                                                               // Restart shifting loop
+    comeFromComparison(test);                                                   // Exited shifting phase
+    setIndex(array, index);                                                     // Index of element to set
+    copy(element, elementToInsert);                                             // Copy in new element
    }
 
-  void removeElementAt(Layout.Variable index)                                   // Remove the Memory at 0 based index i and shift the Memorys above down one position
+  void removeElementAt(Layout.Variable index)                                   // Remove the element at the indicated zero based index
    {copy(target, index);                                                        // Target of removal
     copy(source, target);                                                       // Source of removeal
     shiftLeftOneByOne(source);                                                  // One step down on source
     final Branch test = branchIfAllOnes(source);                                // Test for finish of shifting phase
-      setIndex(array, source);
-      copy(buffer, element);
-      setIndex(array, target);
-      copy(element, buffer);
-      shiftLeftOneByOne(target);                                                //
+      setIndex(array, source);                                                  // Index of source
+      copy(buffer, element);                                                    // Copy source into buffer
+      setIndex(array, target);                                                  // Index of target
+      copy(element, buffer);                                                    // Copy copy of osurce into target slot
+      shiftLeftOneByOne(target);                                                // One step down on target
       shiftLeftOneByOne(source);                                                // One step down on source
-    goTo(test);
-    comeFrom(test);
-    unary.dec();                                                                // New number of elements on stuck stack
+    goTo(test);                                                                 // Restart shifting loop
+    comeFrom(test);                                                             // Finished shift down
+    unary.dec();                                                                // New number of elements on stuck
    }
 
   void firstElement(Layout.Field FirstElement)                                  // Get the first element
-   {zero(index);
-    setIndex(array, index);
-    copy(FirstElement, element);
+   {zero(source);                                                               // Index of first element
+    setIndex(array, source);                                                    // Set index of first element
+    copy(FirstElement, element);                                                // Copy of first element
    }
 
   void lastElement(Layout.Field LastElement)                                    // Get the last active element
-   {copy(source, unary.value);
-    shiftRightOneByZero(source);
-    setIndex(array, source);
-    copy(LastElement, element);
+   {copy(source, unary.value);                                                  // Index top of stuck
+    shiftRightOneByZero(source);                                                // Index of top most active element
+    setIndex(array, source);                                                    // Set index of topmost element
+    copy(LastElement, element);                                                 // Copy of top most element
    }
 
 //D1 Search                                                                     // Search a stuck stack.
