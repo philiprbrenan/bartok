@@ -8,12 +8,15 @@ import java.util.*;
 
 //D1 Construct                                                                  // Construct a silicon chip comprised of memory, intermediate bits and logic gates.
 
-public class BitMachine extends Test                                            // A machine whose assembler code is just capable enough to manipulate a b-tree
+public class BitMachine extends Test implements LayoutAble                      // A machine whose assembler code is just capable enough to manipulate a b-tree
  {final int maxSteps = 999;                                                     // Maximum number of steps to be executed
   Stack<Instruction> instructions = new Stack<>();                              // Instructions to be executed
   Layout layout;                                                                // Layout of bit memory being manipulated by this bit machine
   int instructionIndex;                                                         // The current instruction
   int step = 0;                                                                 // The number of the currently executing step
+
+  public Layout.Field getLayoutField() {return layout.top;}                     // Layout associated with this class
+  public Layout       getLayout     () {return layout;}                         // Layout associated with this class
 
   void execute()
    {final int N = instructions.size();
