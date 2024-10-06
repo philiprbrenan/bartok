@@ -60,12 +60,9 @@ class Mjaf extends BitMachine                                                   
     nextLevel      = new Stuck("next", maxKeysPerBranch, bitsPerNext);          // Next values
     topNode        = layout.variable ("topNode",         bitsPerNext);          // Next node if search key is greater than all keys in this node
     branch         = layout.structure("branch",                                 // Branch of the tree
-                       branchKeyNames.layout(),
-                       nextLevel.layout(),
-                       topNode);
-    leaf           = layout.structure("leaf",                                   // Leaf of the tree
-                       leafKeyNames.layout.top,
-                       dataValues.layout.top);
+                       branchKeyNames, nextLevel, topNode);
+    leaf           = layout.structure("leaf",  leafKeyNames, dataValues);       // Leaf of the tree
+
     branchOrLeaf   = layout.union    ("branchOrLeaf",   branch, leaf);          // Branch or leaf of the tree
     isBranch       = layout.variable ("isBranch",       1);                     // The node is a branch if true
     isLeaf         = layout.variable ("isLeaf",         1);                     // The node is a leaf if true
@@ -73,7 +70,7 @@ class Mjaf extends BitMachine                                                   
     nodes          = layout.array    ("nodes", node,    size);                  // Array of nodes comprising tree
     hasNode        = layout.bit      ("hasNode");                               // Tree has at least one node in it
     tree           = layout.structure("tree",                                   // Tree
-                       nodesFree.layout(), nodesCreated,
+                       nodesFree, nodesCreated,
                        keyDataStored, root, hasNode, nodes);
     layout.layout(tree);                                                        // Layout
 
@@ -809,12 +806,6 @@ class Mjaf extends BitMachine                                                   
 
 //D1 Tests                                                                      // Tests
 
-  static void test_create_empty_tree()
-   {final int N = 2, M = 4;
-    Mjaf m = mjaf(N, N, M, N);
-    say(m.layout);
-   }
-
 /*
   static void test_create_branch()
    {final int N = 2, M = 4;
@@ -1286,6 +1277,13 @@ class Mjaf extends BitMachine                                                   
     ok(m.size(), 24);
    }
 */
+
+  static void test_create_empty_tree()
+   {final int N = 2, M = 4;
+    Mjaf m = mjaf(N, N, M, N);
+    say(m.layout);
+   }
+
   static void oldTests()                                                        // Tests thought to be in good shape
    {//test_create_branch();
     //test_join_branch();
