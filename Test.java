@@ -13,10 +13,6 @@ public class Test                                                               
     "true".equals(System.getenv("GITHUB_ACTIONS"));
   final static long start = System.nanoTime();                                  // Start time
 
-//D1 Tags                                                                       // Interfaces used solely to tag objects to mark them as acceptable parameters to methods that require some flexability on their parameter lists. Placed in thios calss as they assist in testing by making code more reliable versus just passing any object of any type.
-
-  interface LayoutAble {}                                                       // There is a memory layout associated with this object
-
 //D1 Utility routines                                                           // Utility routines
 
 //D2 Bit routines                                                               // Bit routines
