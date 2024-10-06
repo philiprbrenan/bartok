@@ -1,4 +1,4 @@
-# Test 2024-10-06 at 06:10:49
+# Test 2024-10-06 at 06:40:56
 
 name: Test
 run-name: bartok
@@ -20,7 +20,7 @@ jobs:
 
     strategy:
       matrix:
-        task: [BitMachine, Chip, Layout, LayoutAble, Mjaf, Stuck, Test, Unary]
+        task: [BitMachine, Chip, Layout, Mjaf, Stuck, Test, Unary]
 
     steps:
     - uses: actions/checkout@v3
@@ -36,10 +36,10 @@ jobs:
       run:
         sudo apt install tree
 
-    - name: Position
+    - name: Position files in package
       run: |
         mkdir -p com/AppaApps/Silicon
-        cp `find . -name "*.java"` com/AppaApps/Silicon
+        cp `find .  -name "*.java"` com/AppaApps/Silicon
 
     - name: Files
       run:
@@ -63,11 +63,6 @@ jobs:
       if: matrix.task == 'Layout'
       run: |
         java -cp Classes com/AppaApps/Silicon/Layout
-
-    - name: Test LayoutAble
-      if: matrix.task == 'LayoutAble'
-      run: |
-        java -cp Classes com/AppaApps/Silicon/LayoutAble
 
     - name: Test Mjaf
       if: matrix.task == 'Mjaf'
