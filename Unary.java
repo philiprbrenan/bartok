@@ -4,10 +4,13 @@
 //------------------------------------------------------------------------------
 package com.AppaApps.Silicon;                                                   // Design, simulate and layout a binary tree on a silicon chip.
 
-class Unary extends BitMachine                                                  // Unary arithmetic on a chip
+class Unary extends BitMachine implements LayoutAble                            // Unary arithmetic on a bit machine
  {final Layout          layout;                                                 // The layout of the unary number
   final Layout.Variable value;                                                  // The value of the unary number
   BitMachine bitMachine = this;                                                 // The bit machine in which to load instructions
+
+  public Layout.Field getLayoutField() {return layout.top;}                     // Layout field associated with this class
+  public Layout       getLayout     () {return layout;    }                     // Layout associated with this class
 
 //D1 Construction                                                               // Create a unary number
 
