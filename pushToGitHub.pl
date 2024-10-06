@@ -18,7 +18,7 @@ my $wf   = q(.github/workflows/main.yml);                                       
 my @ext  = qw(.java .md .pl);                                                   # Files to upload to github
 
 push my @files, searchDirectoryTreesForMatchingFiles($home, @ext);              # Files to upload
-my @java = map {fn $_}  grep {fe($_) eq q(java)} @files;                        # Java to test
+my @java = map {fn $_}  grep {fe($_) eq q(java) && fn($_) !~ m(Able\Z)} @files; # Java to test
 
 for my $s(@files)                                                               # Upload each selected file
  {my $c = readBinaryFile $s;                                                    # Load file
@@ -73,10 +73,10 @@ jobs:
       run:
         sudo apt install tree
 
-    - name: Position
+    - name: Position files in package
       run: |
         mkdir -p $c
-        cp `find . -name "*.java"` $c
+        cp `find .  -name "*.java"` $c
 
     - name: Files
       run:
