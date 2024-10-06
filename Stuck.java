@@ -6,13 +6,16 @@ package com.AppaApps.Silicon;                                                   
 
 import java.util.*;
 
-class Stuck extends BitMachine                                                  // Stuck: a fixed size stack controlled by a unary number. The unary number zero indicates an empty stuck.
+class Stuck extends BitMachine implements LayoutAble                            // Stuck: a fixed size stack controlled by a unary number. The unary number zero indicates an empty stuck.
  {final String             name;                                                // The lname of the stuc: it does not have to be globally unique
   final Unary             unary;                                                // The layout of the stuck
   final Layout.Field    element;                                                // An element of the stuck
   final Layout.Array      array;                                                // The array holding the elements of the stuck
   final Layout.Structure  stuck;                                                // The stuck
   final Layout           layout;                                                // Layout of the stuck
+
+  public Layout.Field getLayoutField() {return layout.top;}                     // Layout associated with this class
+  public Layout       getLayout     () {return layout    ;}                     // Layout associated with this class
 
   final Layout.Variable  source;                                                // Source index
   final Layout.Variable  target;                                                // Target index
@@ -34,9 +37,9 @@ class Stuck extends BitMachine                                                  
     layout   = new Layout();                                                    // An element of the stuck
     element  = layout.variable ("element", width);                              // An element of the stuck
     array    = layout.array    ("array",   element, max);                       // An array of elements comprising the stuck
-    stuck    = layout.structure(name,      array,   unary.layout());            // An array of elements comprising the stuck
+    stuck    = layout.structure(name, array,  unary);                           // An array of elements comprising the stuck
     layout.layout(stuck);                                                       // Layout the structure of the stuck
-    unary.layout.memory = layout.memory;                                        // Make our memory superceded the default memeory created with unary.
+    //unary.layout.memory = layout.memory;                                      // Make our memory superceded the default memeory created with unary.
     stuck.zero();
     tempLay  = new Layout();                                                    // Temporary storage
     source   = tempLay.variable ("source", max);                                // Source index
