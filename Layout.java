@@ -8,18 +8,18 @@ import java.util.*;
 
 //D1 Construct                                                                  // Layout a description of the memory used by a chip
 
-public class Layout extends Test implements Test.LayoutAble                     // A Memory layout for a chip. There might be several such layouts representing parts of the chip.
+public class Layout extends Test implements LayoutAble                          // A Memory layout for a chip. There might be several such layouts representing parts of the chip.
  {Field top;                                                                    // The top most field in a set of nested fields describing memory.
+  Memory                     memory = new Memory();                             // A sample memory that can be freed if not wanted by assigning null to this non final field.
   final Map<String,Field> fullNames = new TreeMap<>();                          // Fields by full name
-  Stack<Boolean>             memory = new Stack<>();                            // A sample memory that can be freed if not wanted by assigning null to this non final field.
   final Stack<Layout>       layouts = new Stack<>();                            // All the sub layouts added to this layout so we can unify their memory
 
   void layout(Field field)                                                      // Create a new Layout loaded from a set of definitions
    {top  = field;                                                               // Record layout
-    field.layout(0, 0, null);                                                   // Locate field positions
+    field.layout(0, 0);                                                         // Locate field positions
     for (int i = 0; i < field.width; i++) memory.push(null);                    // Create a matching memory.
     indexNames(fullNames);                                                      // Index the names of the fields
-    for (Layout l: layouts) l.memory = memory;                                  // This layout and all its sub layouts now use the memory of this layout
+    unifyMemory(memory);                                                        // Unify the memory of all declared layouts with the memory of this layout
    }
 
   Field get(String path) {return fullNames.get(path);}                          // Locate a field from its full name path which must include the top most field
@@ -42,6 +42,9 @@ public class Layout extends Test implements Test.LayoutAble                     
    {return top.toString();
    }
 
+  public Layout.Field getLayoutField() {return top;}                            // Layout associated with this class
+  public Layout       getLayout     () {return this;}                           // Layout associated with this class
+
   void indexNames(Map<String,Field> names) {top.indexNames(names, null);}       // Index field names in each containing structure so fields can be accessed by a unique structured name
 
   int size() {return top == null ? 0 : top.width;}                              // Size of memory
@@ -55,9 +58,11 @@ public class Layout extends Test implements Test.LayoutAble                     
     return null;
    }
 
-  void unifyMemory()                                                            // Unify the memory of all declared layouts with the memory of this layout
-   {for (Layout l : layouts) l.memory = memory;                                 // Unify the memory of each layout
-    layouts.clear();                                                            // Remove all the layouts unified
+  void unifyMemory(Memory memory)                                               // Unify the memory of all declared layouts with the memory of this layout
+   {for (Layout l : layouts)                                                    // Unify the memory of each layout
+     {l.memory = memory;
+      l.unifyMemory(memory);
+     }
    }
 
   void clear()                                                                  // Clear memory
@@ -67,10 +72,14 @@ public class Layout extends Test implements Test.LayoutAble                     
 
   void ok(String expected) {Test.ok(toString(), expected);}                     // Confirm layout is as expected
 
-//D1 Bit                                                                        // A bit is the element from which memory is constructed.
+//D1 Bit Memory                                                                 // A bit is the element from which memory is constructed.
 
   void    set(int i, Boolean b) {       memory.setElementAt(b, i);}             // Set a bit in the sample memory. This method should be overridden to drive a more useful memory that captures more information about its bits than just their values.
   Boolean get(int i)            {return memory.elementAt(i);}                   // Get a bit from the sample memory
+
+  class Memory extends Stack<Boolean>                                           // A sample memory that can be freed if not wanted by assigning null to this non final field.
+   {private static final long serialVersionUID = 1L;
+   }
 
 //D1 Bits                                                                       // A collection of bits abstracted from memory layouts
 
@@ -134,7 +143,7 @@ public class Layout extends Test implements Test.LayoutAble                     
 
 //D1 Layouts                                                                    // Field memory of the chip as variables, arrays, structures, unions. Dividing the memory in this manner makes it easier to program the chip symbolically.
 
-  abstract class Field implements Test.LayoutAble                               // Variable/Array/Structure/Union definition.
+  abstract class Field implements LayoutAble                                    // Variable/Array/Structure/Union definition.
    {final String name;                                                          // Name of field
     int at;                                                                     // Offset of field from start of memory
     int width;                                                                  // Number of bits in a field
@@ -153,6 +162,8 @@ public class Layout extends Test implements Test.LayoutAble                     
       return n;
      }
 
+    public Layout.Field getLayoutField() {return this;}                         // Layout associated with this field
+    public Layout       getLayout     () {return null;}                         // Layout associated with this field
     abstract void indexNames(Map<String,Field> names, String prefix);           // Set the full names of all the fields in a layout
 
     Field get(String path) {return fullNames.get(path);}                        // Address a contained field by name
@@ -169,7 +180,7 @@ public class Layout extends Test implements Test.LayoutAble                     
         width, "bits wide");
      }
 
-    abstract void layout(int at, int depth, Field superStructure);              // Layout this field
+    abstract void layout(int at, int depth);                                    // Layout this field
 
     void position(int At) {at = At;}                                            // Reposition a field after an index of a containing array has been changed
 
@@ -219,10 +230,16 @@ public class Layout extends Test implements Test.LayoutAble                     
     Integer asInt()                                                             // Get an integer representing the value of the layout to the extent that is possible.  The integer is held inlittle endian format
      {int n = 0;                                                                // Resulting integer
       for (int i = 0; i < width; ++i)                                           // Each bit
-       {final Boolean v = get(i);                                               // Value of bit
-        if (v == null) return null;                                             // One of the bits is null so the overall value is no longer known
-        if (v && i > Integer.SIZE-1) return null;                               // Value is too big to be represented
-        n += v ? 1<<i : 0;
+       {try
+         {final Boolean v = get(i);                                               // Value of bit
+          if (v == null) return null;                                             // One of the bits is null so the overall value is no longer known
+          if (v && i > Integer.SIZE-1) return null;                               // Value is too big to be represented
+          n += v ? 1<<i : 0;
+         }
+        catch(Exception e)
+         {err("Unable to get bit", i, "from field", name, "at", at);
+          return null;                                                                                //
+         }
        }
       return n;                                                                 // Valid representation of bits as an integer
      }
@@ -263,7 +280,7 @@ public class Layout extends Test implements Test.LayoutAble                     
      {indexName(names, prefix);
      }
 
-    void layout(int At, int Depth, Field superStructure)                        // Layout the variable in the structure
+    void layout(int At, int Depth)                                              // Layout the variable in the structure
      {at = At; depth = Depth;
      }
 
@@ -289,18 +306,19 @@ public class Layout extends Test implements Test.LayoutAble                     
     int index = 0;                                                              // Index of array field to access
     Field element;                                                              // The elements of this array are of this type
 
-    Array(String Name, Test.LayoutAble Element, int Size)                       // Create the array definition
+    Array(String Name, LayoutAble Element, int Size)                            // Create the array definition
      {super(Name);                                                              // Name of array
       size = Size;                                                              // Size of array
       element = field(Element);                                                 // Field definition associated with this layout
-      if (Element instanceof Layout l) layouts.push(l);                         // Add the element to the list of sub layouts if it is a sub layout
+      final Layout l = Element.getLayout();
+      if (l != null) layouts.push(l);                                           // Add the element to the list of sub layouts if it is a sub layout
      }
 
     int at(int i) {return at+i*element.width;}                                  // Offset of this array field in the structure
 
-    void layout(int At, int Depth, Field superStructure)                        // Position this array within the layout
+    void layout(int At, int Depth)                                              // Position this array within the layout
      {depth = Depth;                                                            // Depth of field in the layout
-      element.layout(At, Depth+1, superStructure);                              // Field sub structure
+      element.layout(At, Depth+1);                                              // Field sub structure
       at = At;                                                                  // Position on index
       element.up = this;                                                        // Chain up to containing parent field
       width = size * element.width;                                             // The size of the array is the sie of its element times the number of elements in the array
@@ -359,15 +377,11 @@ public class Layout extends Test implements Test.LayoutAble                     
 
     Structure(String Name, LayoutAble...Fields)                                 // Fields in the structure
      {super(Name);
-      for (int i = 0; i < Fields.length; ++i)                                   // Each field supplied
-       {final LayoutAble f = Fields[i];                                         // Supplied field
-        addField(field(f));                                                     // Add field to this structure
-        if (f instanceof Layout l) layouts.push(l);                             // Add the element to the list of sub layouts if it is a sub layout
-       }
+      for (int i = 0; i < Fields.length; ++i) addField(Fields[i]);              // Each field supplied
      }
 
     void addField(LayoutAble layout)                                            // Add additional fields
-     {final Field field = field(layout);                                        // Field associated with this layout
+     {final Field field = layout.getLayoutField();                              // Field associated with this layout
       field.up = this;                                                          // Chain up to containing structure
       if (subMap.containsKey(field.name))
        {stop("Structure:", name, "already contains field with this name:",
@@ -375,16 +389,17 @@ public class Layout extends Test implements Test.LayoutAble                     
        }
       subMap.put   (field.name, field);                                         // Add as a field by name to this structure
       subStack.push(field);                                                     // Add as a field in order to this structure
-      if (layout instanceof Layout) layouts.push((Layout)layout);               // Add the element to the list of sub layouts if it is a sub layout
+      final Layout l = layout.getLayout();
+      if (l != null) layouts.push(l);                                           // Add the element to the list of sub layouts if it is a sub layout
      }
 
-    void layout(int At, int Depth, Field superStructure)                        // Place the structure in the layout
+    void layout(int At, int Depth)                                              // Place the structure in the layout
      {at = At;
       width = 0;
       depth = Depth;
       for(Field v : subStack)                                                   // Field sub structure
        {v.at = at+width;
-        v.layout(v.at, Depth+1, superStructure);
+        v.layout(v.at, Depth+1);
         width += v.width;
        }
      }
@@ -427,18 +442,16 @@ public class Layout extends Test implements Test.LayoutAble                     
    }
 
   class Union extends Structure                                                 // Union of fields laid out in memory on top of each other - it is up to you to have a way of deciding which fields are valid
-   {final Map<String,Field> subMap = new TreeMap<>();                           // Unique variables contained inside this variable
-
-    Union(String Name, LayoutAble...Fields)                                     // Fields in the union
+   {Union(String Name, LayoutAble...Fields)                                     // Fields in the union
      {super(Name, Fields);
      }
 
-    void layout(int at, int Depth, Field superStructure)                        // Compile this variable so that the size, width and byte fields are correct
+    void layout(int at, int Depth)                                              // Compile this variable so that the size, width and byte fields are correct
      {width = 0;
       depth = Depth;
       for(Field v : subMap.values())                                            // Find largest substructure
        {v.at = at;                                                              // Substructures are laid out on top of each other
-        v.layout(v.at, Depth+1, superStructure);
+        v.layout(v.at, Depth+1);
         width = max(width, v.width);                                            // Space occupied is determined by largest field of union
        }
      }
@@ -723,33 +736,78 @@ V    4     2                  1     d
     l.layout(s);
 
     Layout L = new Layout();
-    var A = L.variable ("A", 4);
-    var B = L.variable ("B", 4);
-    var S = L.structure("S", A, l, B);
+    var A = L.variable ("A", 64);
+    var B = L.variable ("B", 24);
+    var S = L.structure("S", A, B);
     L.layout(S);
 
-    L.ok("""
+    Layout M = new Layout();
+    var C = M.variable ("C", 64);
+    var D = M.variable ("D", 24);
+    var E = M.structure("E", C, l, L, D);
+    M.layout(E);
+
+    a.fromInt(1);
+
+    //stop(M);
+    M.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    16                      S
-V    0     4                        A
-S    4     8                        s
-B    4     1                          a
-V    5     7                          b
-V   12     4                        B
+S    0   184                      E
+V    0    64                        C
+S   64     8                        s
+B   64     1                  1       a
+V   65     7                          b
+S   72    88                        S
+V   72    64                          A
+V  136    24                          B
+V  160    24                        D
 """);
 
-    L.get("S.s.a").toBit().fromInt(1);
+    M.get("E.s.a").toBit().fromInt(0);
 
-    //stop(L);
-    L.ok("""
+    //stop(l);
+    l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    16                      S
-V    0     4                        A
-S    4     8                        s
-B    4     1                  1       a
-V    5     7                          b
-V   12     4                        B
+S   64     8                        s
+B   64     1                  0       a
+V   65     7                          b
 """);
+   }
+
+  static void test_union()
+   {Layout l = new Layout();
+    var a = l.bit      ("a");
+    var b = l.variable ("b", 7);
+    var s = l.structure("s", a, b);
+
+    var A = l.variable ("A", 4);
+    var B = l.variable ("B", 4);
+    var S = l.structure("S", A, B);
+
+    var u = l.union    ("u", S, s);
+
+
+    var C = l.variable ("C", 4);
+    var D = l.variable ("D", 4);
+    var E = l.structure("E", C, D, u);
+
+    l.layout(E);
+
+    //stop(l);
+    l.ok("""
+T   At  Wide  Index       Value   Field name
+S    0    16                      E
+V    0     4                        C
+V    4     4                        D
+U    8     8                        u
+S    8     8                          S
+V    8     4                            A
+V   12     4                            B
+S    8     8                          s
+B    8     1                            a
+V    9     7                            b
+""");
+
    }
 
   static void oldTests()                                                        // Tests thought to be in good shape
@@ -758,11 +816,12 @@ V   12     4                        B
     test_bit();
     test_bits();
     test_sub_layout();
+    test_union();
    }
 
   static void newTests()                                                        // Tests being worked on
-   {oldTests();
-    //test_bit();
+   {//oldTests();
+    test_sub_layout();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
