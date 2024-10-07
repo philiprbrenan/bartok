@@ -217,7 +217,7 @@ public class Layout extends Test implements LayoutAble                          
     public   String toString() {return toString(true);}                         // Print the field with a header
     abstract String toString(boolean printHeader);                              // Print the field with or without a header
 
-    abstract Field duplicate(Layout d);                                         // Duplicate an field of this field so we can modify it safely
+    abstract Field duplicate(Layout d);                                         // Duplicate this field and place it in the specified layout so we can modify it safely
 
     Bit       toBit      () {return (Bit)      this;}                           // Try to convert to a bit
     Variable  toVariable () {return (Variable) this;}                           // Try to convert to a variable
@@ -241,14 +241,14 @@ public class Layout extends Test implements LayoutAble                          
      {int n = 0;                                                                // Resulting integer
       for (int i = 0; i < width; ++i)                                           // Each bit
        {try
-         {final Boolean v = get(i);                                               // Value of bit
-          if (v == null) return null;                                             // One of the bits is null so the overall value is no longer known
-          if (v && i > Integer.SIZE-1) return null;                               // Value is too big to be represented
+         {final Boolean v = get(i);                                             // Value of bit
+          if (v == null) return null;                                           // One of the bits is null so the overall value is no longer known
+          if (v && i > Integer.SIZE-1) return null;                             // Value is too big to be represented
           n += v ? 1<<i : 0;
          }
         catch(Exception e)
          {err("Unable to get bit", i, "from field", name, "at", at);
-          return null;                                                                                //
+          return null;
          }
        }
       return n;                                                                 // Valid representation of bits as an integer
@@ -278,9 +278,9 @@ public class Layout extends Test implements LayoutAble                          
        }
      }
 
-    void  fromUnary(int i) {fromInt((1<<i)-1);}                                   // Set a field to the unary representation of an integer
+    void  fromUnary(int i) {fromInt((1<<i)-1);}                                 // Set a field to the unary representation of an integer
 
-    int asUnary()                                                             // Get an integer representing the unary value contained a field by counting the bits that are on
+    int asUnary()                                                               // Get an integer representing the unary value contained a field by counting the bits that are on
      {int n = 0;
       for (int i = 0; i < width; i++) if (get(i)) ++n;
       return n;
@@ -288,6 +288,21 @@ public class Layout extends Test implements LayoutAble                          
 
     void ok(int    expected) {Test.ok(asInt(),    expected);}                   // Check value of a field as an integer
     void ok(String expected) {Test.ok(asString(), expected);}                   // Check value of a field as a string
+
+    Layout copy()                                                               // Copy a layout and share its memory so we can see and modify current values in the copy
+     {final Layout d = new Layout();                                            // New layout
+      d.top = duplicate(d);                                                     // Copy each field into this layout
+      d.indexNames(d.fullNames);                                                // Index the names of the fields
+      d.memory = memory;                                                        // Share the existing memory
+      return d;
+     }
+
+    Layout duplicate()                                                          // Duplicate a layout and create a new memory ethatis entirely separate.
+     {final Layout d = copy();                                                  // New layout
+      d.top.layout(0, 0);                                                       // Locate field positions relative to new top
+      d.memory = d.new Memory();                                                // New memory
+      return d;                                                                 // Duplicate
+     }
    }
 
   class Variable extends Field                                                  // Layout a variable with no sub structure
@@ -899,6 +914,73 @@ V   16     4                 15     e
 """);
    }
 
+  static void test_duplicate_sub_layout()
+   {Layout l = new Layout();
+    var a = l.variable ("a", 4);
+    var b = l.variable ("b", 4);
+    var s = l.structure("s", a, b);
+    var c = l.variable ("c", 4);
+    var d = l.variable ("d", 4);
+    var t = l.structure("t", c, d);
+    var e = l.variable ("e", 4);
+    var S = l.structure("S", e, s, t);
+    l.layout(S);
+    a.fromInt(1);
+    b.fromInt(2);
+    c.fromInt(3);
+    d.fromInt(4);
+    e.fromInt(5);
+
+    //stop(l);
+    l.ok("""
+T   At  Wide  Index       Value   Field name
+S    0    20             274965   S
+V    0     4                  5     e
+S    4     8                 33     s
+V    4     4                  1       a
+V    8     4                  2       b
+S   12     8                 67     t
+V   12     4                  3       c
+V   16     4                  4       d
+""");
+
+    final Layout j = t.duplicate();
+    j.get("t.c").ok(0);
+    j.get("t.d").ok(0);
+    //say(j);
+    j.ok("""
+T   At  Wide  Index       Value   Field name
+S    0     8                  0   t
+V    0     4                  0     c
+V    4     4                  0     d
+""");
+
+    final Layout k = t.copy();
+    k.get("t.c").ok(3);
+    k.get("t.d").ok(4);
+    //stop(k);
+    k.ok("""
+T   At  Wide  Index       Value   Field name
+S   12     8                 67     t
+V   12     4                  3       c
+V   16     4                  4       d
+""");
+
+    k.get("t.c").fromInt(6);
+    //stop(l);
+    l.ok("""
+T   At  Wide  Index       Value   Field name
+S    0    20             287253   S
+V    0     4                  5     e
+S    4     8                 33     s
+V    4     4                  1       a
+V    8     4                  2       b
+S   12     8                 70     t
+V   12     4                  6       c
+V   16     4                  4       d
+""");
+   }
+
   static void oldTests()                                                        // Tests thought to be in good shape
    {test_1();
     test_memory();
@@ -908,10 +990,12 @@ V   16     4                 15     e
     test_union();
     test_unary();
     test_duplicate();
+    test_duplicate_sub_layout();
    }
 
   static void newTests()                                                        // Tests being worked on
    {oldTests();
+    test_duplicate_sub_layout();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
