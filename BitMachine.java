@@ -73,8 +73,7 @@ public class BitMachine extends Test implements LayoutAble                      
       sOff = SOff; tOff = TOff; length = Length;
      }
     void action()                                                               // Perform instruction
-     {//say("CCCC", target.name, target.at, source.name, source.at, length);
-      for(int i = length-1; i >= 0; i--)                                        // Copy each bit assuming no overlap
+     {for(int i = length-1; i >= 0; i--)                                        // Copy each bit assuming no overlap
        {final Boolean b = source.get(sOff+i);
         target.set(tOff+i, b);
        }
@@ -171,7 +170,9 @@ public class BitMachine extends Test implements LayoutAble                      
      {field = Field;
      }
     void action()                                                               // Perform instruction
-     {for (int i = field.width-1; i > 0; i--) field.set(i, field.get(i-1));
+     {for (int i = field.width-1; i > 0; i--)
+       {field.set(i, field.get(i-1));
+       }
       field.set(0, true);
      }
    }
