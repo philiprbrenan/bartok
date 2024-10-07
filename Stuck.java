@@ -228,26 +228,26 @@ class Stuck extends BitMachine implements LayoutAble                            
     //stop(s.layout);
     s.layout.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    44                      s
-A    0    40      0                 array
+S    0    44                  0   s
+A    0    40      0           0     array
 S    0    10                 15       s
 V    0     4                 15         key
 V    4     6                  0         data
-A   10    40      1                 array
+A   10    40      1           0     array
 S   10    10                 31       s
 V   10     4                 15         key
 V   14     6                  1         data
-A   20    40      2                 array
+A   20    40      2           0     array
 S   20    10                 63       s
 V   20     4                 15         key
 V   24     6                  3         data
-A   30    40      3                 array
+A   30    40      3           0     array
 S   30    10                127       s
 V   30     4                 15         key
 V   34     6                  7         data
 V   40     4                 15     unary
 """);
-    //stop(l);
+    stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
 S    0    16                      structure
@@ -810,7 +810,7 @@ V   40     4                  0     unary
 """);
    }
 
-  static void test_first()
+  static void test_first_last()
    {final int W = 6, M = 4;
 
     final Layout           keyData = new Layout();
@@ -819,7 +819,7 @@ V   40     4                  0     unary
     final Layout.Structure KeyData = keyData.structure("s", key, data);
     keyData.layout(KeyData);
 
-    final Layout f = keyData.copy(), l = keyData.copy();
+    final Layout f = keyData.duplicate(), l = keyData.duplicate();
 
     Stuck s = stuck("s", M, keyData);
 
@@ -831,44 +831,11 @@ V   40     4                  0     unary
     s.unary.value.fromInt(15);
 
     s.firstElement(f);
-    //s.lastElement(l);
+    s.lastElement(l);
     s.execute();
-    //stop(key);
-    //f.ok(11);
-say(s.layout);
-say("AAAA", f);
-//say("BBBB", l);
-    //l.ok(44);
-   }
 
-/*
-
-  static void test_last()
-   {final int W = 6, M = 4;
-
-    final Layout           keyData = new Layout();
-    final Layout.Variable  key     = keyData.variable("key",  M);
-    final Layout.Variable  data    = keyData.variable("data", W);
-    final Layout.Structure KeyData = keyData.structure("s", key, data);
-    keyData.layout(KeyData);
-
-    Stuck s = stuck("s", M, keyData);
-
-    s.array.zero();
-    s.array.setIndex(0); s.element.fromInt(11);
-    s.array.setIndex(1); s.element.fromInt(22);
-    s.array.setIndex(2); s.element.fromInt(33);
-    s.array.setIndex(3); s.element.fromInt(44);
-    s.unary.value.fromInt(15);
-
-    final Layout          l = new Layout();
-    final Layout.Variable v = l.variable ("value", W);
-    l.layout(v);
-
-    s.lastElement(v);
-    s.execute();
-    //stop(v);
-    v.ok(44);
+    f.get("s").ok(11);
+    l.get("s").ok(44);
    }
 
   static void test_index_of()
@@ -879,6 +846,7 @@ say("AAAA", f);
     final Layout.Variable  data    = keyData.variable("data", W);
     final Layout.Structure KeyData = keyData.structure("s", key, data);
     keyData.layout(KeyData);
+    KeyData.fromInt(22);
 
     Stuck s = stuck("s", M, keyData);
 
@@ -896,8 +864,7 @@ say("AAAA", f);
     final Layout.Structure S = l.structure("s", i, f, v);
     l.layout(S);
 
-    v.fromInt(22);
-    s.indexOf(v, f, i);
+    s.indexOf(keyData, f, i);
     s.execute();
     //stop(i);
     i.ok(1);
@@ -912,6 +879,7 @@ say("AAAA", f);
     final Layout.Variable  data    = keyData.variable("data", W);
     final Layout.Structure KeyData = keyData.structure("s", key, data);
     keyData.layout(KeyData);
+    KeyData.fromInt(21);
 
     Stuck s = stuck("s", M, keyData);
 
@@ -930,7 +898,7 @@ say("AAAA", f);
     l.layout(S);
 
     v.fromInt(21);
-    s.indexOf(v, f, i);
+    s.indexOf(keyData, f, i);
     s.execute();
     //stop(f);
     f.ok(0);
@@ -944,6 +912,7 @@ say("AAAA", f);
     final Layout.Variable  data    = keyData.variable("data", W);
     final Layout.Structure KeyData = keyData.structure("s", key, data);
     keyData.layout(KeyData);
+    key.fromInt(55);
 
     Stuck s = stuck("s", M, keyData);
 
@@ -956,16 +925,13 @@ say("AAAA", f);
 
     final Layout           l = new Layout();
     final Layout.Variable  i = l.variable ("i", M);
-    final Layout.Variable  j = l.variable ("j", W);
-    final Layout.Structure S = l.structure("s", i, j);
+    final Layout.Structure S = l.structure("s", i);
     l.layout(S);
-
     i.fromInt(3);
-    j.fromInt(55);
 
-    s.setElementAt(j, i);
+    s.setElementAt(keyData, i);
     s.execute();
-    //stop(s.layout);
+    stop(s.layout);
     s.layout.ok("""
 T   At  Wide  Index       Value   Field name
 S    0    28          263419275   s
@@ -980,7 +946,7 @@ V   18     6                 44       element
 V   24     4                 15     unary
 """);
    }
-*/
+
   static void oldTests()                                                        // Tests thought to be in good shape
    {test_push();
     test_pop();
@@ -989,16 +955,14 @@ V   24     4                 15     unary
     test_elementAt();
     test_insert_element_at();
     test_remove_element_at();
-    //test_first();
-    //test_last();
-    //test_index_of();
-    //test_index_of_notFound(); October 4th.
-    //test_set_element_at();
+    test_first_last();
+    test_index_of();
+    test_index_of_notFound();
+    test_set_element_at();
    }
 
   static void newTests()                                                        // Tests being worked on
-   {//oldTests();
-    test_first();
+   {oldTests();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
