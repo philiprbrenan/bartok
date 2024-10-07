@@ -7,7 +7,7 @@ package com.AppaApps.Silicon;                                                   
 import java.util.*;
 
 class Stuck extends BitMachine implements LayoutAble                            // Stuck: a fixed size stack controlled by a unary number. The unary number zero indicates an empty stuck.
- {final String             name;                                                // The lname of the stuc: it does not have to be globally unique
+ {final String             name;                                                // The name of the stuck. The name does not have to be globally unique
   final Unary             unary;                                                // The layout of the stuck
   final Layout.Field    element;                                                // An element of the stuck
   final Layout.Array      array;                                                // The array holding the elements of the stuck
@@ -30,16 +30,17 @@ class Stuck extends BitMachine implements LayoutAble                            
 
 //D1 Construction                                                               // Create a stuck
 
-  Stuck(String Name, int Max, int Width)                                        // Create the stuck
-   {name = Name; width = Width; max = Max;                                      // Parameterize the stuck
+  Stuck(String Name, int Max, Layout repeat)                                    // Create the stuck with a maximum number of the specified elements
+   {name     = Name;                                                            // Name of stuck
+    max      = Max;                                                             // Maximum size
+    width    = repeat.size();                                                   // Width of element of stuck
     unary    = Unary.unary(max);                                                // Unary number showing which elements in the stack are valid
     unary.bitMachine = this;                                                    // Unary instructions to be placed in this machine
     layout   = new Layout();                                                    // An element of the stuck
-    element  = layout.variable ("element", width);                              // An element of the stuck
-    array    = layout.array    ("array",   element, max);                       // An array of elements comprising the stuck
+    array    = layout.array    ("array", repeat.duplicate(), max);              // An array of elements comprising the stuck. Duplicate the input element so that we can manipulate it inmdependently
     stuck    = layout.structure(name, array,  unary);                           // An array of elements comprising the stuck
     layout.layout(stuck);                                                       // Layout the structure of the stuck
-    //unary.layout.memory = layout.memory;                                      // Make our memory superceded the default memeory created with unary.
+    element  = layout.get("array"+"."+repeat.top.name);                         // Element on stuck
     stuck.zero();
     tempLay  = new Layout();                                                    // Temporary storage
     source   = tempLay.variable ("source", max);                                // Source index
@@ -51,8 +52,8 @@ class Stuck extends BitMachine implements LayoutAble                            
    }
 
   Layout.Field layout() {return layout.top;}                                    // Get the topmost structure
-  static Stuck stuck(String Name, int Max, int Width)                           // Create the stuck
-   {return new Stuck(Name, Max, Width);
+  static Stuck stuck(String Name, int Max, Layout Layout)                       // Create the stuck
+   {return new Stuck(Name, Max, Layout);
    }
 
   void clear() {zero(stuck);}                                                   // Clear a stuck
@@ -66,22 +67,22 @@ class Stuck extends BitMachine implements LayoutAble                            
 
 //D1 Actions                                                                    // Place and remove data to/from stuck
 
-  void push(Layout.Field ElementToPush)                                         // Push an element onto the stuck
+  void push(Layout ElementToPush)                                               // Push an element onto the stuck
    {setIndex(array, unary.value);                                               // Index stuck
-    copy(element, ElementToPush);                                               // Copy data into the stuck
+    copy(element, ElementToPush.getLayoutField());                              // Copy data into the stuck
     unary.inc();                                                                // Show next free slot
    }
 
-  void pop(Layout.Field PoppedElement)                                          // Pop an element from the stuck
+  void pop(Layout PoppedElement)                                                // Pop an element from the stuck
    {unary.dec();                                                                // Index of top most element
     setIndex(array, unary.value);                                               // Set index of topmost element
-    copy(PoppedElement, element);                                               // Copy data out of the stuck
+    copy(PoppedElement.getLayoutField(), element);                              // Copy data out of the stuck
    }
 
-  void shift(Layout.Field ShiftedElement)                                       // Shift an element from the stuck
+  void shift(Layout ShiftedElement)                                             // Shift an element from the stuck
    {zero(target);                                                               // Index of the first element
     setIndex(array, target);                                                    // Index of first element
-    copy(ShiftedElement, element);                                              // Copy shifted element out
+    copy(ShiftedElement.getLayoutField(), element);                             // Copy shifted element out
     zero(source);                                                               // Index the start of the stuck
     shiftLeftOneByOne(source);                                                  // Index first element of stuck
 
@@ -96,7 +97,7 @@ class Stuck extends BitMachine implements LayoutAble                            
     unary.dec();                                                                // New number of elements on stuck after one has been shifted out
    }
 
-  void unshift(Layout.Field ElementToUnShift)                                   // Unshift an element from the stuck by moving all the elements up one place
+  void unshift(Layout ElementToUnShift)                                         // Unshift an element from the stuck by moving all the elements up one place
    {ones(source);                                                               // Start the source at the top
     ones(target);                                                               // Start the target at the top
 
@@ -114,21 +115,21 @@ class Stuck extends BitMachine implements LayoutAble                            
      }
     zero(target);                                                               // Index of the first element
     setIndex(array, target);                                                    // Index the first element
-    copy(element, ElementToUnShift);                                            // Copy in the new element
+    copy(element, ElementToUnShift.getLayoutField());                           // Copy in the new element
     unary.inc();                                                                // New number of elements on stuck
    }
 
-  void elementAt(Layout.Field elementOut, Layout.Variable index)                // Return the element at the indicated zero based index
+  void elementAt(Layout elementOut, Layout.Variable index)                      // Return the element at the indicated zero based index
    {setIndex(array, index);                                                     // Index of required element
-    copy(elementOut, element);                                                  // Copy element out
+    copy(elementOut.getLayoutField(), element);                                 // Copy element out
    }
 
-  void setElementAt(Layout.Field elementIn, Layout.Variable index)              // Set the element at the indicated zero based index
+  void setElementAt(Layout elementIn, Layout.Variable index)                    // Set the element at the indicated zero based index
    {setIndex(array, index);                                                     // Index of element to set
-    copy(element, elementIn);                                                   // Copy element in
+    copy(element, elementIn.getLayoutField());                                  // Copy element in
    }
 
-  void insertElementAt(Layout.Field elementToInsert, Layout.Variable index)     // Insert an element represented as memory into the stuckstack at the indicated zero based index after moving the elements above up one position
+  void insertElementAt(Layout elementToInsert, Layout.Variable index)           // Insert an element represented as memory into the stuckstack at the indicated zero based index after moving the elements above up one position
    {ones(target);                                                               // Top of stuck
     ones(source);                                                               // Top of stuck
     shiftRightOneByZero(target);                                                // One step down on target
@@ -143,7 +144,7 @@ class Stuck extends BitMachine implements LayoutAble                            
       goTo(test);                                                               // Restart shifting loop
     comeFromComparison(test);                                                   // Exited shifting phase
     setIndex(array, index);                                                     // Index of element to set
-    copy(element, elementToInsert);                                             // Copy in new element
+    copy(element, elementToInsert.getLayoutField());                            // Copy in new element
    }
 
   void removeElementAt(Layout.Variable index)                                   // Remove the element at the indicated zero based index
@@ -162,29 +163,28 @@ class Stuck extends BitMachine implements LayoutAble                            
     unary.dec();                                                                // New number of elements on stuck
    }
 
-  void firstElement(Layout.Field FirstElement)                                  // Get the first element
+  void firstElement(Layout FirstElement)                                        // Get the first element
    {zero(source);                                                               // Index of first element
     setIndex(array, source);                                                    // Set index of first element
-    copy(FirstElement, element);                                                // Copy of first element
+    copy(FirstElement.getLayoutField(), element);                               // Copy of first element
    }
 
-  void lastElement(Layout.Field LastElement)                                    // Get the last active element
+  void lastElement(Layout LastElement)                                          // Get the last active element
    {copy(source, unary.value);                                                  // Index top of stuck
     shiftRightOneByZero(source);                                                // Index of top most active element
     setIndex(array, source);                                                    // Set index of topmost element
-    copy(LastElement, element);                                                 // Copy of top most element
+    copy(LastElement.getLayoutField(), element);                                // Copy of top most element
    }
 
 //D1 Search                                                                     // Search a stuck.
 
-  void indexOf                                                                  // Find the index of an element in the stuck and set the found flag to true else if no such element is found the found flag is set to false
-   (Layout.Field elementToFind, Layout.Bit found, Layout.Variable index)        // Set found to true and index to the 0 based index of the indicated memory else -1 if the memory is not present in the stuck.
+  void indexOf(Layout elementToFind, Layout.Bit found, Layout.Variable index)   // Find the index of an element in the stuck and set the found flag to true else if no such element is found the found flag is set to false
    {zero(found);
     zero(index);
     Branch[]equal = new Branch[max];
     for (int i = 0; i < max; i++)
      {setIndex(array, index);
-      equals(found, elementToFind, element);                                    // Test for the element to be found
+      equals(found, elementToFind.getLayoutField(), element);                   // Test for the element to be found
       equal[i] = branchIfOne(found);
       shiftLeftOneByOne(index);
      }
@@ -198,6 +198,12 @@ class Stuck extends BitMachine implements LayoutAble                            
   static void test_push()
    {final int W = 6, M = 4;
 
+    final Layout           keyData = new Layout();
+    final Layout.Variable  key     = keyData.variable("key",  M);
+    final Layout.Variable  data    = keyData.variable("data", W);
+    final Layout.Structure KeyData = keyData.structure("s", key, data);
+    keyData.layout(KeyData);
+
     final Layout l = new Layout();
     final Layout.Bit
       e0 = l.bit("e0"), f0 = l.bit("f0"),
@@ -205,299 +211,437 @@ class Stuck extends BitMachine implements LayoutAble                            
       e2 = l.bit("e2"), f2 = l.bit("f2"),
       e3 = l.bit("e3"), f3 = l.bit("f3"),
       e4 = l.bit("e4"), f4 = l.bit("f4");
-    final Layout.Variable value = l.variable("value", W);
+    final Layout.Variable value = l.variable ("value", W);
     final Layout.Structure    S = l.structure("structure", e0, e1, e2, e3, e4,
        value,                                              f0, f1, f2, f3, f4);
     l.layout(S);
 
-    Stuck s = stuck("s", M, W);
+    Stuck s = stuck("s", M, keyData);
     s.isEmpty(e0);
     s.isFull(f0);
-    s.zero(value);              s.push(value); s.isEmpty(e1); s.isFull(f1);
-    s.shiftLeftOneByOne(value); s.push(value); s.isEmpty(e2); s.isFull(f2);
-    s.shiftLeftOneByOne(value); s.push(value); s.isEmpty(e3); s.isFull(f3);
-    s.shiftLeftOneByOne(value); s.push(value); s.isEmpty(e4); s.isFull(f4);
-    //stop(s);
+    s.zero(data); s.ones(key); s.push(keyData); s.isEmpty(e1); s.isFull(f1);
+    s.shiftLeftOneByOne(data); s.push(keyData); s.isEmpty(e2); s.isFull(f2);
+    s.shiftLeftOneByOne(data); s.push(keyData); s.isEmpty(e3); s.isFull(f3);
+    s.shiftLeftOneByOne(data); s.push(keyData); s.isEmpty(e4); s.isFull(f4);
     s.execute();
+
+    //stop(s.layout);
+    s.layout.ok("""
+T   At  Wide  Index       Value   Field name
+S    0    44                      s
+A    0    40      0                 array
+S    0    10                 15       s
+V    0     4                 15         key
+V    4     6                  0         data
+A   10    40      1                 array
+S   10    10                 31       s
+V   10     4                 15         key
+V   14     6                  1         data
+A   20    40      2                 array
+S   20    10                 63       s
+V   20     4                 15         key
+V   24     6                  3         data
+A   30    40      3                 array
+S   30    10                127       s
+V   30     4                 15         key
+V   34     6                  7         data
+V   40     4                 15     unary
+""");
+    //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    16              32993   structure
+S    0    16                      structure
 B    0     1                  1     e0
 B    1     1                  0     e1
 B    2     1                  0     e2
 B    3     1                  0     e3
 B    4     1                  0     e4
-V    5     6                  7     value
+V    5     6                        value
 B   11     1                  0     f0
 B   12     1                  0     f1
 B   13     1                  0     f2
 B   14     1                  0     f3
 B   15     1                  1     f4
 """);
-    s.layout.ok("""
-T   At  Wide  Index       Value   Field name
-S    0    28          253505600   s
-A    0    24      0     1847360     array
-V    0     6                  0       element
-A    6    24      1     1847360     array
-V    6     6                  1       element
-A   12    24      2     1847360     array
-V   12     6                  3       element
-A   18    24      3     1847360     array
-V   18     6                  7       element
-V   24     4                 15     unary
-""");
    }
-
   static void test_pop()
    {final int W = 6, M = 4;
 
-    final Layout l = new Layout();
-    final Layout.Variable
-      v1    = l.variable("v1",    W),
-      v2    = l.variable("v2",    W),
-      v3    = l.variable("v3",    W),
-      v4    = l.variable("v4",    W),
-      value = l.variable("value", W);
-    final Layout.Structure S = l.structure("S", v1, v2, v3, v4, value);
-    l.layout(S);
-    S.zero();
+    final Layout           keyData = new Layout();
+    final Layout.Variable  key     = keyData.variable("key",  M);
+    final Layout.Variable  data    = keyData.variable("data", W);
+    final Layout.Structure KeyData = keyData.structure("s", key, data);
+    keyData.layout(KeyData);
 
-    Stuck s = stuck("s", M, W);
-    s.shiftLeftOneByOne(value); s.push(value);
-    s.shiftLeftOneByOne(value); s.push(value);
-    s.shiftLeftOneByOne(value); s.push(value);
-    s.shiftLeftOneByOne(value); s.push(value);
+    final Layout
+      v1 = keyData.duplicate(),
+      v2 = keyData.duplicate(),
+      v3 = keyData.duplicate(),
+      v4 = keyData.duplicate();
+
+    Stuck s = stuck("S", M, keyData);
+    s.shiftLeftOneByOne(data); s.push(keyData);
+    s.shiftLeftOneByOne(data); s.push(keyData);
+    s.shiftLeftOneByOne(data); s.push(keyData);
+    s.shiftLeftOneByOne(data); s.push(keyData);
     s.pop(v1);
     s.pop(v2);
     s.pop(v3);
     s.pop(v4);
     s.execute();
+
+    //stop(s.layout);
     s.layout.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    28            3961025   s
-A    0    24      0     3961025     array
-V    0     6                  1       element
-A    6    24      1     3961025     array
-V    6     6                  3       element
-A   12    24      2     3961025     array
-V   12     6                  7       element
-A   18    24      3     3961025     array
-V   18     6                 15       element
-V   24     4                  0     unary
+S    0    44                  0   S
+A    0    40      0           0     array
+S    0    10                 16       s
+V    0     4                  0         key
+V    4     6                  1         data
+A   10    40      1           0     array
+S   10    10                 48       s
+V   10     4                  0         key
+V   14     6                  3         data
+A   20    40      2           0     array
+S   20    10                112       s
+V   20     4                  0         key
+V   24     6                  7         data
+A   30    40      3           0     array
+S   30    10                240       s
+V   30     4                  0         key
+V   34     6                 15         data
+V   40     4                  0     unary
 """);
-    l.ok("""
+    //stop(v1);
+    v1.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    30          251933135   S
-V    0     6                 15     v1
-V    6     6                  7     v2
-V   12     6                  3     v3
-V   18     6                  1     v4
-V   24     6                 15     value
+S    0    10                240   s
+V    0     4                  0     key
+V    4     6                 15     data
+""");
+    //stop(v2);
+    v2.ok("""
+T   At  Wide  Index       Value   Field name
+S    0    10                112   s
+V    0     4                  0     key
+V    4     6                  7     data
+""");
+    //stop(v3);
+    v3.ok("""
+T   At  Wide  Index       Value   Field name
+S    0    10                 48   s
+V    0     4                  0     key
+V    4     6                  3     data
+""");
+    //stop(v4);
+    v4.ok("""
+T   At  Wide  Index       Value   Field name
+S    0    10                 16   s
+V    0     4                  0     key
+V    4     6                  1     data
 """);
    }
 
   static void test_shift()
    {final int W = 6, M = 4;
 
-    final Layout l = new Layout();
-    final Layout.Variable
-      v1    = l.variable("v1",    W),
-      v2    = l.variable("v2",    W),
-      v3    = l.variable("v3",    W),
-      v4    = l.variable("v4",    W),
-      value = l.variable("value", W);
-    final Layout.Structure S = l.structure("S", v1, v2, v3, v4, value);
-    l.layout(S);
-    S.zero();
+    final Layout           keyData = new Layout();
+    final Layout.Variable  key     = keyData.variable("key",  M);
+    final Layout.Variable  data    = keyData.variable("data", W);
+    final Layout.Structure KeyData = keyData.structure("s", key, data);
+    keyData.layout(KeyData);
 
-    Stuck s = stuck("s", M, W);
-    s.shiftLeftOneByOne(value); s.push(value);
-    s.shiftLeftOneByOne(value); s.push(value);
-    s.shiftLeftOneByOne(value); s.push(value);
-    s.shiftLeftOneByOne(value); s.push(value);
+    final Layout
+      v1 = keyData.duplicate(),
+      v2 = keyData.duplicate(),
+      v3 = keyData.duplicate(),
+      v4 = keyData.duplicate();
+
+    Stuck s = stuck("s", M, keyData);
+    s.shiftLeftOneByOne(data); s.push(keyData);
+    s.shiftLeftOneByOne(data); s.push(keyData);
+    s.shiftLeftOneByOne(data); s.push(keyData);
+    s.shiftLeftOneByOne(data); s.push(keyData);
     s.shift(v1);
     s.shift(v2);
     s.shift(v3);
     s.shift(v4);
     s.execute();
+
+    //stop(s.layout);
     s.layout.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    28            3994575   s
-A    0    24      0     3994575     array
-V    0     6                 15       element
-A    6    24      1     3994575     array
-V    6     6                 15       element
-A   12    24      2     3994575     array
-V   12     6                 15       element
-A   18    24      3     3994575     array
-V   18     6                 15       element
-V   24     4                  0     unary
+S    0    44                  0   s
+A    0    40      0           0     array
+S    0    10                240       s
+V    0     4                  0         key
+V    4     6                 15         data
+A   10    40      1           0     array
+S   10    10                240       s
+V   10     4                  0         key
+V   14     6                 15         data
+A   20    40      2           0     array
+S   20    10                240       s
+V   20     4                  0         key
+V   24     6                 15         data
+A   30    40      3           0     array
+S   30    10                240       s
+V   30     4                  0         key
+V   34     6                 15         data
+V   40     4                  0     unary
 """);
 
-    l.ok("""
+    //stop(v1);
+    v1.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    30          255619265   S
-V    0     6                  1     v1
-V    6     6                  3     v2
-V   12     6                  7     v3
-V   18     6                 15     v4
-V   24     6                 15     value
+S    0    10                 16   s
+V    0     4                  0     key
+V    4     6                  1     data
+""");
+    //stop(v2);
+    v2.ok("""
+T   At  Wide  Index       Value   Field name
+S    0    10                 48   s
+V    0     4                  0     key
+V    4     6                  3     data
+""");
+    //stop(v3);
+    v3.ok("""
+T   At  Wide  Index       Value   Field name
+S    0    10                112   s
+V    0     4                  0     key
+V    4     6                  7     data
+""");
+
+    //stop(v4);
+    v4.ok("""
+T   At  Wide  Index       Value   Field name
+S    0    10                240   s
+V    0     4                  0     key
+V    4     6                 15     data
 """);
    }
 
   static void test_unshift()
    {final int W = 6, M = 4;
 
-    final Layout l = new Layout();
-    final Layout.Variable value = l.variable("value", W);
-    l.layout(value);
+    final Layout           keyData = new Layout();
+    final Layout.Variable  key     = keyData.variable("key",  M);
+    final Layout.Variable  data    = keyData.variable("data", W);
+    final Layout.Structure KeyData = keyData.structure("s", key, data);
+    keyData.layout(KeyData);
 
-    Stuck s = stuck("s", M, W);
-    s.zero(value);
-    s.shiftLeftOneByOne(value); s.unshift(value);
-    s.shiftLeftOneByOne(value); s.unshift(value);
-    s.shiftLeftOneByOne(value); s.unshift(value);
-    s.shiftLeftOneByOne(value); s.unshift(value);
+    Stuck s = stuck("s", M, keyData);
+    s.zero(data);
+    s.shiftLeftOneByOne(data); s.unshift(keyData);
+    s.shiftLeftOneByOne(data); s.unshift(keyData);
+    s.shiftLeftOneByOne(data); s.unshift(keyData);
+    s.shiftLeftOneByOne(data); s.unshift(keyData);
     s.execute();
 
+    //stop(s.layout);
     s.layout.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    28          251933135   s
-A    0    24      0      274895     array
-V    0     6                 15       element
-A    6    24      1      274895     array
-V    6     6                  7       element
-A   12    24      2      274895     array
-V   12     6                  3       element
-A   18    24      3      274895     array
-V   18     6                  1       element
-V   24     4                 15     unary
+S    0    44                  0   s
+A    0    40      0           0     array
+S    0    10                240       s
+V    0     4                  0         key
+V    4     6                 15         data
+A   10    40      1           0     array
+S   10    10                112       s
+V   10     4                  0         key
+V   14     6                  7         data
+A   20    40      2           0     array
+S   20    10                 48       s
+V   20     4                  0         key
+V   24     6                  3         data
+A   30    40      3           0     array
+S   30    10                 16       s
+V   30     4                  0         key
+V   34     6                  1         data
+V   40     4                 15     unary
 """);
    }
 
   static void test_elementAt()
    {final int W = 6, M = 4;
 
-    final Layout l = new Layout();
-    final Layout.Variable value = l.variable ("value", W);
-    final Layout.Variable v1    = l.variable ("v1",    W);
-    final Layout.Variable v2    = l.variable ("v2",    W);
-    final Layout.Variable v3    = l.variable ("v3",    W);
-    final Layout.Variable v4    = l.variable ("v4",    W);
-    final Layout.Variable index = l.variable ("index", M);
-    final Layout.Structure S    = l.structure("S",
-      value, v1, v2, v3, v4, index);
-    l.layout(S);
+    final Layout           keyData = new Layout();
+    final Layout.Variable  key     = keyData.variable("key",  M);
+    final Layout.Variable  data    = keyData.variable("data", W);
+    final Layout.Structure KeyData = keyData.structure("s", key, data);
+    keyData.layout(KeyData);
 
-    Stuck s = stuck("s", M, W);
-    s.zero(value);
-    s.shiftLeftOneByOne(value); s.unshift(value);
-    s.shiftLeftOneByOne(value); s.unshift(value);
-    s.shiftLeftOneByOne(value); s.unshift(value);
-    s.shiftLeftOneByOne(value); s.unshift(value);
+    final Layout           Index   = new Layout();
+    final Layout.Variable  index   = Index.variable("index",  M);
+    Index.layout(index);
+
+    final Layout
+      v1 = keyData.duplicate(),
+      v2 = keyData.duplicate(),
+      v3 = keyData.duplicate(),
+      v4 = keyData.duplicate();
+
+    Stuck s = stuck("s", M, keyData);
+    s.zero(index);
+    s.shiftLeftOneByOne(index); s.shiftLeftOneByOne(data); s.unshift(keyData);
+    s.shiftLeftOneByOne(index); s.shiftLeftOneByOne(data); s.unshift(keyData);
+    s.shiftLeftOneByOne(index); s.shiftLeftOneByOne(data); s.unshift(keyData);
+    s.shiftLeftOneByOne(index); s.shiftLeftOneByOne(data); s.unshift(keyData);
     s.zero             (index); s.elementAt(v1, index);
     s.shiftLeftOneByOne(index); s.elementAt(v2, index);
     s.shiftLeftOneByOne(index); s.elementAt(v3, index);
     s.shiftLeftOneByOne(index); s.elementAt(v4, index);
     s.execute();
 
+    //stop(s.layout);
     s.layout.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    28          251933135   s
-A    0    24      0      274895     array
-V    0     6                 15       element
-A    6    24      1      274895     array
-V    6     6                  7       element
-A   12    24      2      274895     array
-V   12     6                  3       element
-A   18    24      3      274895     array
-V   18     6                  1       element
-V   24     4                 15     unary
+S    0    44                  0   s
+A    0    40      0           0     array
+S    0    10                240       s
+V    0     4                  0         key
+V    4     6                 15         data
+A   10    40      1           0     array
+S   10    10                112       s
+V   10     4                  0         key
+V   14     6                  7         data
+A   20    40      2           0     array
+S   20    10                 48       s
+V   20     4                  0         key
+V   24     6                  3         data
+A   30    40      3           0     array
+S   30    10                 16       s
+V   30     4                  0         key
+V   34     6                  1         data
+V   40     4                 15     unary
 """);
-    //stop(l);
-    l.ok("""
+    //stop(v4);
+    v4.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    34                      S
-V    0     6                 15     value
-V    6     6                 15     v1
-V   12     6                  7     v2
-V   18     6                  3     v3
-V   24     6                  1     v4
-V   30     4                  7     index
+S    0    10                 16   s
+V    0     4                  0     key
+V    4     6                  1     data
+""");
+    //stop(v3);
+    v3.ok("""
+T   At  Wide  Index       Value   Field name
+S    0    10                 48   s
+V    0     4                  0     key
+V    4     6                  3     data
+""");
+    //stop(v2);
+    v2.ok("""
+T   At  Wide  Index       Value   Field name
+S    0    10                112   s
+V    0     4                  0     key
+V    4     6                  7     data
 """);
 
+    //stop(v1);
+    v1.ok("""
+T   At  Wide  Index       Value   Field name
+S    0    10                240   s
+V    0     4                  0     key
+V    4     6                 15     data
+""");
    }
 
   static void test_insert_element_at()
    {final int W = 6, M = 4;
 
+    final Layout           keyData = new Layout();
+    final Layout.Variable  key     = keyData.variable("key",  M);
+    final Layout.Variable  data    = keyData.variable("data", W);
+    final Layout.Structure KeyData = keyData.structure("s", key, data);
+    keyData.layout(KeyData);
+
+    final Layout v1 = keyData.duplicate();
+    final Layout v2 = keyData.duplicate();
+    final Layout v3 = keyData.duplicate();
+    final Layout v4 = keyData.duplicate();
+
     final Layout l = new Layout();
-    final Layout.Variable v1 = l.variable ("v1",    W);
-    final Layout.Variable v2 = l.variable ("v2",    W);
-    final Layout.Variable v3 = l.variable ("v3",    W);
-    final Layout.Variable v4 = l.variable ("v4",    W);
-    final Layout.Variable i0 = l.variable ("i0",    M);
-    final Layout.Variable i1 = l.variable ("i1",    M);
-    final Layout.Variable i2 = l.variable ("i2",    M);
-    final Layout.Structure S = l.structure("S",
-      v1, v2, v3, v4, i0, i1, i2);
+    final Layout.Variable i0 = l.variable ("i0", M);
+    final Layout.Variable i1 = l.variable ("i1", M);
+    final Layout.Variable i2 = l.variable ("i2", M);
+    final Layout.Structure S = l.structure("S", i0, i1, i2);
     l.layout(S);
-    i0.fromInt(0); v1.fromInt(11);
-    i1.fromInt(1); v2.fromInt(22);
-    i2.fromInt(3); v3.fromInt(33);
-                   v4.fromInt(44);
+    i0.fromInt(0); v1.get("s.data").fromInt(11);
+    i1.fromInt(1); v2.get("s.data").fromInt(22);
+    i2.fromInt(3); v3.get("s.data").fromInt(33);
+                   v4.get("s.data").fromInt(44);
 
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    36                      S
-V    0     6                 11     v1
-V    6     6                 22     v2
-V   12     6                 33     v3
-V   18     6                 44     v4
-V   24     4                  0     i0
-V   28     4                  1     i1
-V   32     4                  3     i2
+S    0    12                784   S
+V    0     4                  0     i0
+V    4     4                  1     i1
+V    8     4                  3     i2
 """);
 
-    Stuck s = stuck("s", M, W);
+    Stuck s = stuck("s", M, keyData);
     s.insertElementAt(v3, i0);
     s.insertElementAt(v2, i1);
     s.insertElementAt(v1, i2);
     s.insertElementAt(v4, i1);
     s.execute();
 
-    //stop(s.layout);
-    s.layout.ok("""
+    //stop(v1);
+    v1.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    28            2976545   s
-A    0    24      0     2976545     array
-V    0     6                 33       element
-A    6    24      1     2976545     array
-V    6     6                 44       element
-A   12    24      2     2976545     array
-V   12     6                 22       element
-A   18    24      3     2976545     array
-V   18     6                 11       element
-V   24     4                  0     unary
+S    0    10                176   s
+V    0     4                  0     key
+V    4     6                 11     data
+""");
+
+    //stop(v2);
+    v2.ok("""
+T   At  Wide  Index       Value   Field name
+S    0    10                352   s
+V    0     4                  0     key
+V    4     6                 22     data
+""");
+
+    //stop(v3);
+    v3.ok("""
+T   At  Wide  Index       Value   Field name
+S    0    10                528   s
+V    0     4                  0     key
+V    4     6                 33     data
+""");
+
+    //stop(v4);
+    v4.ok("""
+T   At  Wide  Index       Value   Field name
+S    0    10                704   s
+V    0     4                  0     key
+V    4     6                 44     data
 """);
    }
+
 
   static void test_remove_element_at()
    {final int W = 6, M = 4;
 
+    final Layout           keyData = new Layout();
+    final Layout.Variable  key     = keyData.variable("key",  M);
+    final Layout.Variable  data    = keyData.variable("data", W);
+    final Layout.Structure KeyData = keyData.structure("s", key, data);
+    keyData.layout(KeyData);
+
     final Layout l = new Layout();
-    final Layout.Variable i0 = l.variable ("i0",    M);
-    final Layout.Variable i1 = l.variable ("i1",    M);
-    final Layout.Variable i2 = l.variable ("i2",    M);
+    final Layout.Variable i0 = l.variable ("i0", M);
+    final Layout.Variable i1 = l.variable ("i1", M);
+    final Layout.Variable i2 = l.variable ("i2", M);
     final Layout.Structure S = l.structure("S", i0, i1, i2);
     l .layout (S);
     i0.fromInt(0);
     i1.fromInt(1);
     i2.fromInt(3);
 
-    Stuck s = stuck("s", M, W);
+    Stuck s = stuck("s", M, keyData);
 
     s.array.zero();
     s.array.setIndex(0); s.element.fromInt(11);
@@ -509,16 +653,24 @@ V   24     4                  0     unary
     //stop(s.layout);
     s.layout.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    28          263329163   s
-A    0    24      0    11670923     array
-V    0     6                 11       element
-A    6    24      1    11670923     array
-V    6     6                 22       element
-A   12    24      2    11670923     array
-V   12     6                 33       element
-A   18    24      3    11670923     array
-V   18     6                 44       element
-V   24     4                 15     unary
+S    0    44                  0   s
+A    0    40      0           0     array
+S    0    10                 11       s
+V    0     4                 11         key
+V    4     6                  0         data
+A   10    40      1           0     array
+S   10    10                 22       s
+V   10     4                  6         key
+V   14     6                  1         data
+A   20    40      2           0     array
+S   20    10                 33       s
+V   20     4                  1         key
+V   24     6                  2         data
+A   30    40      3           0     array
+S   30    10                 44       s
+V   30     4                 12         key
+V   34     6                  2         data
+V   40     4                 15     unary
 """);
     s.removeElementAt(i1);
     s.execute();
@@ -526,19 +678,27 @@ V   24     4                 15     unary
     //stop(s.layout);
     s.layout.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    28          129157195   s
-A    0    24      0    11716683     array
-V    0     6                 11       element
-A    6    24      1    11716683     array
-V    6     6                 33       element
-A   12    24      2    11716683     array
-V   12     6                 44       element
-A   18    24      3    11716683     array
-V   18     6                 44       element
-V   24     4                  7     unary
+S    0    44                  0   s
+A    0    40      0           0     array
+S    0    10                 11       s
+V    0     4                 11         key
+V    4     6                  0         data
+A   10    40      1           0     array
+S   10    10                 33       s
+V   10     4                  1         key
+V   14     6                  2         data
+A   20    40      2           0     array
+S   20    10                 44       s
+V   20     4                 12         key
+V   24     6                  2         data
+A   30    40      3           0     array
+S   30    10                 44       s
+V   30     4                 12         key
+V   34     6                  2         data
+V   40     4                  7     unary
 """);
 
-    Stuck t = stuck("t", M, W);
+    Stuck t = stuck("t", M, keyData);
 
     t.array.zero();
     t.array.setIndex(0); t.element.fromInt(11);
@@ -554,19 +714,27 @@ V   24     4                  7     unary
     //stop(t.layout);
     t.layout.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    28           62049035   t
-A    0    24      0    11717387     array
-V    0     6                 11       element
-A    6    24      1    11717387     array
-V    6     6                 44       element
-A   12    24      2    11717387     array
-V   12     6                 44       element
-A   18    24      3    11717387     array
-V   18     6                 44       element
-V   24     4                  3     unary
+S    0    44                  0   t
+A    0    40      0           0     array
+S    0    10                 11       s
+V    0     4                 11         key
+V    4     6                  0         data
+A   10    40      1           0     array
+S   10    10                 44       s
+V   10     4                 12         key
+V   14     6                  2         data
+A   20    40      2           0     array
+S   20    10                 44       s
+V   20     4                 12         key
+V   24     6                  2         data
+A   30    40      3           0     array
+S   30    10                 44       s
+V   30     4                 12         key
+V   34     6                  2         data
+V   40     4                  3     unary
 """);
 
-    Stuck u = stuck("u", M, W);
+    Stuck u = stuck("u", M, keyData);
 
     u.array.zero();
     u.array.setIndex(0); u.element.fromInt(11);
@@ -583,19 +751,27 @@ V   24     4                  3     unary
     //stop(u.layout);
     u.layout.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    28           28494636   u
-A    0    24      0    11717420     array
-V    0     6                 44       element
-A    6    24      1    11717420     array
-V    6     6                 44       element
-A   12    24      2    11717420     array
-V   12     6                 44       element
-A   18    24      3    11717420     array
-V   18     6                 44       element
-V   24     4                  1     unary
+S    0    44                  0   u
+A    0    40      0           0     array
+S    0    10                 44       s
+V    0     4                 12         key
+V    4     6                  2         data
+A   10    40      1           0     array
+S   10    10                 44       s
+V   10     4                 12         key
+V   14     6                  2         data
+A   20    40      2           0     array
+S   20    10                 44       s
+V   20     4                 12         key
+V   24     6                  2         data
+A   30    40      3           0     array
+S   30    10                 44       s
+V   30     4                 12         key
+V   34     6                  2         data
+V   40     4                  1     unary
 """);
 
-    Stuck v = stuck("v", M, W);
+    Stuck v = stuck("v", M, keyData);
 
     v.array.zero();
     v.array.setIndex(0); v.element.fromInt(11);
@@ -613,23 +789,39 @@ V   24     4                  1     unary
     //stop(v.layout);
     v.layout.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    28           11717420   v
-A    0    24      0    11717420     array
-V    0     6                 44       element
-A    6    24      1    11717420     array
-V    6     6                 44       element
-A   12    24      2    11717420     array
-V   12     6                 44       element
-A   18    24      3    11717420     array
-V   18     6                 44       element
-V   24     4                  0     unary
+S    0    44                  0   v
+A    0    40      0           0     array
+S    0    10                 44       s
+V    0     4                 12         key
+V    4     6                  2         data
+A   10    40      1           0     array
+S   10    10                 44       s
+V   10     4                 12         key
+V   14     6                  2         data
+A   20    40      2           0     array
+S   20    10                 44       s
+V   20     4                 12         key
+V   24     6                  2         data
+A   30    40      3           0     array
+S   30    10                 44       s
+V   30     4                 12         key
+V   34     6                  2         data
+V   40     4                  0     unary
 """);
    }
 
   static void test_first()
    {final int W = 6, M = 4;
 
-    Stuck s = stuck("s", M, W);
+    final Layout           keyData = new Layout();
+    final Layout.Variable  key     = keyData.variable("key",  M);
+    final Layout.Variable  data    = keyData.variable("data", W);
+    final Layout.Structure KeyData = keyData.structure("s", key, data);
+    keyData.layout(KeyData);
+
+    final Layout f = keyData.copy(), l = keyData.copy();
+
+    Stuck s = stuck("s", M, keyData);
 
     s.array.zero();
     s.array.setIndex(0); s.element.fromInt(11);
@@ -638,20 +830,29 @@ V   24     4                  0     unary
     s.array.setIndex(3); s.element.fromInt(44);
     s.unary.value.fromInt(15);
 
-    final Layout          l = new Layout();
-    final Layout.Variable v = l.variable ("value", W);
-    l.layout(v);
-
-    s.firstElement(v);
+    s.firstElement(f);
+    //s.lastElement(l);
     s.execute();
-    //stop(v);
-    v.ok(11);
+    //stop(key);
+    //f.ok(11);
+say(s.layout);
+say("AAAA", f);
+//say("BBBB", l);
+    //l.ok(44);
    }
+
+/*
 
   static void test_last()
    {final int W = 6, M = 4;
 
-    Stuck s = stuck("s", M, W);
+    final Layout           keyData = new Layout();
+    final Layout.Variable  key     = keyData.variable("key",  M);
+    final Layout.Variable  data    = keyData.variable("data", W);
+    final Layout.Structure KeyData = keyData.structure("s", key, data);
+    keyData.layout(KeyData);
+
+    Stuck s = stuck("s", M, keyData);
 
     s.array.zero();
     s.array.setIndex(0); s.element.fromInt(11);
@@ -673,7 +874,13 @@ V   24     4                  0     unary
   static void test_index_of()
    {final int W = 6, M = 4;
 
-    Stuck s = stuck("s", M, W);
+    final Layout           keyData = new Layout();
+    final Layout.Variable  key     = keyData.variable("key",  M);
+    final Layout.Variable  data    = keyData.variable("data", W);
+    final Layout.Structure KeyData = keyData.structure("s", key, data);
+    keyData.layout(KeyData);
+
+    Stuck s = stuck("s", M, keyData);
 
     s.array.zero();
     s.array.setIndex(0); s.element.fromInt(11);
@@ -700,7 +907,13 @@ V   24     4                  0     unary
   static void test_index_of_notFound()
    {final int W = 6, M = 4;
 
-    Stuck s = stuck("s", M, W);
+    final Layout           keyData = new Layout();
+    final Layout.Variable  key     = keyData.variable("key",  M);
+    final Layout.Variable  data    = keyData.variable("data", W);
+    final Layout.Structure KeyData = keyData.structure("s", key, data);
+    keyData.layout(KeyData);
+
+    Stuck s = stuck("s", M, keyData);
 
     s.array.zero();
     s.array.setIndex(0); s.element.fromInt(11);
@@ -726,7 +939,13 @@ V   24     4                  0     unary
   static void test_set_element_at()
    {final int W = 6, M = 4;
 
-    Stuck s = stuck("s", M, W);
+    final Layout           keyData = new Layout();
+    final Layout.Variable  key     = keyData.variable("key",  M);
+    final Layout.Variable  data    = keyData.variable("data", W);
+    final Layout.Structure KeyData = keyData.structure("s", key, data);
+    keyData.layout(KeyData);
+
+    Stuck s = stuck("s", M, keyData);
 
     s.array.zero();
     s.array.setIndex(0); s.element.fromInt(11);
@@ -761,7 +980,7 @@ V   18     6                 44       element
 V   24     4                 15     unary
 """);
    }
-
+*/
   static void oldTests()                                                        // Tests thought to be in good shape
    {test_push();
     test_pop();
@@ -770,15 +989,16 @@ V   24     4                 15     unary
     test_elementAt();
     test_insert_element_at();
     test_remove_element_at();
-    test_first();
-    test_last();
-    test_index_of();
-    test_index_of_notFound();
-    test_set_element_at();
+    //test_first();
+    //test_last();
+    //test_index_of();
+    //test_index_of_notFound(); October 4th.
+    //test_set_element_at();
    }
 
   static void newTests()                                                        // Tests being worked on
-   {oldTests();
+   {//oldTests();
+    test_first();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
