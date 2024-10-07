@@ -278,9 +278,9 @@ public class Layout extends Test implements LayoutAble                          
        }
      }
 
-    void  asUnary(int i) {fromInt((1<<i)-1);}                                   // Set a field to ther unary representation of an integer
+    void  fromUnary(int i) {fromInt((1<<i)-1);}                                   // Set a field to the unary representation of an integer
 
-    int fromUnary()                                                             // Get an integer representing the unary value contained a field by counting the bits that are on
+    int asUnary()                                                             // Get an integer representing the unary value contained a field by counting the bits that are on
      {int n = 0;
       for (int i = 0; i < width; i++) if (get(i)) ++n;
       return n;
@@ -839,17 +839,17 @@ V    9     7                  0         b
     var s = l.structure("s", a, b, c, d, e);
     l.layout(s);
 
-    a.asUnary(0);
-    b.asUnary(1);
-    c.asUnary(2);
-    d.asUnary(3);
-    e.asUnary(4);
+    a.fromUnary(0);
+    b.fromUnary(1);
+    c.fromUnary(2);
+    d.fromUnary(3);
+    e.fromUnary(4);
 
-    ok(a.fromUnary(), 0);
-    ok(b.fromUnary(), 1);
-    ok(c.fromUnary(), 2);
-    ok(d.fromUnary(), 3);
-    ok(e.fromUnary(), 4);
+    ok(a.asUnary(), 0);
+    ok(b.asUnary(), 1);
+    ok(c.asUnary(), 2);
+    ok(d.asUnary(), 3);
+    ok(e.asUnary(), 4);
 
     //stop(l);
     l.ok("""
@@ -875,11 +875,11 @@ V   16     4                 15     e
 
     Layout D = l.copy();
 
-    a.asUnary(0);
-    b.asUnary(1);
-    c.asUnary(2);
-    d.asUnary(3);
-    e.asUnary(4);
+    a.fromUnary(0);
+    b.fromUnary(1);
+    c.fromUnary(2);
+    d.fromUnary(3);
+    e.fromUnary(4);
 
     D.get("s.a").ok(0);
     D.get("s.b").ok(1);
