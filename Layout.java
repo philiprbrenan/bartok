@@ -155,7 +155,7 @@ public class Layout extends Test implements LayoutAble                          
 
   abstract class Field implements LayoutAble                                    // Variable/Array/Structure/Union definition.
    {final String name;                                                          // Name of field
-    int at;                                                                     // Offset of field from start of memory
+    int at, at2;                                                                // Offset of field from start of memory for source or target of operation.
     int width;                                                                  // Number of bits in a field
     int depth;                                                                  // Depth of field - the number of containing arrays/structures/unions above
     Field up;                                                                   // Upward chain to containing array/structure/union
@@ -192,7 +192,8 @@ public class Layout extends Test implements LayoutAble                          
 
     abstract void layout(int at, int depth);                                    // Layout this field
 
-    void position(int At) {at = At;}                                            // Reposition a field after an index of a containing array has been changed
+    void position (int At) {at  = At;}                                          // Reposition a field after an index of a containing array has been changed
+    void position2(int At) {at2 = At;}                                          // Reposition a field after an index of a containing array has been changed
 
     String  indent() {return "  ".repeat(depth);}                               // Indentation during printing
     char fieldType() {return getClass().getName().split("\\$")[1].charAt(0);}   // First letter of inner most class name to identify type of field
@@ -337,7 +338,7 @@ public class Layout extends Test implements LayoutAble                          
 
   class Array extends Field                                                     // Layout an array definition.
    {int size;                                                                   // Dimension of array
-    int index = 0;                                                              // Index of array field to access
+    int index = 0, index2;                                                      // Indexes of the source and target array fields to access
     Field element;                                                              // The elements of this array are of this type
 
     Array(String Name, LayoutAble Element, int Size)                            // Create the array definition
@@ -365,10 +366,8 @@ public class Layout extends Test implements LayoutAble                          
       element.indexNames(fullNames,             null);                          // Index name in this array
      }
 
-    void position(int At)                                                       // Reposition this array after an index of a containing array has been changed
-     {at = At;
-      element.position(at + index * element.width);
-     }
+    void position (int At) {at  = At; element.position(at  + index*element.width);}// Reposition this array after an index of a containing array has been changed
+    void position2(int At) {at2 = At; element.position(at2 + index*element.width);}// Reposition this array after an index of a containing array has been changed
 
     public String toString(boolean printHeader)                                 // Print the array
      {final String  n = indent()+name;                                          // Name using indentation to show depth
@@ -390,11 +389,8 @@ public class Layout extends Test implements LayoutAble                          
       return s.toString();                                                      // Array as a string
      }
 
-    void setIndex(int Index)                                                    // Sets the index for the current array field allowing us to set and get this field and all its sub elements.
-     {if (index != Index)
-       {index = Index; position(at);
-       }
-     }
+    void setIndex (int Ix){if (index  != Ix) {index  = Ix; position (at); }}    // Sets the source index for the current array field allowing us to set and get this field and all its sub elements.
+    void setIndex2(int Ix){if (index2 != Ix) {index2 = Ix; position2(at2);}}    // Sets the target index for the current array field allowing us to set and get this field and all its sub elements.
 
     Field duplicate(Layout d)                                                   // Duplicate an array so we can modify it safely
      {final Field e = element.duplicate(d);
@@ -447,11 +443,20 @@ public class Layout extends Test implements LayoutAble                          
        }
      }
 
-    void position(int At)                                                       // Reposition this structure after an index of a containing array has been changed
+    void position(int At)                                                       // Reposition this structure on an array source index
      {at = At;
       int w = 0;
       for(Field v : subStack)                                                   // Field sub structure
        {v.position(v.at = at+w);                                                // Substructures are laid out sequentially
+        w += v.width;
+       }
+     }
+
+    void position2(int At)                                                      // Reposition this structure on an array target index
+     {at2 = At;
+      int w = 0;
+      for(Field v : subStack)                                                   // Field sub structure
+       {v.position2(v.at2 = at2+w);                                             // Substructures are laid out sequentially
         w += v.width;
        }
      }
@@ -490,9 +495,9 @@ public class Layout extends Test implements LayoutAble                          
        }
      }
 
-    void position(int At)                                                       // Reposition this union after an index of a containing array has been changed
-     {at = At;
-      for(Field v : subMap.values()) v.position(at);
+    void position2(int At)                                                      // Reposition this union after an index of a containing array has been changed
+     {at2 = At;
+      for(Field v : subMap.values()) v.position2(at2);
      }
    }
 
