@@ -20,16 +20,13 @@ class Mjaf extends BitMachine                                                   
   final Layout.Variable  nodeFree;                                              // Index of a free node as a positive binary integer
   final Stuck            nodesFree;                                             // Free nodes
   final Stuck            branchStuck;                                           // Branch key, next pairs stuck
-  final Stuck            leafStuck;                                             // Leaf key, data pairs stuck
-  //final Stuck            dataValues;                                            // Data values
-  //final Stuck            nextLevel;                                             // Index of next level node
+  final Stuck            leaf;                                                  // Leaf key, data pairs stuck
   final Layout.Variable  leafKey;                                               // Key in a leaf
   final Layout.Variable  leafData;                                              // Data in a leaf
   final Layout.Variable  branchKey;                                             // Key in a branch
   final Layout.Variable  branchNext;                                            // Next from a branch
   final Layout.Variable  topNode;                                               // Next node if search key is greater than all keys in this node
   final Layout.Structure branch;                                                // Branch node of the tree
-  final Layout.Structure leaf;                                                  // Leaf node of the tree
   final Layout.Structure leafKeyData;                                           // An entry in a leaf node
   final Layout.Structure branchKeyNext;                                         // An entry in a branch node
   final Layout.Union     branchOrLeaf;                                          // Branch or leaf of the tree
@@ -46,15 +43,15 @@ class Mjaf extends BitMachine                                                   
 
   Mjaf(int BitsPerKey, int BitsPerData, int MaxKeysPerLeaf, int size)           // Define a Btree with a specified maximum number of keys per leaf.
    {super();
-    final int N = MaxKeysPerLeaf;
+    final int N = MaxKeysPerLeaf;                                               // Assign a shorter name
     bitsPerKey  = BitsPerKey;
     bitsPerNext = BitsPerKey + 1;
     bitsPerData = BitsPerData;
 
     if (N % 2 == 1) stop("# keys per leaf must be even not odd:", N);
     if (N     <= 3) stop("# keys per leaf must be greater than three, not:", N);
-    maxKeysPerLeaf   = N;
-    maxKeysPerBranch = N-1;
+    maxKeysPerLeaf   = N;                                                       // Some even number
+    maxKeysPerBranch = N-1;                                                     // Ideally should be some number that makes the leaf nodes and the branch nodes the same size
     splitIdx         = maxKeysPerBranch >> 1;                                   // Index of splitting key
     maxNodes         = size;
 
@@ -64,17 +61,17 @@ class Mjaf extends BitMachine                                                   
     leafKeyData      = L.new Structure("leafKeyData", leafKey, leafData);       // An entry in a leaf node
     layoutLeafKeyData.layout(leafKeyData);                                      // Layout of a leaf key data pair
 
-    leafStuck      = new Stuck                                                  // Leaf key, data pairs stuck
-     ("leafKeyData",   maxKeysPerLeaf,   layoutLeafKeyData);
+    leaf             =   new Stuck("leafStuck",                                 // Leaf key, data pairs stuck
+      maxKeysPerLeaf,layoutLeafKeyData);
 
     final Layout B   = layoutBranchKeyNext = new Layout();                      // An entry in a branch node
     branchKey        = B.new Variable ("branchKey",  bitsPerKey);               // Key in a branch
-    branchNext       = B.new Variable ("branchData", bitsPerData);              // Next from a branch
-    branchKeyNext    = B.new Structure("branchKeyData", branchKey, branchNext); // An entry in a branch node
+    branchNext       = B.new Variable ("branchNext", bitsPerData);              // Next from a branch
+    branchKeyNext    = B.new Structure("branchKeyNext", branchKey, branchNext); // An entry in a branch node
     layoutBranchKeyNext.layout(branchKeyNext);                                  // Layout of a branch key next pair
 
-    branchStuck    = new Stuck                                                  // Branch key, next pairs stuck
-     ("branchKeyNext", maxKeysPerBranch, layoutBranchKeyNext);
+    branchStuck    = new Stuck("branchStuck",                                   // Branch key, next pairs stuck
+      maxKeysPerBranch, layoutBranchKeyNext);
 
 
     final Layout T = layout = new Layout();                                     // Tree level layout
@@ -85,8 +82,7 @@ class Mjaf extends BitMachine                                                   
     nodesFree      = new Stuck  ("free", size,     nodeFree.duplicate());       // Free nodes stuck
 
     topNode        = T.variable ("topNode",        bitsPerNext);                // Next node if search key is greater than all keys in this node
-    branch         = T.structure("branch",         branchKeyNext, topNode);     // Branch of the tree
-    leaf           = T.structure("leaf",           leafKeyData);                // Leaf of the tree
+    branch         = T.structure("branch",         branchStuck, topNode);       // Branch of the tree
 
     branchOrLeaf   = T.union    ("branchOrLeaf",   branch, leaf);               // Branch or leaf of the tree
     isBranch       = T.variable ("isBranch",       1);                          // The node is a branch if true
@@ -1307,107 +1303,98 @@ class Mjaf extends BitMachine                                                   
   static void test_create_empty_tree()
    {final int N = 2, M = 4;
     Mjaf m = mjaf(N, N, M, N);
+    //stop(m.layout);
     m.layout.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    72                200   tree
+S    0    62                  0   tree
 S    0     8                200     free
 A    0     6      0           8       array
-V    0     3                  0         element
+V    0     3                  0         nodeFree
 A    3     6      1           8       array
-V    3     3                  1         element
+V    3     3                  1         nodeFree
 V    6     2                  3       unary
-V    8     5                  0     nodesCreated
-V   13     3                  0     keyDataStored
-V   16     3                  0     root
-B   19     1                  0     hasNode
-A   20    52      0           0     nodes
-S   20    26                  0       node
-V   20     1                  0         isLeaf
-V   21     1                  0         isBranch
-U   22    24                  0         branchOrLeaf
-S   22    24                  0           branch
-S   22     9                  0             keys
-A   22     6      0           0               array
-V   22     2                  0                 element
-A   24     6      1           0               array
-V   24     2                  0                 element
-A   26     6      2           0               array
-V   26     2                  0                 element
-V   28     3                  0               unary
-S   31    12                  0             next
-A   31     9      0           0               array
-V   31     3                  0                 element
-A   34     9      1           0               array
-V   34     3                  0                 element
-A   37     9      2           0               array
-V   37     3                  0                 element
-V   40     3                  0               unary
-V   43     3                  0             topNode
-S   22    24                  0           leaf
-S   22    12                  0             keys
-A   22     8      0           0               array
-V   22     2                  0                 element
-A   24     8      1           0               array
-V   24     2                  0                 element
-A   26     8      2           0               array
-V   26     2                  0                 element
-A   28     8      3           0               array
-V   28     2                  0                 element
-V   30     4                  0               unary
-S   34    12                  0             data
-A   34     8      0           0               array
-V   34     2                  0                 element
-A   36     8      1           0               array
-V   36     2                  0                 element
-A   38     8      2           0               array
-V   38     2                  0                 element
-A   40     8      3           0               array
-V   40     2                  0                 element
-V   42     4                  0               unary
-A   46    52      1           0     nodes
-S   46    26                  0       node
-V   46     1                  0         isLeaf
-V   47     1                  0         isBranch
-U   48    24                  0         branchOrLeaf
-S   48    24                  0           branch
-S   48     9                  0             keys
-A   48     6      0           0               array
-V   48     2                  0                 element
-A   50     6      1           0               array
-V   50     2                  0                 element
-A   52     6      2           0               array
-V   52     2                  0                 element
+V    8     3                  0     nodesCreated
+V   11     3                  0     keyDataStored
+V   14     3                  0     root
+B   17     1                  0     hasNode
+A   18    44      0           0     nodes
+S   18    22                  0       node
+V   18     1                  0         isLeaf
+V   19     1                  0         isBranch
+U   20    20                  0         branchOrLeaf
+S   20    18                  0           branch
+S   20    15                  0             branchStuck
+A   20    12      0           0               array
+S   20     4                  0                 branchKeyNext
+V   20     2                  0                   branchKey
+V   22     2                  0                   branchNext
+A   24    12      1           0               array
+S   24     4                  0                 branchKeyNext
+V   24     2                  0                   branchKey
+V   26     2                  0                   branchNext
+A   28    12      2           0               array
+S   28     4                  0                 branchKeyNext
+V   28     2                  0                   branchKey
+V   30     2                  0                   branchNext
+V   32     3                  0               unary
+V   35     3                  0             topNode
+S   20    20                  0           leafStuck
+A   20    16      0           0             array
+S   20     4                  0               leafKeyData
+V   20     2                  0                 leafKey
+V   22     2                  0                 leafData
+A   24    16      1           0             array
+S   24     4                  0               leafKeyData
+V   24     2                  0                 leafKey
+V   26     2                  0                 leafData
+A   28    16      2           0             array
+S   28     4                  0               leafKeyData
+V   28     2                  0                 leafKey
+V   30     2                  0                 leafData
+A   32    16      3           0             array
+S   32     4                  0               leafKeyData
+V   32     2                  0                 leafKey
+V   34     2                  0                 leafData
+V   36     4                  0             unary
+A   40    44      1           0     nodes
+S   40    22                  0       node
+V   40     1                  0         isLeaf
+V   41     1                  0         isBranch
+U   42    20                  0         branchOrLeaf
+S   42    18                  0           branch
+S   42    15                  0             branchStuck
+A   42    12      0           0               array
+S   42     4                  0                 branchKeyNext
+V   42     2                  0                   branchKey
+V   44     2                  0                   branchNext
+A   46    12      1           0               array
+S   46     4                  0                 branchKeyNext
+V   46     2                  0                   branchKey
+V   48     2                  0                   branchNext
+A   50    12      2           0               array
+S   50     4                  0                 branchKeyNext
+V   50     2                  0                   branchKey
+V   52     2                  0                   branchNext
 V   54     3                  0               unary
-S   57    12                  0             next
-A   57     9      0           0               array
-V   57     3                  0                 element
-A   60     9      1           0               array
-V   60     3                  0                 element
-A   63     9      2           0               array
-V   63     3                  0                 element
-V   66     3                  0               unary
-V   69     3                  0             topNode
-S   48    24                  0           leaf
-S   48    12                  0             keys
-A   48     8      0           0               array
-V   48     2                  0                 element
-A   50     8      1           0               array
-V   50     2                  0                 element
-A   52     8      2           0               array
-V   52     2                  0                 element
-A   54     8      3           0               array
-V   54     2                  0                 element
-V   56     4                  0               unary
-S   60    12                  0             data
-A   60     8      0           0               array
-V   60     2                  0                 element
-A   62     8      1           0               array
-V   62     2                  0                 element
-A   64     8      2           0               array
-V   64     2                  0                 element
-A   66     8      3           0               array
-V   66     2                  0                 element
-V   68     4                  0               unary
+V   57     3                  0             topNode
+S   42    20                  0           leafStuck
+A   42    16      0           0             array
+S   42     4                  0               leafKeyData
+V   42     2                  0                 leafKey
+V   44     2                  0                 leafData
+A   46    16      1           0             array
+S   46     4                  0               leafKeyData
+V   46     2                  0                 leafKey
+V   48     2                  0                 leafData
+A   50    16      2           0             array
+S   50     4                  0               leafKeyData
+V   50     2                  0                 leafKey
+V   52     2                  0                 leafData
+A   54    16      3           0             array
+S   54     4                  0               leafKeyData
+V   54     2                  0                 leafKey
+V   56     2                  0                 leafData
+V   58     4                  0             unary
 """);
    }
 
