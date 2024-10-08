@@ -17,11 +17,12 @@ class Mjaf extends BitMachine                                                   
   final Layout.Variable  nodesCreated;                                          // Number of nodes created
   final Layout.Variable  keyDataStored;                                         // Current number of key/data pairs currently stored in tree
   final Layout.Variable  root;                                                  // Root
+  final Layout.Variable  nodeFree;                                              // Index of a free node as a positive binary integer
   final Stuck            nodesFree;                                             // Free nodes
-  final Stuck            branchKeyNames;                                        // Branch key names
-  final Stuck            leafKeyNames;                                          // Leaf key names
-  final Stuck            dataValues;                                            // Data values
-  final Stuck            nextLevel;                                             // Index of next level node
+  final Stuck            branchStuck;                                           // Branch key, next pairs stuck
+  final Stuck            leafStuck;                                             // Leaf key, data pairs stuck
+  //final Stuck            dataValues;                                            // Data values
+  //final Stuck            nextLevel;                                             // Index of next level node
   final Layout.Variable  leafKey;                                               // Key in a leaf
   final Layout.Variable  leafData;                                              // Data in a leaf
   final Layout.Variable  branchKey;                                             // Key in a branch
@@ -29,12 +30,16 @@ class Mjaf extends BitMachine                                                   
   final Layout.Variable  topNode;                                               // Next node if search key is greater than all keys in this node
   final Layout.Structure branch;                                                // Branch node of the tree
   final Layout.Structure leaf;                                                  // Leaf node of the tree
+  final Layout.Structure leafKeyData;                                           // An entry in a leaf node
+  final Layout.Structure branchKeyNext;                                         // An entry in a branch node
   final Layout.Union     branchOrLeaf;                                          // Branch or leaf of the tree
   final Layout.Variable  isBranch;                                              // The node is a branch if true
   final Layout.Variable  isLeaf;                                                // The node is a leaf if true
   final Layout.Structure node;                                                  // Node of the tree
   final Layout.Array     nodes;                                                 // Array of nodes comprising tree
   final Layout.Structure tree;                                                  // Structure of tree
+  final Layout           layoutLeafKeyData;                                     // Layout of a leaf key data pair
+  final Layout           layoutBranchKeyNext;                                   // Layout of a branch key next pair
   final Layout           layout;                                                // Layout of tree
 
 //D1 Construction                                                               // Create a Btree from nodes which can be branches or leaves.  The data associated with the Btree is stored only in the leaves opposite the keys
@@ -51,39 +56,55 @@ class Mjaf extends BitMachine                                                   
     maxKeysPerLeaf   = N;
     maxKeysPerBranch = N-1;
     splitIdx         = maxKeysPerBranch >> 1;                                   // Index of splitting key
-    maxNodes = size;
+    maxNodes         = size;
 
-    layout         = new Layout();
-    nodesCreated   = layout.variable ("nodesCreated",  2*BitsPerKey+1);         // Number of nodes created
-    keyDataStored  = layout.variable ("keyDataStored",   BitsPerKey+1);         // Field to track number of keys stored in twos complement form hence an extra bit for the sign
-    root           = layout.variable ("root",            BitsPerKey+1);         // Root
-    nodesFree      = new Stuck("free", size,             bitsPerNext);          // Free nodes
-    branchKeyNames = new Stuck("keys", maxKeysPerBranch, BitsPerKey);           // Branch key names
-    leafKeyNames   = new Stuck("keys", maxKeysPerLeaf,   BitsPerKey);           // Leaf key names
-    dataValues     = new Stuck("data", maxKeysPerLeaf,   BitsPerData);          // Data values
-    nextLevel      = new Stuck("next", maxKeysPerBranch, bitsPerNext);          // Next values
-    topNode        = layout.variable ("topNode",         bitsPerNext);          // Next node if search key is greater than all keys in this node
-    branch         = layout.structure("branch",                                 // Branch of the tree
-                       branchKeyNames, nextLevel, topNode);
-    leaf           = layout.structure("leaf",  leafKeyNames, dataValues);       // Leaf of the tree
+    final Layout L   = layoutLeafKeyData = new Layout();                        // Layout of a leaf key data pair
+    leafKey          = L.new Variable ("leafKey",  bitsPerKey);                 // Key in a leaf
+    leafData         = L.new Variable ("leafData", bitsPerData);                // Data in a leaf
+    leafKeyData      = L.new Structure("leafKeyData", leafKey, leafData);       // An entry in a leaf node
+    layoutLeafKeyData.layout(leafKeyData);                                      // Layout of a leaf key data pair
 
-    branchOrLeaf   = layout.union    ("branchOrLeaf",   branch, leaf);          // Branch or leaf of the tree
-    isBranch       = layout.variable ("isBranch",       1);                     // The node is a branch if true
-    isLeaf         = layout.variable ("isLeaf",         1);                     // The node is a leaf if true
-    node           = layout.structure("node",  isLeaf,  isBranch, branchOrLeaf);// Node of the tree
-    nodes          = layout.array    ("nodes", node,    size);                  // Array of nodes comprising tree
-    hasNode        = layout.bit      ("hasNode");                               // Tree has at least one node in it
-    tree           = layout.structure("tree",                                   // Tree
+    leafStuck      = new Stuck                                                  // Leaf key, data pairs stuck
+     ("leafKeyData",   maxKeysPerLeaf,   layoutLeafKeyData);
+
+    final Layout B   = layoutBranchKeyNext = new Layout();                      // An entry in a branch node
+    branchKey        = B.new Variable ("branchKey",  bitsPerKey);               // Key in a branch
+    branchNext       = B.new Variable ("branchData", bitsPerData);              // Next from a branch
+    branchKeyNext    = B.new Structure("branchKeyData", branchKey, branchNext); // An entry in a branch node
+    layoutBranchKeyNext.layout(branchKeyNext);                                  // Layout of a branch key next pair
+
+    branchStuck    = new Stuck                                                  // Branch key, next pairs stuck
+     ("branchKeyNext", maxKeysPerBranch, layoutBranchKeyNext);
+
+
+    final Layout T = layout = new Layout();                                     // Tree level layout
+    nodesCreated   = T.variable ("nodesCreated",   bitsPerNext);                // Number of nodes created
+    keyDataStored  = T.variable ("keyDataStored",  bitsPerNext);                // Field to track number of keys stored in twos complement form hence an extra bit for the sign
+    root           = T.variable ("root",           bitsPerNext);                // Root
+    nodeFree       = T.variable ("nodeFree",       bitsPerNext);                // Index of a free node as a positive binary integer
+    nodesFree      = new Stuck  ("free", size,     nodeFree.duplicate());       // Free nodes stuck
+
+    topNode        = T.variable ("topNode",        bitsPerNext);                // Next node if search key is greater than all keys in this node
+    branch         = T.structure("branch",         branchKeyNext, topNode);     // Branch of the tree
+    leaf           = T.structure("leaf",           leafKeyData);                // Leaf of the tree
+
+    branchOrLeaf   = T.union    ("branchOrLeaf",   branch, leaf);               // Branch or leaf of the tree
+    isBranch       = T.variable ("isBranch",       1);                          // The node is a branch if true
+    isLeaf         = T.variable ("isLeaf",         1);                          // The node is a leaf if true
+    node           = T.structure("node",  isLeaf,  isBranch, branchOrLeaf);     // Node of the tree
+    nodes          = T.array    ("nodes", node,    size);                       // Array of nodes comprising tree
+    hasNode        = T.bit      ("hasNode");                                    // Tree has at least one node in it
+    tree           = T.structure("tree",                                        // Tree
                        nodesFree, nodesCreated,
                        keyDataStored, root, hasNode, nodes);
-    layout.layout(tree);                                                        // Layout
+    T.layout(tree);                                                             // Layout
 
     tree.zero();                                                                // Clear all of memory
     for (int i = 0; i < size; i++)                                              // All nodes are originally free
      {nodesFree.array.setIndex(i);                                              // Index free node
       nodesFree.element.fromInt(i);                                             // Place the free node
      }
-    nodesFree.unary.value.ones();                                                     // The stuck is initially full of free nodes
+    nodesFree.unary.value.ones();                                               // The stuck is initially full of free nodes
    }
 
   static Mjaf mjaf(int Key, int Data, int MaxKeysPerLeaf, int size)             // Define a Btree with a specified maximum number of keys per leaf.
