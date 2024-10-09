@@ -519,6 +519,21 @@ public class BitMachine extends Test implements LayoutAble                      
     abstract void block();                                                      // Block of code to execute on each iteration
    }
 
+  class SetIndex extends Instruction                                            // Set the index of an array from a field interpreted as a binary integer
+   {final Layout.Array    array;                                                // Array to index
+    final Layout.Variable index;                                                // Index
+    SetIndex(Layout.Array Array, Layout.Variable Index)                         // Array, index value
+     {array = Array;
+      index = Index;
+     }
+    void action()                                                               // Set index for the indicated array from the specified field interpreting it as a unary number
+     {array.setIndex(index.asInt());                                            // Set the array index
+     }
+   }
+  SetIndex setIndex(Layout.Array Array, Layout.Variable Index)                  // Array, index value
+   {return new SetIndex(Array, Index);
+   }
+
   class SetIndexFromUnary extends Instruction                                   // Set the index of an array from a field interpreted as a unary number
    {final Layout.Array    array;                                                // Array to index
     final Layout.Variable index;                                                // Index
