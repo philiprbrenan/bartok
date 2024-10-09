@@ -10,6 +10,7 @@ import java.util.*;
 
 public class BitMachine extends Test implements LayoutAble                      // A machine whose assembler code is just capable enough to manipulate a b-tree
  {final int maxSteps = 999;                                                     // Maximum number of steps to be executed
+  final StringBuilder printer = new StringBuilder();                            // Place test output here for comparison with expected values
   Stack<Instruction> instructions = new Stack<>();                              // Instructions to be executed
   Layout layout;                                                                // Layout of bit memory being manipulated by this bit machine
   int instructionIndex;                                                         // The current instruction
@@ -519,6 +520,16 @@ public class BitMachine extends Test implements LayoutAble                      
     abstract void block();                                                      // Block of code to execute on each iteration
    }
 
+  abstract class Repeat extends Block                                           // Repeat a block of code until a return is requested
+   {Repeat()                                                                    // Iterate over an array
+     {super(true);
+      name = "Repeat";
+      code();
+      goTo(this);
+      end = nop();                                                              // End of block
+     }
+   }
+
   class SetIndex extends Instruction                                            // Set the index of an array from a field interpreted as a binary integer
    {final Layout.Array    array;                                                // Array to index
     final Layout.Variable index;                                                // Index
@@ -554,8 +565,10 @@ public class BitMachine extends Test implements LayoutAble                      
 
 // D2 Block                                                                     // A block of code can be easily exited on a condition making it behave rather like a subroutine with a return
 
-  abstract class Block                                                          // A block of code
-   {final Instruction end;                                                      // The final instruction at the end of the block that we exit to
+  abstract class Block extends Instruction                                      // A block of code acts like an instruction
+   {Instruction end;                                                            // The final instruction at the end of the block that we exit to
+
+    Block(boolean doNothing) {}                                                 // Define the block without generating any code
 
     Block()                                                                     // Define the block
      {code();
@@ -761,18 +774,21 @@ public class BitMachine extends Test implements LayoutAble                      
      }
    }
 
-//D1                                                                            // Print program
+//D1 Debugging                                                                  // Print program
 
   public String toString()                                                      // Print the program
    {final StringBuilder s = new StringBuilder();                                // Printed results
     s.append(String.format("%4s  %24s\n", "Line", "OpCode"));                   // Titles
-    final int N = instructions.size();                                          // Number of instrictions
+    final int N = instructions.size();                                          // Number of instructions
     for (int i = 0; i < N; i++)
      {final Instruction I = instructions.elementAt(i);
       s.append(String.format("%4d  %24s\n", i+1, I.name));
      }
     return s.toString();
    }
+
+  class Say extends Instruction {Say() {}}                                      // Say something to help debug a program
+  void  Say(Object...O) {say(printer, O);}                                      // Captured say
 
 //D0                                                                            // Tests: I test, therefore I am.  And so do my mentees.  But most other people, apparently, do not, they live in a half world lit by shadows in which they never know if their code works or not.
 
@@ -1387,6 +1403,46 @@ V    8     4                  3     c
 """);
    }
 
+  static void test_repeat()
+   {Layout           l = new Layout();
+    Layout.Variable  a = l.variable ("a", 4);
+    Layout.Variable  b = l.variable ("b", 4);
+    Layout.Variable  c = l.variable ("c", 4);
+    Layout.Structure s = l.structure("s", a, b, c);
+    l.layout(s);
+
+    b.fromUnary(4);
+
+    BitMachine       m = new BitMachine();
+    m.new Repeat()
+     {void code()
+       {m.shiftLeftOneByOne(a);
+        m.new Say() {void action() {m.Say("AAAA", a.asUnary());}};
+        returnIfEqual(a, b);
+        m.new Say() {void action() {m.Say("BBBB", b.asUnary());}};
+        m.shiftLeftOneByOne(c);
+       };
+     };
+    m.execute();
+    ok(m.printer, """
+AAAA 1
+BBBB 4
+AAAA 2
+BBBB 4
+AAAA 3
+BBBB 4
+AAAA 4
+""");
+    //stop(l);
+    l.ok("""
+T   At  Wide  Index       Value   Field name
+S    0    12               2047   s
+V    0     4                 15     a
+V    4     4                 15     b
+V    8     4                  7     c
+""");
+   }
+
   static void oldTests()                                                        // Tests thought to be in good shape
    {test_zero_and_ones();
     test_invert();
@@ -1407,8 +1463,8 @@ V    8     4                  3     c
    }
 
   static void newTests()                                                        // Tests being worked on
-   {oldTests();
-    //test_block_bits();
+   {//oldTests();
+    test_repeat();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
