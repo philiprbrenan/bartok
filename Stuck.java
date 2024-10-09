@@ -68,28 +68,28 @@ class Stuck extends BitMachine implements LayoutAble                            
 //D1 Actions                                                                    // Place and remove data to/from stuck
 
   void push(Layout ElementToPush)                                               // Push an element onto the stuck
-   {setIndex(array, unary.value);                                               // Index stuck
+   {setIndexFromUnary(array, unary.value);                                      // Index stuck
     copy(element, ElementToPush.getLayoutField());                              // Copy data into the stuck
     unary.inc();                                                                // Show next free slot
    }
 
   void pop(Layout PoppedElement)                                                // Pop an element from the stuck
    {unary.dec();                                                                // Index of top most element
-    setIndex(array, unary.value);                                               // Set index of topmost element
+    setIndexFromUnary(array, unary.value);                                      // Set index of topmost element
     copy(PoppedElement.getLayoutField(), element);                              // Copy data out of the stuck
    }
 
   void shift(Layout ShiftedElement)                                             // Shift an element from the stuck
    {zero(target);                                                               // Index of the first element
-    setIndex(array, target);                                                    // Index of first element
+    setIndexFromUnary(array, target);                                           // Index of first element
     copy(ShiftedElement.getLayoutField(), element);                             // Copy shifted element out
     zero(source);                                                               // Index the start of the stuck
     shiftLeftOneByOne(source);                                                  // Index first element of stuck
 
     for (int i = 1; i < max; i++)                                               // Shift the stuck down one place
-     {setIndex(array, source);                                                  // Source index
+     {setIndexFromUnary(array, source);                                         // Source index
       copy(buffer, element);                                                    // Copy element at source
-      setIndex(array, target);                                                  // Taregt index is one less than source index
+      setIndexFromUnary(array, target);                                         // Taregt index is one less than source index
       copy(element, buffer);                                                    // Copy the copy of the source element into the target position
       shiftLeftOneByOne(source);                                                // Next source
       shiftLeftOneByOne(target);                                                // Next target
@@ -106,26 +106,26 @@ class Stuck extends BitMachine implements LayoutAble                            
     shiftRightOneByZero(source);                                                // Second to last slot
 
     for (int i = 1; i < max; ++i)                                               // Shift the stuck up one place
-     {setIndex(array, source);                                                  // Index source
+     {setIndexFromUnary(array, source);                                                  // Index source
       copy(buffer, element);                                                    // Copy source
-      setIndex(array, target);                                                  // Index target
+      setIndexFromUnary(array, target);                                                  // Index target
       copy(element, buffer);                                                    // Copy target
       shiftRightOneByZero(source);                                              // Move target down one
       shiftRightOneByZero(target);                                              // Move source down one
      }
     zero(target);                                                               // Index of the first element
-    setIndex(array, target);                                                    // Index the first element
+    setIndexFromUnary(array, target);                                                    // Index the first element
     copy(element, ElementToUnShift.getLayoutField());                           // Copy in the new element
     unary.inc();                                                                // New number of elements on stuck
    }
 
   void elementAt(Layout elementOut, Layout.Variable index)                      // Return the element at the indicated zero based index
-   {setIndex(array, index);                                                     // Index of required element
+   {setIndexFromUnary(array, index);                                                     // Index of required element
     copy(elementOut.getLayoutField(), element);                                 // Copy element out
    }
 
   void setElementAt(Layout elementIn, Layout.Variable index)                    // Set the element at the indicated zero based index
-   {setIndex(array, index);                                                     // Index of element to set
+   {setIndexFromUnary(array, index);                                            // Index of element to set
     copy(element, elementIn.getLayoutField());                                  // Copy element in
    }
 
@@ -136,14 +136,14 @@ class Stuck extends BitMachine implements LayoutAble                            
     shiftRightOneByZero(source);                                                // One step down on source
       final BranchOnCompare test = branchIfEqual(target, index);                // Test for finish of shifting phase
       shiftRightOneByZero(source);                                              // One step down on source
-      setIndex(array, source);                                                  // Index of source
+      setIndexFromUnary(array, source);                                         // Index of source
       copy(buffer, element);                                                    // Copy source into buffer
-      setIndex(array, target);                                                  // Index of target
+      setIndexFromUnary(array, target);                                         // Index of target
       copy(element, buffer);                                                    // Copy copy of osurce into target slot
       shiftRightOneByZero(target);                                              // One step down on target
       goTo(test);                                                               // Restart shifting loop
     comeFromComparison(test);                                                   // Exited shifting phase
-    setIndex(array, index);                                                     // Index of element to set
+    setIndexFromUnary(array, index);                                            // Index of element to set
     copy(element, elementToInsert.getLayoutField());                            // Copy in new element
    }
 
@@ -152,9 +152,9 @@ class Stuck extends BitMachine implements LayoutAble                            
     copy(source, target);                                                       // Source of removeal
     shiftLeftOneByOne(source);                                                  // One step down on source
     final Branch test = branchIfAllOnes(source);                                // Test for finish of shifting phase
-      setIndex(array, source);                                                  // Index of source
+      setIndexFromUnary(array, source);                                         // Index of source
       copy(buffer, element);                                                    // Copy source into buffer
-      setIndex(array, target);                                                  // Index of target
+      setIndexFromUnary(array, target);                                         // Index of target
       copy(element, buffer);                                                    // Copy copy of osurce into target slot
       shiftLeftOneByOne(target);                                                // One step down on target
       shiftLeftOneByOne(source);                                                // One step down on source
@@ -165,14 +165,14 @@ class Stuck extends BitMachine implements LayoutAble                            
 
   void firstElement(Layout FirstElement)                                        // Get the first element
    {zero(source);                                                               // Index of first element
-    setIndex(array, source);                                                    // Set index of first element
+    setIndexFromUnary(array, source);                                           // Set index of first element
     copy(FirstElement.getLayoutField(), element);                               // Copy of first element
    }
 
   void lastElement(Layout LastElement)                                          // Get the last active element
    {copy(source, unary.value);                                                  // Index top of stuck
     shiftRightOneByZero(source);                                                // Index of top most active element
-    setIndex(array, source);                                                    // Set index of topmost element
+    setIndexFromUnary(array, source);                                           // Set index of topmost element
     copy(LastElement.getLayoutField(), element);                                // Copy of top most element
    }
 
@@ -183,7 +183,7 @@ class Stuck extends BitMachine implements LayoutAble                            
     zero(index);
     Branch[]equal = new Branch[max];
     for (int i = 0; i < max; i++)
-     {setIndex(array, index);
+     {setIndexFromUnary(array, index);
       equals(found, elementToFind.getLayoutField(), element);                   // Test for the element to be found
       equal[i] = branchIfOne(found);
       shiftLeftOneByOne(index);
