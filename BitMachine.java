@@ -508,7 +508,7 @@ public class BitMachine extends Test implements LayoutAble                      
       start = lessThan(atEnd, counter, limit);
       finished = branchIfZero(atEnd);
 
-      setIndex(array, counter);
+      setIndexFromUnary(array, counter);
       block();
 
       shiftLeftOneByOne(counter);
@@ -519,22 +519,22 @@ public class BitMachine extends Test implements LayoutAble                      
     abstract void block();                                                      // Block of code to execute on each iteration
    }
 
-  class SetIndex extends Instruction                                            // Set the index of an array from a field
+  class SetIndexFromUnary extends Instruction                                   // Set the index of an array from a field interpreted as a unary number
    {final Layout.Array    array;                                                // Array to index
     final Layout.Variable index;                                                // Index
-    SetIndex(Layout.Array Array, Layout.Variable Index)                         // Array, index value
+    SetIndexFromUnary(Layout.Array Array, Layout.Variable Index)                // Array, index value
      {array = Array;
       index = Index;
      }
-    void action()                                                               // Set index for inducated array from the specified field
+    void action()                                                               // Set index for the indicated array from the specified field interpreting it as a unary number
      {final int N = index.width;
       int ones = N;                                                             // Faulte de mieux
       for (int i = 0; i < N; ++i) if (!index.get(i)) {ones = i; break;}         // First zero
       array.setIndex(ones);                                                     // Set the array index
      }
    }
-  SetIndex setIndex(Layout.Array Array, Layout.Variable Index)                  // Array, index value
-   {return new SetIndex(Array, Index);
+  SetIndexFromUnary setIndexFromUnary(Layout.Array Array, Layout.Variable Index)// Array, index value
+   {return new SetIndexFromUnary(Array, Index);
    }
 
 // D2 Block                                                                     // A block of code can be easily exited on a condition making it behave rather like a subroutine with a return
@@ -1139,7 +1139,7 @@ Line                    OpCode
    1                       For
    2                  LessThan
    3              BranchIfZero
-   4                  SetIndex
+   4         SetIndexFromUnary
    5                      Copy
    6         ShiftLeftOneByOne
    7                      GoTo
