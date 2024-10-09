@@ -537,10 +537,215 @@ public class BitMachine extends Test implements LayoutAble                      
    {return new SetIndex(Array, Index);
    }
 
+// D2 Block                                                                     // A block of code can be easily exited on a condition making it behave rather like a subroutine with a return
+
+  abstract class Block                                                          // A block of code
+   {final Instruction end;                                                      // The final instruction at the end of the block that we exit to
+
+    Block()                                                                     // Define the block
+     {code();
+      end = nop();                                                              // End of block
+     }
+
+    abstract void code();                                                       // The code of the block
+
+    class ReturnIfAllZero extends Branch                                        // Branch if all the bits in a field are zero
+     {ReturnIfAllZero(Layout.Field Field)                                       // Forward branch to a come from instruction
+       {super(Field); name = "ReturnIfAllZero";
+       }
+      void action()                                                             // Set instruction pointer to continue execution at the next instruction
+       {for (int i = 0; i <  bit.width; i++) if (bit.get(i)) return;            // Non zero bit
+        instructionIndex = end.position;                                        // Set instruction pointer to continue execution at the next instruction becuase all biots are zero
+       }
+     }
+    ReturnIfAllZero returnIfAllZero(Layout.Field field)                         // Jump forward to a come from instruction
+     {return new ReturnIfAllZero(field);
+     }
+
+    class ReturnIfNotAllZero extends Branch                                     // Branch if not all the bits in a field are zero
+     {ReturnIfNotAllZero(Layout.Field Field)                                    // Forward branch to a come from instruction
+       {super(Field); name = "ReturnIfNotAllZero";
+       }
+      void action()                                                             // Set instruction pointer to continue execution at the next instruction
+       {for (int i = 0; i <  bit.width; i++)                                    // Examine each bit
+         {if (bit.get(i))                                                       // Found a bit that is not zero so branch
+           {instructionIndex = end.position;                                    // Set instruction pointer to continue execution at the next instruction becuase all biots are zero
+            return;
+           }
+         }
+       }
+     }
+    ReturnIfNotAllZero returnIfNotAllZero(Layout.Field field)                   // Jump forward to a come from instruction
+     {return new ReturnIfNotAllZero(field);
+     }
+
+    class ReturnIfOne extends Branch                                            // Branch if a bit is one
+     {ReturnIfOne(Layout.Bit Bit)                                               // Forward branch to a come from instruction
+       {super(Bit); name = "ReturnIfOne";
+       }
+      void action() {if (bit.get(0)) instructionIndex = end.position;}          // Set instruction pointer to continue execution at the next instruction
+     }
+    ReturnIfOne returnIfOne(Layout.Bit bit)                                     // Jump forward to a come from instruction
+     {return new ReturnIfOne(bit);
+     }
+
+    class ReturnIfAllOnes extends Branch                                        // Branch if all the bits in a field are one
+     {ReturnIfAllOnes(Layout.Field Field)                                       // Forward branch to a come from instruction
+       {super(Field); name = "ReturnIfAllOnes";
+       }
+      void action()                                                             // Set instruction pointer to continue execution at the next instruction
+       {for (int i = 0; i <  bit.width; i++) if (!bit.get(i)) return;           // Zero bit
+        instructionIndex = end.position;                                        // Set instruction pointer to continue execution at the next instruction becuase all biots are zero
+       }
+     }
+    ReturnIfAllOnes returnIfAllOnes(Layout.Field field)                         // Jump forward to a come from instruction
+     {return new ReturnIfAllOnes(field);
+     }
+
+    class ReturnIfNotAllOnes extends Branch                                     // Branch if not all the bits in a field are one
+     {ReturnIfNotAllOnes(Layout.Field Field)                                    // Forward branch to a come from instruction
+       {super(Field); name = "ReturnINotAllAOnes";
+       }
+      void action()                                                             // Set instruction pointer to continue execution at the next instruction
+       {for (int i = 0; i <  bit.width; i++)                                    // Examine each bit
+         {if (!bit.get(i))                                                      // Zero bit
+           {instructionIndex = end.position;                                    // Set instruction pointer to continue execution at the next instruction becuase all biots are zero
+            return;                                                             // Zero bit
+           }
+         }
+       }
+     }
+    ReturnIfNotAllOnes returnIfNotAllOnes(Layout.Field field)                   // Jump forward to a come from instruction
+     {return new ReturnIfNotAllOnes(field);
+     }
+
+    class ReturnIfEqual extends BranchOnCompare                                 // Exit the block if two fields are equal
+     {ReturnIfEqual(Layout.Field First, Layout.Field Second)
+       {super(First, Second);
+        name = "ReturnIfEqual";
+       }
+      void action()                                                             // Set instruction pointer to continue execution at the next instruction
+       {for (int i = 0; i < first.width; i++)                                   // Check each bit  in the same  sized fields
+         {if (first.get(i) != second.get(i)) return;                            // Bits differ at this position so no branch required
+         }
+        instructionIndex = end.position;                                        // All bits equal, update the instruction pointer to exit the block
+       }
+     }
+    ReturnIfEqual returnIfEqual(Layout.Field first, Layout.Field second)        // Exit if the two field are equal
+     {return new ReturnIfEqual(first, second);
+     }
+
+    class ReturnIfNotEqual extends BranchOnCompare                              // Exit the block if two fields are equal
+     {ReturnIfNotEqual(Layout.Field First, Layout.Field Second)
+       {super(First, Second);
+        name = "ReturnIfNotEqual";
+       }
+      void action()                                                             // Set instruction pointer to continue execution at the next instruction
+       {for (int i = 0; i < first.width; i++)                                   // Check each bit  in the same  sized fields
+         {if (first.get(i) != second.get(i))                                    // Unequal bits so exit
+           {instructionIndex = end.position;
+            return;
+           }
+         }
+       }
+     }
+    ReturnIfNotEqual returnIfNotEqual(Layout.Field first, Layout.Field second)  // Exit if the two field are equal
+     {return new ReturnIfNotEqual(first, second);
+     }
+
+    class ReturnIfLessThan extends BranchOnCompare                              // Exit the block if the first field is less than the second field
+     {ReturnIfLessThan(Layout.Field First, Layout.Field Second)
+       {super(First, Second);
+        name = "ReturnIfLessThan";
+       }
+      void action()                                                             // Set instruction pointer to continue execution at the next instruction
+       {for (int i = first.width-1; i >= 0; --i)                                // Check each bit  in the same  sized fields
+         {final Boolean f = first.get(i), s = second.get(i);                    // Bits
+          if (f && !s) return;                                                  // Greater than so less or equal than is impossible
+          if (f == s) continue;                                                 // Equal so less than or equal might be possible
+          if (!f && s)                                                          // Less than
+           {instructionIndex = end.position;
+            return;
+           }
+         }
+       }
+     }
+    ReturnIfLessThan returnIfLessThan(Layout.Field first, Layout.Field second)  // Exit if the two field are equal
+     {return new ReturnIfLessThan(first, second);
+     }
+
+    class ReturnIfLessThanOrEqual extends BranchOnCompare                       // Exit the block if the first field is less than the second field
+     {ReturnIfLessThanOrEqual(Layout.Field First, Layout.Field Second)
+       {super(First, Second);
+        name = "ReturnIfLessThanOrEqual";
+       }
+      void action()                                                             // Set instruction pointer to continue execution at the next instruction
+       {for (int i = first.width-1; i >= 0; --i)                                // Check each bit  in the same  sized fields
+         {final Boolean f = first.get(i), s = second.get(i);                    // Bits
+          if (f && !s) return;                                                  // Greater than so less than or equal is impossible
+          if (f == s) continue;                                                 // Equal so less than or equal  might be possible
+          if (!f && s)                                                          // Less than
+           {instructionIndex = end.position;
+            return;
+           }
+         }
+        instructionIndex = end.position;                                        // All equal so exit block
+       }
+     }
+    ReturnIfLessThanOrEqual returnIfLessThanOrEqual                             // Exit if the two field are equal
+     (Layout.Field first, Layout.Field second)
+     {return new ReturnIfLessThanOrEqual(first, second);
+     }
+
+    class ReturnIfGreaterThan extends BranchOnCompare                           // Exit the block if the first field is greater than the second field
+     {ReturnIfGreaterThan(Layout.Field First, Layout.Field Second)
+       {super(First, Second);
+        name = "ReturnIfGreaterThan";
+       }
+      void action()                                                             // Set instruction pointer to continue execution at the next instruction
+       {for (int i = first.width-1; i >= 0; --i)                                // Check each bit  in the same  sized fields
+         {final Boolean f = first.get(i), s = second.get(i);                    // Bits
+          if (!f &&  s) return;                                                 // Less than so greater than is impossible
+          if ( f ==  s) continue;                                               // Equal so greater than might be possible
+          if ( f && !s)                                                         // Greater than
+           {instructionIndex = end.position;
+            return;
+           }
+         }
+       }
+     }
+    ReturnIfGreaterThan returnIfGreaterThan(Layout.Field first, Layout.Field second)  // Exit if the two field are equal
+     {return new ReturnIfGreaterThan(first, second);
+     }
+
+    class ReturnIfGreaterThanOrEqual extends BranchOnCompare                    // Exit the block if the first field is greater than the second field
+     {ReturnIfGreaterThanOrEqual(Layout.Field First, Layout.Field Second)
+       {super(First, Second);
+        name = "ReturnIfGreaterThanOrEqual";
+       }
+      void action()                                                             // Set instruction pointer to continue execution at the next instruction
+       {for (int i = first.width-1; i >= 0; --i)                                // Check each bit  in the same sized fields
+         {final Boolean f = first.get(i), s = second.get(i);                    // Bits
+          if (!f &&  s) return;                                                 // Less than so greater than or equal is impossible
+          if ( f ==  s) continue;                                               // Equal so greater than or equal might be possible
+          if ( f && !s)                                                         // Greater than
+           {instructionIndex = end.position;
+            return;
+           }
+         }
+        instructionIndex = end.position;                                        // All equal so exit block
+       }
+     }
+    ReturnIfGreaterThanOrEqual returnIfGreaterThanOrEqual                       // Exit if the two field are equal
+     (Layout.Field first, Layout.Field second)
+     {return new ReturnIfGreaterThanOrEqual(first, second);
+     }
+   }
+
 //D1                                                                            // Print program
 
   public String toString()                                                      // Print the program
-   {final StringBuilder s = new StringBuilder();                                //                                                                                //
+   {final StringBuilder s = new StringBuilder();                                // Printed results
     s.append(String.format("%4s  %24s\n", "Line", "OpCode"));                   // Titles
     final int N = instructions.size();                                          // Number of instrictions
     for (int i = 0; i < N; i++)
@@ -991,6 +1196,151 @@ V    8     4                  0     c
 """);
    }
 
+  static void test_block_comparisons()
+   {Layout           l = new Layout();
+    Layout.Variable  a = l.variable ("a", 4);
+    Layout.Variable  b = l.variable ("b", 4);
+    Layout.Variable  c = l.variable ("c", 4);
+    Layout.Variable  eq01 = l.variable ("eq01", 4), eq11 = l.variable ("eq11", 4), eq10 = l.variable ("eq10", 4);
+    Layout.Variable  ne01 = l.variable ("ne01", 4), ne11 = l.variable ("ne11", 4), ne10 = l.variable ("ne10", 4);
+    Layout.Variable  lt01 = l.variable ("lt01", 4), lt11 = l.variable ("lt11", 4), lt10 = l.variable ("lt10", 4);
+    Layout.Variable  le01 = l.variable ("le01", 4), le11 = l.variable ("le11", 4), le10 = l.variable ("le10", 4);
+    Layout.Variable  gt01 = l.variable ("gt01", 4), gt11 = l.variable ("gt11", 4), gt10 = l.variable ("gt10", 4);
+    Layout.Variable  ge01 = l.variable ("ge01", 4), ge11 = l.variable ("ge11", 4), ge10 = l.variable ("ge10", 4);
+    Layout.Structure s     = l.structure("s", a, b, c,
+      eq01, eq11, eq10, ne01, ne11, ne10,
+      lt01, lt11, lt10, le01, le11, le10,
+      gt01, gt11, gt10, ge01, ge11, ge10);
+    l.layout(s); s.ones();
+
+    a.fromInt(0);
+    b.fromInt(1);
+    c.fromInt(0);
+
+    BitMachine m = new BitMachine();
+    m.new Block() {void code() {returnIfEqual             (a, b); m.copy(eq01, c);}};
+    m.new Block() {void code() {returnIfNotEqual          (a, b); m.copy(ne01, c);}};
+    m.new Block() {void code() {returnIfLessThan          (a, b); m.copy(lt01, c);}};
+    m.new Block() {void code() {returnIfLessThanOrEqual   (a, b); m.copy(le01, c);}};
+    m.new Block() {void code() {returnIfGreaterThan       (a, b); m.copy(gt01, c);}};
+    m.new Block() {void code() {returnIfGreaterThanOrEqual(a, b); m.copy(ge01, c);}};
+
+    m.new Block() {void code() {returnIfEqual             (b, b); m.copy(eq11, c);}};
+    m.new Block() {void code() {returnIfNotEqual          (b, b); m.copy(ne11, c);}};
+    m.new Block() {void code() {returnIfLessThan          (b, b); m.copy(lt11, c);}};
+    m.new Block() {void code() {returnIfLessThanOrEqual   (b, b); m.copy(le11, c);}};
+    m.new Block() {void code() {returnIfGreaterThan       (b, b); m.copy(gt11, c);}};
+    m.new Block() {void code() {returnIfGreaterThanOrEqual(b, b); m.copy(ge11, c);}};
+
+    m.new Block() {void code() {returnIfEqual             (b, a); m.copy(eq10, c);}};
+    m.new Block() {void code() {returnIfNotEqual          (b, a); m.copy(ne10, c);}};
+    m.new Block() {void code() {returnIfLessThan          (b, a); m.copy(lt10, c);}};
+    m.new Block() {void code() {returnIfLessThanOrEqual   (b, a); m.copy(le10, c);}};
+    m.new Block() {void code() {returnIfGreaterThan       (b, a); m.copy(gt10, c);}};
+    m.new Block() {void code() {returnIfGreaterThanOrEqual(b, a); m.copy(ge10, c);}};
+    m.execute();
+    //stop(l);
+    l.ok("""
+T   At  Wide  Index       Value   Field name
+S    0    84                      s
+V    0     4                  0     a
+V    4     4                  1     b
+V    8     4                  0     c
+V   12     4                  0     eq01
+V   16     4                 15     eq11
+V   20     4                  0     eq10
+V   24     4                 15     ne01
+V   28     4                  0     ne11
+V   32     4                 15     ne10
+V   36     4                 15     lt01
+V   40     4                  0     lt11
+V   44     4                  0     lt10
+V   48     4                 15     le01
+V   52     4                 15     le11
+V   56     4                  0     le10
+V   60     4                  0     gt01
+V   64     4                  0     gt11
+V   68     4                 15     gt10
+V   72     4                  0     ge01
+V   76     4                 15     ge11
+V   80     4                 15     ge10
+""");
+   }
+
+  static void test_block_bits()
+   {Layout           l   = new Layout();
+    Layout.Variable  a   = l.variable ("a",  1);
+    Layout.Variable  f00 = l.variable("f00", 2);
+    Layout.Variable  f01 = l.variable("f01", 2);
+    Layout.Variable  f11 = l.variable("f11", 2);
+
+    Layout.Variable AllZero____f00 = l.variable("AllZero____f00", 1);
+    Layout.Variable NotAllZero_f00 = l.variable("NotAllZero_f00", 1);
+    Layout.Variable AllOnes____f00 = l.variable("AllOnes____f00", 1);
+    Layout.Variable NotAllOnes_f00 = l.variable("NotAllOnes_f00", 1);
+
+    Layout.Variable AllZero____f01 = l.variable("AllZero____f01", 1);
+    Layout.Variable NotAllZero_f01 = l.variable("NotAllZero_f01", 1);
+    Layout.Variable AllOnes____f01 = l.variable("AllOnes____f01", 1);
+    Layout.Variable NotAllOnes_f01 = l.variable("NotAllOnes_f01", 1);
+
+    Layout.Variable AllZero____f11 = l.variable("AllZero____f11", 1);
+    Layout.Variable NotAllZero_f11 = l.variable("NotAllZero_f11", 1);
+    Layout.Variable AllOnes____f11 = l.variable("AllOnes____f11", 1);
+    Layout.Variable NotAllOnes_f11 = l.variable("NotAllOnes_f11", 1);
+
+    Layout.Structure s   = l.structure("s", a, f00, f01, f11,
+     AllZero____f00, NotAllZero_f00, AllOnes____f00, NotAllOnes_f00,
+     AllZero____f01, NotAllZero_f01, AllOnes____f01, NotAllOnes_f01,
+     AllZero____f11, NotAllZero_f11, AllOnes____f11, NotAllOnes_f11);
+
+    l.layout(s); l.getLayoutField().ones();
+
+    a  .zero();
+    f00.fromInt(0);
+    f01.fromInt(1);
+    f11.fromInt(3);
+
+    BitMachine m = new BitMachine();
+    m.new Block() {void code() {returnIfAllZero   (f00); m.copy(AllZero____f00, a);}};
+    m.new Block() {void code() {returnIfNotAllZero(f00); m.copy(NotAllZero_f00, a);}};
+    m.new Block() {void code() {returnIfAllOnes   (f00); m.copy(AllOnes____f00, a);}};
+    m.new Block() {void code() {returnIfNotAllOnes(f00); m.copy(NotAllOnes_f00, a);}};
+
+    m.new Block() {void code() {returnIfAllZero   (f01); m.copy(AllZero____f01, a);}};
+    m.new Block() {void code() {returnIfNotAllZero(f01); m.copy(NotAllZero_f01, a);}};
+    m.new Block() {void code() {returnIfAllOnes   (f01); m.copy(AllOnes____f01, a);}};
+    m.new Block() {void code() {returnIfNotAllOnes(f01); m.copy(NotAllOnes_f01, a);}};
+
+    m.new Block() {void code() {returnIfAllZero   (f11); m.copy(AllZero____f11, a);}};
+    m.new Block() {void code() {returnIfNotAllZero(f11); m.copy(NotAllZero_f11, a);}};
+    m.new Block() {void code() {returnIfAllOnes   (f11); m.copy(AllOnes____f11, a);}};
+    m.new Block() {void code() {returnIfNotAllOnes(f11); m.copy(NotAllOnes_f11, a);}};
+
+    m.execute();
+    //stop(l);
+    l.ok("""
+T   At  Wide  Index       Value   Field name
+S    0    19             218344   s
+V    0     1                  0     a
+V    1     2                  0     f00
+V    3     2                  1     f01
+V    5     2                  3     f11
+V    7     1                  1     AllZero____f00
+V    8     1                  0     NotAllZero_f00
+V    9     1                  0     AllOnes____f00
+V   10     1                  1     NotAllOnes_f00
+V   11     1                  0     AllZero____f01
+V   12     1                  1     NotAllZero_f01
+V   13     1                  0     AllOnes____f01
+V   14     1                  1     NotAllOnes_f01
+V   15     1                  0     AllZero____f11
+V   16     1                  1     NotAllZero_f11
+V   17     1                  1     AllOnes____f11
+V   18     1                  0     NotAllOnes_f11
+""");
+   }
+
   static void test_branchIfNotEqual()
    {Layout           l = new Layout();
     Layout.Variable  a = l.variable ("a", 4);
@@ -1033,10 +1383,13 @@ V    8     4                  3     c
     test_for();
     test_branchIfEqual();
     test_branchIfNotEqual();
+    test_block_comparisons();
+    test_block_bits();
    }
 
   static void newTests()                                                        // Tests being worked on
    {oldTests();
+    //test_block_bits();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
