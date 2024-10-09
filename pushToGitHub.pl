@@ -30,6 +30,9 @@ for my $s(@files)                                                               
   lll "$w  $t";
  }
 
+writeFileUsingSavedToken($user, $repo, q(.config/geany/snippets.conf),          # Save the snippets file as this was the thing I missed most after a rebuild
+                   readFile(q(/home/phil/.config/geany/snippets.conf)));
+
 if (1)                                                                          # Write workflow
  {my $d = dateTimeStamp;
   my $c = q(com/AppaApps/Silicon);                                              # Package to classes folder
