@@ -549,6 +549,8 @@ public class BitMachine extends Test implements LayoutAble                      
 
     abstract void code();                                                       // The code of the block
 
+//D3 Simplex tests                                                              // Exit a block depending on the result of testing the content of a variable
+
     class ReturnIfAllZero extends Branch                                        // Branch if all the bits in a field are zero
      {ReturnIfAllZero(Layout.Field Field)                                       // Forward branch to a come from instruction
        {super(Field); name = "ReturnIfAllZero";
@@ -618,6 +620,8 @@ public class BitMachine extends Test implements LayoutAble                      
     ReturnIfNotAllOnes returnIfNotAllOnes(Layout.Field field)                   // Jump forward to a come from instruction
      {return new ReturnIfNotAllOnes(field);
      }
+
+//D3 Duplex tests                                                               // Exit a block depending on the result of testing one variable against another
 
     class ReturnIfEqual extends BranchOnCompare                                 // Exit the block if two fields are equal
      {ReturnIfEqual(Layout.Field First, Layout.Field Second)
