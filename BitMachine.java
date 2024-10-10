@@ -273,7 +273,7 @@ public class BitMachine extends Test implements LayoutAble                      
 
 //D2 Constant comparison                                                        // Compare the value of a field  with a constant value to determine whether to branch or not
 
-  abstract class Branch extends Instruction                                     // A branch instruction
+  abstract class Branch extends Instruction                                     // A branch instruction. These instructions are primarily to support 'if' statements. Otherwise instructions based on  'block' are preffereable.
    {final Layout.Field bit;
     int target;
 
@@ -298,44 +298,44 @@ public class BitMachine extends Test implements LayoutAble                      
    {return new BranchIfZero(bit, instruction);
    }
 
-  class BranchIfAllZero extends Branch                                          // Branch if all the bits in a field are zero
-   {BranchIfAllZero(Layout.Field Field) {super(Field);}                         // Forward branch to a come from instruction
-    BranchIfAllZero(Layout.Field Field, Instruction Instruction)                // Backward branch
-     {super(Field, Instruction);
-     }
-    void action()                                                               // Set instruction pointer to continue execution at the next instruction
-     {for (int i = 0; i <  bit.width; i++) if (bit.get(i)) return;              // Non zero bit
-      setInstructionIndex(target);                                              // Set instruction pointer to continue execution at the next instruction becuase all biots are zero
-     }
-   }
-  BranchIfAllZero branchIfAllZero(Layout.Field field)                           // Jump forward to a come from instruction
-   {return new BranchIfAllZero(field);
-   }
-  BranchIfAllZero branchIfAllZero(Layout.Field field, Instruction instruction)  // Jump back to an existing instruction
-   {return new BranchIfAllZero(field, instruction);
-   }
-
-  class BranchIfNotAllZero extends Branch                                       // Branch if not all the bits in a field are zero
-   {BranchIfNotAllZero(Layout.Field Field) {super(Field);}                      // Forward branch to a come from instruction
-    BranchIfNotAllZero(Layout.Field Field, Instruction Instruction)             // Backward branch
-     {super(Field, Instruction);
-     }
-    void action()                                                               // Set instruction pointer to continue execution at the next instruction
-     {for (int i = 0; i <  bit.width; i++)                                      // Examine each bit
-       {if (bit.get(i))                                                         // Found a bit that is not zero so branch
-         {setInstructionIndex(target);                                          // Set instruction pointer to continue execution at the next instruction becuase all biots are zero
-          return;
-         }
-       }
-     }
-   }
-  BranchIfNotAllZero branchIfNotAllZero(Layout.Field field)                     // Jump forward to a come from instruction
-   {return new BranchIfNotAllZero(field);
-   }
-  BranchIfNotAllZero branchIfNotAllZero                                         // Jump back to an existing instruction
-   (Layout.Field field, Instruction instruction)
-   {return new BranchIfNotAllZero(field, instruction);
-   }
+//  class BranchIfAllZero extends Branch                                          // Branch if all the bits in a field are zero
+//   {BranchIfAllZero(Layout.Field Field) {super(Field);}                         // Forward branch to a come from instruction
+//    BranchIfAllZero(Layout.Field Field, Instruction Instruction)                // Backward branch
+//     {super(Field, Instruction);
+//     }
+//    void action()                                                               // Set instruction pointer to continue execution at the next instruction
+//     {for (int i = 0; i <  bit.width; i++) if (bit.get(i)) return;              // Non zero bit
+//      setInstructionIndex(target);                                              // Set instruction pointer to continue execution at the next instruction becuase all biots are zero
+//     }
+//   }
+//  BranchIfAllZero branchIfAllZero(Layout.Field field)                           // Jump forward to a come from instruction
+//   {return new BranchIfAllZero(field);
+//   }
+//  BranchIfAllZero branchIfAllZero(Layout.Field field, Instruction instruction)  // Jump back to an existing instruction
+//   {return new BranchIfAllZero(field, instruction);
+//   }
+//
+//  class BranchIfNotAllZero extends Branch                                       // Branch if not all the bits in a field are zero
+//   {BranchIfNotAllZero(Layout.Field Field) {super(Field);}                      // Forward branch to a come from instruction
+//    BranchIfNotAllZero(Layout.Field Field, Instruction Instruction)             // Backward branch
+//     {super(Field, Instruction);
+//     }
+//    void action()                                                               // Set instruction pointer to continue execution at the next instruction
+//     {for (int i = 0; i <  bit.width; i++)                                      // Examine each bit
+//       {if (bit.get(i))                                                         // Found a bit that is not zero so branch
+//         {setInstructionIndex(target);                                          // Set instruction pointer to continue execution at the next instruction becuase all biots are zero
+//          return;
+//         }
+//       }
+//     }
+//   }
+//  BranchIfNotAllZero branchIfNotAllZero(Layout.Field field)                     // Jump forward to a come from instruction
+//   {return new BranchIfNotAllZero(field);
+//   }
+//  BranchIfNotAllZero branchIfNotAllZero                                         // Jump back to an existing instruction
+//   (Layout.Field field, Instruction instruction)
+//   {return new BranchIfNotAllZero(field, instruction);
+//   }
 
   class BranchIfOne extends Branch                                              // Branch if a bit is one
    {BranchIfOne(Layout.Bit Bit) {super(Bit);}                                   // Forward branch to a come from instruction
@@ -351,44 +351,44 @@ public class BitMachine extends Test implements LayoutAble                      
    {return new BranchIfOne(bit, instruction);
    }
 
-  class BranchIfAllOnes extends Branch                                          // Branch if all the bits in a field are one
-   {BranchIfAllOnes(Layout.Field Field) {super(Field);}                         // Forward branch to a come from instruction
-    BranchIfAllOnes(Layout.Field Field, Instruction Instruction)                // Backward branch
-     {super(Field, Instruction);
-     }
-    void action()                                                               // Set instruction pointer to continue execution at the next instruction
-     {for (int i = 0; i <  bit.width; i++) if (!bit.get(i)) return;             // Zero bit
-      setInstructionIndex(target);                                              // Set instruction pointer to continue execution at the next instruction becuase all biots are zero
-     }
-   }
-  BranchIfAllOnes branchIfAllOnes(Layout.Field field)                           // Jump forward to a come from instruction
-   {return new BranchIfAllOnes(field);
-   }
-  BranchIfAllOnes branchIfAllOnes(Layout.Field field, Instruction instruction)  // Jump back to an existing instruction
-   {return new BranchIfAllOnes(field, instruction);
-   }
-
-  class BranchIfNotAllOnes extends Branch                                       // Branch if not all the bits in a field are one
-   {BranchIfNotAllOnes(Layout.Field Field) {super(Field);}                      // Forward branch to a come from instruction
-    BranchIfNotAllOnes(Layout.Field Field, Instruction Instruction)             // Backward branch
-     {super(Field, Instruction);
-     }
-    void action()                                                               // Set instruction pointer to continue execution at the next instruction
-     {for (int i = 0; i <  bit.width; i++)                                      // Examine each bit
-       {if (!bit.get(i))                                                        // Zero bit
-         {setInstructionIndex(target);                                          // Set instruction pointer to continue execution at the next instruction becuase all biots are zero
-          return;
-         }
-       }
-     }
-   }
-  BranchIfNotAllOnes branchIfNotAllOnes(Layout.Field field)                     // Jump forward to a come from instruction
-   {return new BranchIfNotAllOnes(field);
-   }
-  BranchIfNotAllOnes branchIfNotAllOnes                                         // Jump back to an existing instruction
-   (Layout.Field field, Instruction instruction)
-   {return new BranchIfNotAllOnes(field, instruction);
-   }
+//  class BranchIfAllOnes extends Branch                                          // Branch if all the bits in a field are one
+//   {BranchIfAllOnes(Layout.Field Field) {super(Field);}                         // Forward branch to a come from instruction
+//    BranchIfAllOnes(Layout.Field Field, Instruction Instruction)                // Backward branch
+//     {super(Field, Instruction);
+//     }
+//    void action()                                                               // Set instruction pointer to continue execution at the next instruction
+//     {for (int i = 0; i <  bit.width; i++) if (!bit.get(i)) return;             // Zero bit
+//      setInstructionIndex(target);                                              // Set instruction pointer to continue execution at the next instruction becuase all biots are zero
+//     }
+//   }
+//  BranchIfAllOnes branchIfAllOnes(Layout.Field field)                           // Jump forward to a come from instruction
+//   {return new BranchIfAllOnes(field);
+//   }
+//  BranchIfAllOnes branchIfAllOnes(Layout.Field field, Instruction instruction)  // Jump back to an existing instruction
+//   {return new BranchIfAllOnes(field, instruction);
+//   }
+//
+//  class BranchIfNotAllOnes extends Branch                                       // Branch if not all the bits in a field are one
+//   {BranchIfNotAllOnes(Layout.Field Field) {super(Field);}                      // Forward branch to a come from instruction
+//    BranchIfNotAllOnes(Layout.Field Field, Instruction Instruction)             // Backward branch
+//     {super(Field, Instruction);
+//     }
+//    void action()                                                               // Set instruction pointer to continue execution at the next instruction
+//     {for (int i = 0; i <  bit.width; i++)                                      // Examine each bit
+//       {if (!bit.get(i))                                                        // Zero bit
+//         {setInstructionIndex(target);                                          // Set instruction pointer to continue execution at the next instruction becuase all biots are zero
+//          return;
+//         }
+//       }
+//     }
+//   }
+//  BranchIfNotAllOnes branchIfNotAllOnes(Layout.Field field)                     // Jump forward to a come from instruction
+//   {return new BranchIfNotAllOnes(field);
+//   }
+//  BranchIfNotAllOnes branchIfNotAllOnes                                         // Jump back to an existing instruction
+//   (Layout.Field field, Instruction instruction)
+//   {return new BranchIfNotAllOnes(field, instruction);
+//   }
 
 //D2 Variable comparison                                                        // Branch based on the comparison of the values of two fields
 
