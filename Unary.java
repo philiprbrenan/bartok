@@ -33,10 +33,10 @@ class Unary extends BitMachine implements LayoutAble                            
   void zero() {zero(value);}                                                    // Clear unary number to all zeros
   void ones() {ones(value);}                                                    // Set unary number to all ones
 
-  void canInc   (Layout.Bit result) {copy(result, 0, value, value.width-1, 1); not(result);} // Unary contains at least one one
-  void canNotInc(Layout.Bit result) {copy(result, 0, value, value.width-1, 1);}              // Unary contains at least one one
-  void canDec   (Layout.Bit result) {copy(result, 0, value, 0,             1);}              // Unary contains at least one zero
-  void canNotDec(Layout.Bit result) {copy(result, 0, value, 0,             1); not(result);} // Unary contains at least one zero
+  void canInc   (Layout.Bit result) {copy(result, 0, value, value.width-1, 1); not(result);} // Not full
+  void canNotInc(Layout.Bit result) {copy(result, 0, value, value.width-1, 1);}              // Full
+  void canDec   (Layout.Bit result) {copy(result, 0, value, 0,             1);}              // Not empty
+  void canNotDec(Layout.Bit result) {copy(result, 0, value, 0,             1); not(result);} // Empty
 
   void inc() {shiftLeftOneByOne  (value);}                                      // Increment the unary number
   void dec() {shiftRightOneByZero(value);}                                      // Decrement the unary number
