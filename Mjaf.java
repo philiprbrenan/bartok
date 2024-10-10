@@ -1392,13 +1392,42 @@ V   58     4                  0             unary
     i2.fromUnary(2);  n2.fromInt(2);
     i3.fromUnary(3);  n3.fromInt(3);
 
-    m.leafInsert(n0, i0, k0);
-    m.leafInsert(n0, i1, k1);
-    m.leafInsert(n0, i2, k2);
-    m.leafInsert(n0, i3, k3);
+    /*m.leafInsert(n0, i0, k0);*/  m.leafInsert(n1, i0, k0);
+    /*m.leafInsert(n0, i1, k1);*/  //m.leafInsert(n1, i0, k1);
+    /*m.leafInsert(n0, i2, k2);*/  //m.leafInsert(n1, i0, k2);
+    /*m.leafInsert(n0, i3, k3);*/  //m.leafInsert(n1, i0, k3);
     m.execute();
+say(m.printProgram());
+    m.nodes.setIndex(1);
+    stop(m.layout.get("tree.nodes.node.branchOrLeaf.leaf"));
+
+
+
     m.nodes.setIndex(0);
     //stop(m.layout.get("tree.nodes.node.branchOrLeaf.leaf"));
+    m.layout.get("tree.nodes.node.branchOrLeaf.leaf").copy().ok("""
+T   At  Wide  Index       Value   Field name
+S   50    68                              leaf
+A   50    64      0                         array
+S   50    16               2817               leafKeyData
+V   50     8                  1                 leafKey
+V   58     8                 11                 leafData
+A   66    64      1                         array
+S   66    16               5634               leafKeyData
+V   66     8                  2                 leafKey
+V   74     8                 22                 leafData
+A   82    64      2                         array
+S   82    16               8451               leafKeyData
+V   82     8                  3                 leafKey
+V   90     8                 33                 leafData
+A   98    64      3                         array
+S   98    16              11268               leafKeyData
+V   98     8                  4                 leafKey
+V  106     8                 44                 leafData
+V  114     4                  0             unary
+""");
+    m.nodes.setIndex(1);
+    stop(m.layout.get("tree.nodes.node.branchOrLeaf.leaf"));
     m.layout.get("tree.nodes.node.branchOrLeaf.leaf").copy().ok("""
 T   At  Wide  Index       Value   Field name
 S   50    68                              leaf
