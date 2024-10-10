@@ -61,7 +61,7 @@ class Mjaf extends BitMachine                                                   
     leafKeyData      = L.new Structure("leafKeyData", leafKey, leafData);       // An entry in a leaf node
     layoutLeafKeyData.layout(leafKeyData);                                      // Layout of a leaf key data pair
 
-    leaf             =   new Stuck("leafStuck",                                 // Leaf key, data pairs stuck
+    leaf             =   new Stuck("leaf",                                      // Leaf key, data pairs stuck
       maxKeysPerLeaf,layoutLeafKeyData);
 
     final Layout B   = layoutBranchKeyNext = new Layout();                      // An entry in a branch node
@@ -101,6 +101,8 @@ class Mjaf extends BitMachine                                                   
       nodesFree.element.fromInt(i);                                             // Place the free node
      }
     nodesFree.unary.value.ones();                                               // The stuck is initially full of free nodes
+
+    bitMachine(nodesFree, branchStuck, leaf); bitMachines(this);                // Place all the instruction that woukld oether be generated in these anchines into this machine instead
    }
 
   static Mjaf mjaf(int Key, int Data, int MaxKeysPerLeaf, int size)             // Define a Btree with a specified maximum number of keys per leaf.
@@ -110,54 +112,15 @@ class Mjaf extends BitMachine                                                   
   void size     (Layout.Variable size) {copy(size, keyDataStored);}             // Number of entries in the tree
   void emptyTree(Layout.Bit    result) {copy(result, hasNode); not(result);}    // Test for an empty tree
 
-/*
+//D1 Leaf                                                                       // Process a leaf
 
-  public String toString()                                                      // Convert tree to string
-   {final StringBuilder b = new StringBuilder();
-    b.append("Mjaf\n");
-    b.append(String.format
-     ("BitsPerKey  : %4d  BitsPerData  : %4d  MaxKeysPerLeaf: %4d MaxNodes: %4d\n",
-       bitsPerKey, bitsPerData, maxKeysPerLeaf, maxNodes));
-
-    b.append(String.format
-     ("nodesCreated: %4d  keyDataStored: %4d  root: %4d\n",
-       nodesCreated.toInt(), keyDataStored.toInt(), root.toInt()));
-
-    b.append("Node\n");
-    for (int i = 0; i < maxNodes; i++)
-     {nodes.setIndex(i);
-      final boolean ib = isBranch.toInt() > 0, il = isLeaf.toInt() > 0;
-      if (!ib && !il) continue;
-      b.append(String.format("%4d ", i));
-
-      if (ib) b.append("      Branch Keys:"+branchKeyNames.print("","")+
-                                   " Next:"+nextLevel     .print("","")+
-                                        " "+topNode.toInt()+"\n");
-      else    b.append("      Leaf   Keys:"+leafKeyNames  .print("","")+
-                                   " Data:"+dataValues    .print("","")+
-                                       "\n");
-     }
-    return b.toString();
+  void leafInsert(Layout.Variable iLeaf, Layout.Variable index, Layout kd)      // Place the specified key, data pair at the specified location in the leaf
+   {setIndex(nodes, iLeaf);                                                     // Select the leaf to process
+    leaf.insertElementAt(kd, index);                                            // Insert the key, data pair at the specified index in the specified leaf
    }
 
 //D1 Node                                                                       // A branch or a leaf
-
-  class Key extends Memory                                                      // Memory for a key
-   {Key(Memory memory)
-     {super(bitsPerKey); bits = Layout.bits; at = Layout.at; width = Layout.width;
-     }
-    Key(int n) {super(memoryFromInt(bitsPerKey, n));}
-   }
-  Key key(int n) {return new Key(n);}
-
-  class Data extends Memory                                                     // Memory for a data value
-   {Data(Memory memory)
-     {super(bitsPerData); bits = Layout.bits; at = Layout.at; width = Layout.width;
-     }
-    Data(int n) {super(memoryFromInt(bitsPerData, n));}
-   }
-  Data data(int n) {return new Data(n);}
-
+/*
   class Node                                                                    // A node contains a leaf or a branch
    {final int   index;                                                          // Index of node
     Node()                         {index = root.toInt();}                      // Root node
@@ -1400,8 +1363,68 @@ V   58     4                  0             unary
 """);
    }
 
+  static void test_create_leaf()
+   {final int W = 8, M = 4, N = 2;
+    Mjaf m = mjaf(W, W, M, N);
+
+    Layout k0 = m.leafKeyData.getLayoutField().duplicate();
+    Layout k1 = m.leafKeyData.getLayoutField().duplicate();
+    Layout k2 = m.leafKeyData.getLayoutField().duplicate();
+    Layout k3 = m.leafKeyData.getLayoutField().duplicate();
+
+    String lk = "leafKeyData.leafKey";
+    String ld = "leafKeyData.leafData";
+    k0.get(lk).fromInt(1); k0.get(ld).fromInt(11);
+    k1.get(lk).fromInt(2); k1.get(ld).fromInt(22);
+    k2.get(lk).fromInt(3); k2.get(ld).fromInt(33);
+    k3.get(lk).fromInt(4); k3.get(ld).fromInt(44);
+
+    Layout           t    = new Layout();
+    Layout.Variable  i0   = t.variable ("i0",  M), n0 = t.variable ("n0",  N);
+    Layout.Variable  i1   = t.variable ("i1",  M), n1 = t.variable ("n1",  N);
+    Layout.Variable  i2   = t.variable ("i2",  M), n2 = t.variable ("n2",  N);
+    Layout.Variable  i3   = t.variable ("i3",  M), n3 = t.variable ("n3",  N);
+    Layout.Structure temp = t.structure("struct", i0, i1, i2, i3, n0, n1, n2, n3);
+    t.layout(temp);
+
+    i0.fromUnary(0);  n0.fromInt(0);
+    i1.fromUnary(1);  n1.fromInt(1);
+    i2.fromUnary(2);  n2.fromInt(2);
+    i3.fromUnary(3);  n3.fromInt(3);
+
+    m.leafInsert(n0, i0, k0);
+    m.leafInsert(n0, i1, k1);
+    m.leafInsert(n0, i2, k2);
+    m.leafInsert(n0, i3, k3);
+    m.execute();
+    m.nodes.setIndex(0);
+    //stop(m.layout.get("tree.nodes.node.branchOrLeaf.leaf"));
+    m.layout.get("tree.nodes.node.branchOrLeaf.leaf").copy().ok("""
+T   At  Wide  Index       Value   Field name
+S   50    68                              leaf
+A   50    64      0                         array
+S   50    16               2817               leafKeyData
+V   50     8                  1                 leafKey
+V   58     8                 11                 leafData
+A   66    64      1                         array
+S   66    16               5634               leafKeyData
+V   66     8                  2                 leafKey
+V   74     8                 22                 leafData
+A   82    64      2                         array
+S   82    16               8451               leafKeyData
+V   82     8                  3                 leafKey
+V   90     8                 33                 leafData
+A   98    64      3                         array
+S   98    16              11268               leafKeyData
+V   98     8                  4                 leafKey
+V  106     8                 44                 leafData
+V  114     4                  0             unary
+""");
+   }
+
   static void oldTests()                                                        // Tests thought to be in good shape
-   {//test_create_branch();
+   {test_create_empty_tree();
+    //test_create_branch();
     //test_join_branch();
     //test_create_leaf();
     //test_join_leaf();
@@ -1414,7 +1437,7 @@ V   58     4                  0             unary
 
   static void newTests()                                                        // Tests being worked on
    {//oldTests();
-    test_create_empty_tree();
+    test_create_leaf();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
