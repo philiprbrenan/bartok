@@ -26,8 +26,6 @@ class Stuck extends BitMachine implements LayoutAble                            
   final int max;                                                                // The maximum number of entries in the stuck.
   final int width;                                                              // The width of each object in the stuck in bits
 
-  BitMachine bitMachine = this;                                                 // The bit machine in which to load instructions
-
 //D1 Construction                                                               // Create a stuck
 
   Stuck(String Name, int Max, Layout repeat)                                    // Create the stuck with a maximum number of the specified elements
@@ -35,7 +33,6 @@ class Stuck extends BitMachine implements LayoutAble                            
     max      = Max;                                                             // Maximum size
     width    = repeat.size();                                                   // Width of element of stuck
     unary    = Unary.unary(max);                                                // Unary number showing which elements in the stack are valid
-    unary.bitMachine = this;                                                    // Unary instructions to be placed in this machine
     layout   = new Layout();                                                    // An element of the stuck
     array    = layout.array    ("array", repeat.duplicate(), max);              // An array of elements comprising the stuck. Duplicate the input element so that we can manipulate it inmdependently
     stuck    = layout.structure(name, array,  unary);                           // An array of elements comprising the stuck
@@ -49,9 +46,9 @@ class Stuck extends BitMachine implements LayoutAble                            
     temp     = tempLay.structure("structure", source, target, buffer);          // Temporary structure
     tempLay.layout(temp);                                                       // Layout of temporary storage
     temp.zero();                                                                // Clear temporary storage
+    bitMachine(this, unary); bitMachines(this);
    }
 
-  Layout.Field layout() {return layout.top;}                                    // Get the topmost structure
   static Stuck stuck(String Name, int Max, Layout Layout)                       // Create the stuck
    {return new Stuck(Name, Max, Layout);
    }
