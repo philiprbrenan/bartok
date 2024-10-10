@@ -89,6 +89,39 @@ public class BitMachine extends Test implements LayoutAble                      
    {return new Copy(Target, TOff, Source, SOff, Length);
    }
 
+//D2 Arithmetic                                                                 // Integer arithmetic
+
+  class Add extends Instruction                                                 // Add two equal sized fields containing positive integers in binary form to get a field of the same size by ignoring any overflow
+   {Layout.Field f1, f2;                                                        // Fields to add
+    Layout.Field result;                                                        // Result of addition
+    Add(Layout.Field Result, Layout.Field F1, Layout.Field F2)                  // Check the two fields are the same size
+     {if (Result.width != 1) stop("Result field must be one bit, but it is",
+        Result.width, "bits");
+      F1.sameSize(F2);
+      result = Result; f1 = F1; f2 = F2;
+     }
+    void action()  {result.fromInt(f1.asInt() + f2.asInt());}                   // Perform instruction
+   }
+  Add add(Layout.Field Result, Layout.Field F1, Layout.Field F2)                // Add two positive integers ignoring overflow
+   {return new Add(Result, F1, F2);
+   }
+
+  class Inc extends Instruction                                                 // Increment a field containing a positive integer in binary form ignoring any overflow
+   {Layout.Field field;                                                         // Field to increment
+    Inc(Layout.Field Field) {field = Field;}                                    // Record field to increment
+    void action()           {field.fromInt(field.asInt() + 1);}                 // Perform instruction
+   }
+  Inc inc(Layout.Field field) {return new Inc(field);}                          // Increment a field containing a positive integer ignoring the result
+
+  class Dec extends Instruction                                                 // Increment a field containing a positive integer in binary form ignoring any overflow
+   {Layout.Field field;                                                         // Field to increment
+    Dec(Layout.Field Field) {field = Field;}                                    // Record field to increment
+    void action()           {field.fromInt(field.asInt() - 1);}                 // Perform instruction
+   }
+  Dec dec(Layout.Field field) {return new Dec(field);}                          // Decrement a field containing a positive integer ignoring the result
+
+//D2 Boolean tests                                                              // Test the value of one fioeld against another to get a boolean result
+
   class Equals extends Instruction                                              // Check that two fields are equal
    {Layout.Field f1, f2;                                                        // Fields to compare
     Layout.Field result;                                                        // Bit field showing result
@@ -1376,6 +1409,28 @@ V   18     1                  0     NotAllOnes_f11
 """);
    }
 
+  static void test_inc_dec()
+   {Layout           l = new Layout();
+    Layout.Variable  a = l.variable("a", 4);
+    Layout.Variable  b = l.variable("b", 4);
+    Layout.Structure s = l.structure("s", a, b);
+    l.layout(s);
+    a.fromInt(2); b.fromInt(2);
+
+    BitMachine m = new BitMachine();
+    m.inc(a);
+    m.dec(b);
+
+    m.execute();
+    //stop(l);
+    l.ok("""
+T   At  Wide  Index       Value   Field name
+S    0     8                 19   s
+V    0     4                  3     a
+V    4     4                  1     b
+""");
+   }
+
   static void test_branchIfNotEqual()
    {Layout           l = new Layout();
     Layout.Variable  a = l.variable ("a", 4);
@@ -1460,11 +1515,13 @@ V    8     4                  7     c
     test_branchIfNotEqual();
     test_block_comparisons();
     test_block_bits();
+    test_repeat();
+    test_inc_dec();
    }
 
   static void newTests()                                                        // Tests being worked on
-   {//oldTests();
-    test_repeat();
+   {oldTests();
+    test_inc_dec();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
