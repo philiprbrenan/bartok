@@ -131,21 +131,17 @@ class Stuck extends BitMachine implements LayoutAble                            
     ones(source);                                                               // Top of stuck
     shiftRightOneByZero(target);                                                // One step down on target
     shiftRightOneByZero(source);                                                // One step down on source
-new Say() {void action() {say("AAAA", index);}};
     new Repeat()
      {void code()
-       {new Say() {void action() {say("BBBB", source, target, index);}};
-        returnIfEqual(target, index);                                           // Test for finish of shifting phase
+       {returnIfEqual(target, index);                                           // Test for finish of shifting phase
         shiftRightOneByZero(source);                                            // One step down on source
         setIndexFromUnary(array, source);                                       // Index of source
         copy(buffer, element);                                                  // Copy source into buffer
         setIndexFromUnary(array, target);                                       // Index of target
         copy(element, buffer);                                                  // Copy copy of osurce into target slot
         shiftRightOneByZero(target);                                            // One step down on target
-        new Say() {void action() {say("CCCC", source, target, index);}};
        }
      };
-new Say() {void action() {say("DDDD", index);}};
     setIndexFromUnary(array, index);                                            // Index of element to set
     copy(element, elementToInsert.getLayoutField());                            // Copy in new element
     unary.inc();                                                                // New number of elements on stuck
