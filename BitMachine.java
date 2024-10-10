@@ -18,8 +18,9 @@ public class BitMachine extends Test implements LayoutAble                      
   int instructionIndex;                                                         // The current instruction
   int step = 0;                                                                 // The number of the currently executing step
 
-  public Layout.Field getLayoutField() {return layout.top;}                     // Layout associated with this class
-  public Layout       getLayout     () {return layout;}                         // Layout associated with this class
+  public Layout.Field getLayoutField()         {return layout.top;}             // Top most field of the layout associated with this bit machine
+  public Layout       getLayout     ()         {return layout;}                 // Layout associated with this bit machine
+  void                setLayout(Layout Layout) {layout = Layout;}               // Set the layout associated with this bit machine
 
   void bitMachine(BitMachine machine, BitMachine...subMachines)                 // Save machines this machine is dependent on
    {for (BitMachine b : subMachines) machines.push(b);
