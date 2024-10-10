@@ -7,7 +7,6 @@ package com.AppaApps.Silicon;                                                   
 class Unary extends BitMachine implements LayoutAble                            // Unary arithmetic on a bit machine
  {final Layout          layout;                                                 // The layout of the unary number
   final Layout.Variable value;                                                  // The value of the unary number
-  BitMachine bitMachine = this;                                                 // The bit machine in which to load instructions
 
   public Layout.Field getLayoutField() {return layout.top;}                     // Layout field associated with this class
   public Layout       getLayout     () {return layout;    }                     // Layout associated with this class
@@ -34,13 +33,13 @@ class Unary extends BitMachine implements LayoutAble                            
   void zero() {zero(value);}                                                    // Clear unary number to all zeros
   void ones() {ones(value);}                                                    // Set unary number to all ones
 
-  void canInc(   Layout.Bit result) {bitMachine.copy(result, 0, value, value.width-1, 1); bitMachine.not(result);} // Unary contains at least one one
-  void canNotInc(Layout.Bit result) {bitMachine.copy(result, 0, value, value.width-1, 1);}                         // Unary contains at least one one
-  void canDec   (Layout.Bit result) {bitMachine.copy(result, 0, value, 0,             1);}                         // Unary contains at least one zero
-  void canNotDec(Layout.Bit result) {bitMachine.copy(result, 0, value, 0,             1); bitMachine.not(result);} // Unary contains at least one zero
+  void canInc   (Layout.Bit result) {copy(result, 0, value, value.width-1, 1); not(result);} // Unary contains at least one one
+  void canNotInc(Layout.Bit result) {copy(result, 0, value, value.width-1, 1);}              // Unary contains at least one one
+  void canDec   (Layout.Bit result) {copy(result, 0, value, 0,             1);}              // Unary contains at least one zero
+  void canNotDec(Layout.Bit result) {copy(result, 0, value, 0,             1); not(result);} // Unary contains at least one zero
 
-  void inc() {bitMachine.shiftLeftOneByOne  (value);}                           // Increment the unary number
-  void dec() {bitMachine.shiftRightOneByZero(value);}                           // Decrement the unary number
+  void inc() {shiftLeftOneByOne  (value);}                                      // Increment the unary number
+  void dec() {shiftRightOneByZero(value);}                                      // Decrement the unary number
 
 //D1 Print                                                                      // Print a unary number
 
@@ -57,7 +56,7 @@ class Unary extends BitMachine implements LayoutAble                            
     Layout.Structure s = l.structure("s", a, b, c, d);
     l.layout(s);
 
-    Unary   u = unary(4);
+    Unary u = unary(4);
     u.zero();
     u.canDec(a);
     u.canInc(b);
@@ -69,7 +68,7 @@ class Unary extends BitMachine implements LayoutAble                            
     u.canInc(d);
     u.execute();
     u.ok("1111");
-    //stop(l);
+    //stop(u);
     l.ok("""
 T   At  Wide  Index       Value   Field name
 S    0     4                  6   s
