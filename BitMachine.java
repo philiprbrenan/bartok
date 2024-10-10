@@ -32,6 +32,8 @@ public class BitMachine extends Test implements LayoutAble                      
      }
    }
 
+  void setInstructionIndex(int index) {bitMachine.instructionIndex = index;}    // Set the instruction pointer in the top level bit machine
+
   void trace() {}                                                               // Trace the execution
 
   void ok(String expected) {Test.ok(toString(), expected);}                     // Check the code for this machine is as expected
@@ -43,7 +45,7 @@ public class BitMachine extends Test implements LayoutAble                      
     step = 0;
     for(instructionIndex = 0; instructionIndex < N; ++instructionIndex)         // Instruction sequence
      {final Instruction i = instructions.elementAt(instructionIndex);
-//say("AAAA", step, i.position, i.name);
+//say("AAAA", step+1, instructionIndex, i.position, i.name);
       i.action();
       trace();
       if (++step > maxSteps) stop("Terminating after", maxSteps, "steps");
@@ -287,7 +289,7 @@ public class BitMachine extends Test implements LayoutAble                      
     BranchIfZero(Layout.Bit Bit, Instruction Instruction)                       // Backward branch
      {super(Bit, Instruction);
      }
-    void action() {if (!bit.get(0)) instructionIndex = target;}                 // Set instruction pointer to continue execution at the next instruction
+    void action() {if (!bit.get(0)) setInstructionIndex(target);}               // Set instruction pointer to continue execution at the next instruction
    }
   BranchIfZero branchIfZero(Layout.Bit bit)                                     // Jump forward to a come from instruction
    {return new BranchIfZero(bit);
@@ -303,7 +305,7 @@ public class BitMachine extends Test implements LayoutAble                      
      }
     void action()                                                               // Set instruction pointer to continue execution at the next instruction
      {for (int i = 0; i <  bit.width; i++) if (bit.get(i)) return;              // Non zero bit
-      instructionIndex = target;                                                // Set instruction pointer to continue execution at the next instruction becuase all biots are zero
+      setInstructionIndex(target);                                              // Set instruction pointer to continue execution at the next instruction becuase all biots are zero
      }
    }
   BranchIfAllZero branchIfAllZero(Layout.Field field)                           // Jump forward to a come from instruction
@@ -321,7 +323,7 @@ public class BitMachine extends Test implements LayoutAble                      
     void action()                                                               // Set instruction pointer to continue execution at the next instruction
      {for (int i = 0; i <  bit.width; i++)                                      // Examine each bit
        {if (bit.get(i))                                                         // Found a bit that is not zero so branch
-         {instructionIndex = target;                                            // Set instruction pointer to continue execution at the next instruction becuase all biots are zero
+         {setInstructionIndex(target);                                          // Set instruction pointer to continue execution at the next instruction becuase all biots are zero
           return;
          }
        }
@@ -340,7 +342,7 @@ public class BitMachine extends Test implements LayoutAble                      
     BranchIfOne(Layout.Bit Bit, Instruction Instruction)                        // Backward branch
      {super(Bit, Instruction);
      }
-    void action() {if (bit.get(0)) instructionIndex = target;}                  // Set instruction pointer to continue execution at the next instruction
+    void action() {if (bit.get(0)) setInstructionIndex(target);}                // Set instruction pointer to continue execution at the next instruction
    }
   BranchIfOne branchIfOne(Layout.Bit bit)                                       // Jump forward to a come from instruction
    {return new BranchIfOne(bit);
@@ -356,7 +358,7 @@ public class BitMachine extends Test implements LayoutAble                      
      }
     void action()                                                               // Set instruction pointer to continue execution at the next instruction
      {for (int i = 0; i <  bit.width; i++) if (!bit.get(i)) return;             // Zero bit
-      instructionIndex = target;                                                // Set instruction pointer to continue execution at the next instruction becuase all biots are zero
+      setInstructionIndex(target);                                              // Set instruction pointer to continue execution at the next instruction becuase all biots are zero
      }
    }
   BranchIfAllOnes branchIfAllOnes(Layout.Field field)                           // Jump forward to a come from instruction
@@ -374,8 +376,8 @@ public class BitMachine extends Test implements LayoutAble                      
     void action()                                                               // Set instruction pointer to continue execution at the next instruction
      {for (int i = 0; i <  bit.width; i++)                                      // Examine each bit
        {if (!bit.get(i))                                                        // Zero bit
-         {instructionIndex = target;                                            // Set instruction pointer to continue execution at the next instruction becuase all biots are zero
-          return;             // Zero bit
+         {setInstructionIndex(target);                                          // Set instruction pointer to continue execution at the next instruction becuase all biots are zero
+          return;
          }
        }
      }
@@ -417,7 +419,7 @@ public class BitMachine extends Test implements LayoutAble                      
      {for (int i = 0; i < first.width; i++)                                     // Check each bit  in the same  sized fields
        {if (first.get(i) != second.get(i)) return;                              // Bits differ at this position so no branch required
        }
-      instructionIndex = target;                                                // All bits equal, update the instruction pointer to effect the branch
+      setInstructionIndex(target);                                              // All bits equal, update the instruction pointer to effect the branch
      }
    }
   BranchIfEqual branchIfEqual(Layout.Field first, Layout.Field second)          // Jump forward to a come from instruction
@@ -439,7 +441,7 @@ public class BitMachine extends Test implements LayoutAble                      
     void action()                                                               // Set instruction pointer to continue execution at the next instruction
      {for (int i = 0; i < first.width; i++)                                     // Check each bit  in the same  sized fields
        {if (first.get(i) != second.get(i))                                      // Bits differ at this position so branch is required
-         {instructionIndex = target;                                            // At least one bit differs so update the instruction pointer to effect the branch
+         {setInstructionIndex(target);                                          // At least one bit differs so update the instruction pointer to effect the branch
           return;
          }
        }
@@ -458,7 +460,7 @@ public class BitMachine extends Test implements LayoutAble                      
   class GoTo extends Branch                                                     // Goto the specified instruction
    {GoTo() {super(null);}                                                       // Forward goto
     GoTo(Instruction instruction) {super(null, instruction);}                   // Backward goto
-    void action()   {instructionIndex = target;}                                // Set instruction pointer to continue execution at the next instruction
+    void action()   {setInstructionIndex(target);}                              // Set instruction pointer to continue execution at the next instruction
    }
   GoTo goTo()                        {return new GoTo();}                       // Jump forward to a comeFrom instruction
   GoTo goTo(Instruction instruction) {return new GoTo(instruction);}            // Jump back to an existing instruction
@@ -631,7 +633,7 @@ public class BitMachine extends Test implements LayoutAble                      
        }
       void action()                                                             // Set instruction pointer to continue execution at the next instruction
        {for (int i = 0; i <  bit.width; i++) if (bit.get(i)) return;            // Non zero bit
-        instructionIndex = end.position;                                        // Set instruction pointer to continue execution at the next instruction becuase all biots are zero
+        setInstructionIndex(end.position);                                      // Set instruction pointer to continue execution at the next instruction becuase all biots are zero
        }
      }
     ReturnIfAllZero returnIfAllZero(Layout.Field field)                         // Jump forward to a come from instruction
@@ -645,7 +647,7 @@ public class BitMachine extends Test implements LayoutAble                      
       void action()                                                             // Set instruction pointer to continue execution at the next instruction
        {for (int i = 0; i <  bit.width; i++)                                    // Examine each bit
          {if (bit.get(i))                                                       // Found a bit that is not zero so branch
-           {instructionIndex = end.position;                                    // Set instruction pointer to continue execution at the next instruction becuase all biots are zero
+           {setInstructionIndex(end.position);                                  // Set instruction pointer to continue execution at the next instruction becuase all biots are zero
             return;
            }
          }
@@ -659,7 +661,7 @@ public class BitMachine extends Test implements LayoutAble                      
      {ReturnIfOne(Layout.Bit Bit)                                               // Forward branch to a come from instruction
        {super(Bit); name = "ReturnIfOne";
        }
-      void action() {if (bit.get(0)) instructionIndex = end.position;}          // Set instruction pointer to continue execution at the next instruction
+      void action() {if (bit.get(0)) setInstructionIndex(end.position);}        // Set instruction pointer to continue execution at the next instruction
      }
     ReturnIfOne returnIfOne(Layout.Bit bit)                                     // Jump forward to a come from instruction
      {return new ReturnIfOne(bit);
@@ -671,7 +673,7 @@ public class BitMachine extends Test implements LayoutAble                      
        }
       void action()                                                             // Set instruction pointer to continue execution at the next instruction
        {for (int i = 0; i <  bit.width; i++) if (!bit.get(i)) return;           // Zero bit
-        instructionIndex = end.position;                                        // Set instruction pointer to continue execution at the next instruction becuase all biots are zero
+        setInstructionIndex(end.position);                                      // Set instruction pointer to continue execution at the next instruction becuase all biots are zero
        }
      }
     ReturnIfAllOnes returnIfAllOnes(Layout.Field field)                         // Jump forward to a come from instruction
@@ -685,7 +687,7 @@ public class BitMachine extends Test implements LayoutAble                      
       void action()                                                             // Set instruction pointer to continue execution at the next instruction
        {for (int i = 0; i <  bit.width; i++)                                    // Examine each bit
          {if (!bit.get(i))                                                      // Zero bit
-           {instructionIndex = end.position;                                    // Set instruction pointer to continue execution at the next instruction becuase all biots are zero
+           {setInstructionIndex(end.position);                                  // Set instruction pointer to continue execution at the next instruction becuase all biots are zero
             return;                                                             // Zero bit
            }
          }
@@ -706,7 +708,7 @@ public class BitMachine extends Test implements LayoutAble                      
        {for (int i = 0; i < first.width; i++)                                   // Check each bit  in the same  sized fields
          {if (first.get(i) != second.get(i)) return;                            // Bits differ at this position so no branch required
          }
-        instructionIndex = end.position;                                        // All bits equal, update the instruction pointer to exit the block
+        setInstructionIndex(end.position);                                      // All bits equal, update the instruction pointer to exit the block
        }
      }
     ReturnIfEqual returnIfEqual(Layout.Field first, Layout.Field second)        // Exit if the two field are equal
@@ -721,7 +723,7 @@ public class BitMachine extends Test implements LayoutAble                      
       void action()                                                             // Set instruction pointer to continue execution at the next instruction
        {for (int i = 0; i < first.width; i++)                                   // Check each bit  in the same  sized fields
          {if (first.get(i) != second.get(i))                                    // Unequal bits so exit
-           {instructionIndex = end.position;
+           {setInstructionIndex(end.position);
             return;
            }
          }
@@ -742,7 +744,7 @@ public class BitMachine extends Test implements LayoutAble                      
           if (f && !s) return;                                                  // Greater than so less or equal than is impossible
           if (f == s) continue;                                                 // Equal so less than or equal might be possible
           if (!f && s)                                                          // Less than
-           {instructionIndex = end.position;
+           {setInstructionIndex(end.position);
             return;
            }
          }
@@ -763,11 +765,11 @@ public class BitMachine extends Test implements LayoutAble                      
           if (f && !s) return;                                                  // Greater than so less than or equal is impossible
           if (f == s) continue;                                                 // Equal so less than or equal  might be possible
           if (!f && s)                                                          // Less than
-           {instructionIndex = end.position;
+           {setInstructionIndex(end.position);
             return;
            }
          }
-        instructionIndex = end.position;                                        // All equal so exit block
+        setInstructionIndex(end.position);                                      // All equal so exit block
        }
      }
     ReturnIfLessThanOrEqual returnIfLessThanOrEqual                             // Exit if the two field are equal
@@ -786,7 +788,7 @@ public class BitMachine extends Test implements LayoutAble                      
           if (!f &&  s) return;                                                 // Less than so greater than is impossible
           if ( f ==  s) continue;                                               // Equal so greater than might be possible
           if ( f && !s)                                                         // Greater than
-           {instructionIndex = end.position;
+           {setInstructionIndex(end.position);
             return;
            }
          }
@@ -807,11 +809,11 @@ public class BitMachine extends Test implements LayoutAble                      
           if (!f &&  s) return;                                                 // Less than so greater than or equal is impossible
           if ( f ==  s) continue;                                               // Equal so greater than or equal might be possible
           if ( f && !s)                                                         // Greater than
-           {instructionIndex = end.position;
+           {setInstructionIndex(end.position);
             return;
            }
          }
-        instructionIndex = end.position;                                        // All equal so exit block
+        setInstructionIndex(end.position);                                      // All equal so exit block
        }
      }
     ReturnIfGreaterThanOrEqual returnIfGreaterThanOrEqual                       // Exit if the two field are equal
@@ -824,18 +826,24 @@ public class BitMachine extends Test implements LayoutAble                      
 
   String printProgram()                                                         // Print the program
    {final StringBuilder s = new StringBuilder();                                // Printed results
-    s.append(String.format("%4s  %24s\n", "Line", "OpCode"));                   // Titles
+    s.append(String.format("%4s  %24s %6s\n", "Line", "OpCode", "Target"));     // Titles
     final int N = instructions.size();                                          // Number of instructions
     for (int i = 0; i < N; i++)
      {final Instruction I = instructions.elementAt(i);
-      s.append(String.format("%4d  %24s\n", i+1, I.name));
+      if (I instanceof Branch)
+       {final Branch B = (Branch)I;
+        s.append(String.format("%4d  %24s %6d\n", i+1, I.name, B.target+2));    // Two becuase we want to be one based and because the loop will increment the instructionPointer again
+       }
+      else
+       {s.append(String.format("%4d  %24s\n", i+1, I.name));
+       }
      }
     return s.toString();
    }
 
   public String toString() {return printProgram();}                             // Alternate name to make it easier to print a program
 
-  class Say extends Instruction {Say() {}}                                      // Say something to help debug a program
+  class Say extends Instruction {Say() {name = "Say";}}                         // Say something to help debug a program
   void  Say(Object...O) {say(printer, O);}                                      // Captured say
 
 //D0                                                                            // Tests: I test, therefore I am.  And so do my mentees.  But most other people, apparently, do not, they live in a half world lit by shadows in which they never know if their code works or not.
@@ -1214,14 +1222,14 @@ V   88     8                 18       c
      };
 
     m.ok("""
-Line                    OpCode
+Line                    OpCode Target
    1                       For
    2                  LessThan
-   3              BranchIfZero
+   3              BranchIfZero      8
    4         SetIndexFromUnary
    5                      Copy
    6         ShiftLeftOneByOne
-   7                      GoTo
+   7                      GoTo      2
    8                  ComeFrom
 """);
 
