@@ -10,8 +10,10 @@ import java.util.*;
 
 public class BitMachine extends Test implements LayoutAble                      // A machine whose assembler code is just capable enough to manipulate a b-tree
  {final int maxSteps = 999;                                                     // Maximum number of steps to be executed
+  BitMachine bitMachine = this;                                                 // The bit machine in which to load instructions
   final StringBuilder printer = new StringBuilder();                            // Place test output here for comparison with expected values
-  Stack<Instruction> instructions = new Stack<>();                              // Instructions to be executed
+  final Stack<BitMachine>  machines     = new Stack<>();                        // Machines that will generate instructions for this machine
+  final Stack<Instruction> instructions = new Stack<>();                        // Instructions to be executed
   Layout layout;                                                                // Layout of bit memory being manipulated by this bit machine
   int instructionIndex;                                                         // The current instruction
   int step = 0;                                                                 // The number of the currently executing step
@@ -19,15 +21,14 @@ public class BitMachine extends Test implements LayoutAble                      
   public Layout.Field getLayoutField() {return layout.top;}                     // Layout associated with this class
   public Layout       getLayout     () {return layout;}                         // Layout associated with this class
 
-  void execute()
-   {final int N = instructions.size();
-    step = 0;
-    for(instructionIndex = 0; instructionIndex < N; ++instructionIndex)
-     {final Instruction i = instructions.elementAt(instructionIndex);
-//say("AAAA", step, i.position, i.name);
-      i.action();
-      trace();
-      if (++step > maxSteps) stop("Terminating after", maxSteps, "steps");
+  void bitMachine(BitMachine machine, BitMachine...subMachines)                 // Save machines this machine is dependent on
+   {for (BitMachine b : subMachines) machines.push(b);
+   }
+
+  void bitMachines(BitMachine machine)                                          // Have the sub machines put their instructions into this machine
+   {for (BitMachine b : machines)
+     {b.bitMachine = machine;
+      b.bitMachines(machine);
      }
    }
 
@@ -36,6 +37,18 @@ public class BitMachine extends Test implements LayoutAble                      
   void ok(String expected) {Test.ok(toString(), expected);}                     // Check the code for this machine is as expected
 
 //D1 Instruction                                                                // Instructions recognized by the bit machine
+
+  void execute()                                                                // Execute the instructions in this machine
+   {final int N = instructions.size();
+    step = 0;
+    for(instructionIndex = 0; instructionIndex < N; ++instructionIndex)         // Instruction sequence
+     {final Instruction i = instructions.elementAt(instructionIndex);
+//say("AAAA", step, i.position, i.name);
+      i.action();
+      trace();
+      if (++step > maxSteps) stop("Terminating after", maxSteps, "steps");
+     }
+   }
 
   abstract class Instruction                                                    // An instruction to be executed
    {String name;                                                                // Name of the instruction
@@ -50,8 +63,8 @@ public class BitMachine extends Test implements LayoutAble                      
     void action() {}                                                            // Action performed by the instruction. Composite  instructuins liek If or For use other instructions to implement their processing as this simplifies the instruction set
 
     void addInstruction()                                                       // Add the instruction to the instruction stack
-     {position = instructions.size();                                           // Position of instruction in stack of instructions
-      instructions.push(this);                                                  // Save instruction
+     {position = bitMachine.instructions.size();                                // Position of instruction in stack of instructions
+      bitMachine.instructions.push(this);                                      // Save instruction
      }
    }
 
@@ -809,7 +822,7 @@ public class BitMachine extends Test implements LayoutAble                      
 
 //D1 Debugging                                                                  // Print program
 
-  public String toString()                                                      // Print the program
+  String printProgram()                                                         // Print the program
    {final StringBuilder s = new StringBuilder();                                // Printed results
     s.append(String.format("%4s  %24s\n", "Line", "OpCode"));                   // Titles
     final int N = instructions.size();                                          // Number of instructions
@@ -819,6 +832,8 @@ public class BitMachine extends Test implements LayoutAble                      
      }
     return s.toString();
    }
+
+  public String toString() {return printProgram();}                             // Alternate name to make it easier to print a program
 
   class Say extends Instruction {Say() {}}                                      // Say something to help debug a program
   void  Say(Object...O) {say(printer, O);}                                      // Captured say
