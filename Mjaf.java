@@ -106,9 +106,11 @@ class Mjaf extends BitMachine                                                   
   static Mjaf mjaf(int Key, int Data, int MaxKeysPerLeaf, int size)             // Define a Btree with a specified maximum number of keys per leaf.
    {return new Mjaf(Key, Data, MaxKeysPerLeaf, size);
    }
+
+  void size     (Layout.Variable size) {copy(size, keyDataStored);}             // Number of entries in the tree
+  void emptyTree(Layout.Bit    result) {copy(result, hasNode); not(result);}    // Test for an empty tree
+
 /*
-  int     size     () {return keyDataStored.toInt();}                           // Number of entries in the tree
-  boolean emptyTree() {return root.isNull();}                                   // Test for an empty tree
 
   public String toString()                                                      // Convert tree to string
    {final StringBuilder b = new StringBuilder();
