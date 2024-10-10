@@ -151,15 +151,17 @@ class Stuck extends BitMachine implements LayoutAble                            
    {copy(target, index);                                                        // Target of removal
     copy(source, target);                                                       // Source of removeal
     shiftLeftOneByOne(source);                                                  // One step down on source
-    final Branch test = branchIfAllOnes(source);                                // Test for finish of shifting phase
-      setIndexFromUnary(array, source);                                         // Index of source
-      copy(buffer, element);                                                    // Copy source into buffer
-      setIndexFromUnary(array, target);                                         // Index of target
-      copy(element, buffer);                                                    // Copy copy of osurce into target slot
-      shiftLeftOneByOne(target);                                                // One step down on target
-      shiftLeftOneByOne(source);                                                // One step down on source
-    goTo(test);                                                                 // Restart shifting loop
-    comeFrom(test);                                                             // Finished shift down
+    new Repeat()
+     {void code()
+       {returnIfAllOnes(source);                                                // Test for finish of shifting phase
+        setIndexFromUnary(array, source);                                       // Index of source
+        copy(buffer, element);                                                  // Copy source into buffer
+        setIndexFromUnary(array, target);                                       // Index of target
+        copy(element, buffer);                                                  // Copy copy of osurce into target slot
+        shiftLeftOneByOne(target);                                              // One step down on target
+        shiftLeftOneByOne(source);                                              // One step down on source
+       }
+     };
     unary.dec();                                                                // New number of elements on stuck
    }
 
