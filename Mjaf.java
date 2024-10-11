@@ -190,6 +190,25 @@ class Mjaf extends BitMachine                                                   
      }
    }
 
+  boolean joinable(Layout.Variable source, Layout.Variable target)              // Check that we can join two leaves
+   {
+     return nKeys() + a.nKeys() <= maxKeysPerLeaf;
+   }
+
+  void join(Leaf Join)                                                          // Join the specified leaf onto the end of this leaf
+   {final int K = nKeys(), J = Join.nKeys();                                    // Number of keys currently in node
+    if (!joinable(Join)) stop("Join of leaf has too many keys", K,
+      "+", J, "greater than", maxKeysPerLeaf);
+
+    for (int i = 0; i < J; i++)                                                 // Add each key/data from the leaf being joined
+     {final Key  k = Join.getKey(i);
+      final Data d = Join.getData(i);
+      pushKey(k);
+      pushData(d);
+     }
+    Join.free();                                                                // Free the leaf that was joined
+   }
+
 
 //D1 Node                                                                       // A branch or a leaf
 /*
