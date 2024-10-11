@@ -271,15 +271,26 @@ public class BitMachine extends Test implements LayoutAble                      
   Not not(Layout.Field Field) {return new Not(Field);}                          // Invert a field
 
   class UnaryFilled extends Instruction                                         // Check that two unary fields fill the maximum value allowed
-   {final Layout.Field f1, f2;                                                  // Unary fields
-    final Layout.Bit   result;                                                  // Result
+   {final int N, N1;
+    final Layout.Field f1, f2, im;                                              // Unary fields, intermediate result
+    final Layout.Bit   r;                                                       // Result
     UnaryFilled(Layout.Field F1, Layout.Field F2, Layout.Bit R)                 // Check that two unary fields fill the maximum value allowed
+     {F1.sameSize(F2);
+      f1 = F1; f2 = F2; r = R;
+      im = Layout.createVariable("im", N = f1.width); N1 = N - 1;               // Temporary work area
+     }
     void action()                                                               // Invert fields
-     {for (int i = 0; i < field.width; i++) field.set(i, !field.get(i));        // Invert the field bit by bit
+     {im.zero();
+      for (int i = 0; i < N; i++) if (f1.get(i)) im.set(   i, true);            // Invert the field bit by bit
+      for (int i = 0; i < N; i++) if (f2.get(i)) im.set(N1-i, true);            // Invert the field bit by bit
+      for (int i = 0; i < N; i++) if (!im.get(i))                               // Invert the field bit by bit
+       {r.set(false);
+        return;
+       }
+      r.set(true);                                                              // Invert the field bit by bit
      }
    }
-  UnaryFilled unaryFilled                                                       // Check that two unary fields fill the maximum value allowed
-   (Layout.Field F1, Layout.Field F2, Layout.Bit R)
+  UnaryFilled unaryFilled(Layout.Field F1, Layout.Field F2, Layout.Bit R)       // Check that two unary fields fill the maximum value allowed
    {return new UnaryFilled(F1, F2, R);
    }
 
@@ -1535,6 +1546,34 @@ V    8     4                  7     c
 """);
    }
 
+  static void test_unary_filled()
+   {Layout           l = new Layout();
+    Layout.Variable  a = l.variable("a", 4);
+    Layout.Variable  b = l.variable("b", 4);
+    Layout.Variable  c = l.variable("c", 4);
+    Layout.Bit      r1 = l.bit("r1");
+    Layout.Bit      r2 = l.bit("r2");
+    Layout.Structure s = l.structure("s", a, b, c, r1, r2);
+    l.layout(s);
+
+    a.fromUnary(1); b.fromUnary(1); c.fromUnary(3);
+
+    BitMachine m = new BitMachine();
+    m.unaryFilled(a, b, r1);
+    m.unaryFilled(a, c, r2);
+    m.execute();
+    //stop(l);
+    l.ok("""
+T   At  Wide  Index       Value   Field name
+S    0    14              10001   s
+V    0     4                  1     a
+V    4     4                  1     b
+V    8     4                  7     c
+B   12     1                  0     r1
+B   13     1                  1     r2
+""");
+   }
+
   static void oldTests()                                                        // Tests thought to be in good shape
    {test_zero_and_ones();
     test_invert();
@@ -1554,11 +1593,11 @@ V    8     4                  7     c
     test_block_bits();
     test_repeat();
     test_inc_dec();
+    test_unary_filled();
    }
 
   static void newTests()                                                        // Tests being worked on
    {oldTests();
-    test_inc_dec();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
