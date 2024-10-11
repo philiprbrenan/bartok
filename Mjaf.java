@@ -122,6 +122,10 @@ class Mjaf extends BitMachine                                                   
   void size     (Layout.Variable size) {copy(size, keyDataStored);}             // Number of entries in the tree
   void emptyTree(Layout.Bit    result) {copy(result, hasNode); not(result);}    // Test for an empty tree
 
+  void free(Layout.Variable index)                                              // Free the indexed node
+   {nodesFree.push(index.copy());
+   }
+
 //D1 Leaf                                                                       // Process a leaf
 
   void leafMake(Layout.Variable iLeaf)                                          // Convert a node to a new leaf
@@ -190,23 +194,23 @@ class Mjaf extends BitMachine                                                   
      }
    }
 
-  boolean joinable(Layout.Variable source, Layout.Variable target)              // Check that we can join two leaves
-   {
-     return nKeys() + a.nKeys() <= maxKeysPerLeaf;
+  void joinable                                                                 // Check that we can join two leaves
+   (Layout.Variable target, Layout.Variable source, Layout.Bit result)
+   {unaryFilled(source, target, result);
    }
 
-  void join(Leaf Join)                                                          // Join the specified leaf onto the end of this leaf
-   {final int K = nKeys(), J = Join.nKeys();                                    // Number of keys currently in node
-    if (!joinable(Join)) stop("Join of leaf has too many keys", K,
-      "+", J, "greater than", maxKeysPerLeaf);
-
-    for (int i = 0; i < J; i++)                                                 // Add each key/data from the leaf being joined
-     {final Key  k = Join.getKey(i);
-      final Data d = Join.getData(i);
-      pushKey(k);
-      pushData(d);
-     }
-    Join.free();                                                                // Free the leaf that was joined
+  void join(Layout.Variable target, Layout.Variable source)                     // Join the specified leaf onto the end of this leaf
+   {new Repeat()
+     {final Layout kd = leafKeyData.duplicate();                                // Key data pair bufer
+      void code()
+       {setIndex(nodes, source);
+        returnIfAllZero(leaf.unary.getLayoutField());                           // Exit then the source leaf has been emptied
+        leaf.shift(kd);
+        setIndex(nodes, target);
+        leaf.push(kd);
+       }
+     };
+    free(source);                                                               // Free the leaf that was joined
    }
 
 
