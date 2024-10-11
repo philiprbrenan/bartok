@@ -502,7 +502,14 @@ public class Layout extends Test implements LayoutAble                          
   Structure structure(String name, LayoutAble...ml)           {return new Structure(name, ml);}
   Union     union    (String name, LayoutAble...ml)           {return new Union    (name, ml);}
 
-//D0                                                                            // Tests: I test, therefore I am.  And so do my mentees.  But most other people, apparently, do not, they live in a half world lit by shadows in which they never know if their code actually works or not.
+  static Variable createVariable(String name, int width)                        // Create a single variable
+   {final Layout          l = new Layout();
+    final Layout.Variable v = l.variable(name, width);                          // New variable
+    l.layout(v);                                                                // Layout the variable
+    return l.top.toVariable();                                                  // Variable
+   }
+
+//D0                                                                            // Tests.
 
   static void test_1()
    {Layout    l = new Layout();
@@ -981,6 +988,16 @@ V   16     4                  4       d
 """);
    }
 
+  static void test_single_variable()
+   {Layout.Variable a = createVariable("a", 4);
+    a.fromInt(3);
+    //stop(a);
+    ok(a.toString(), """
+T   At  Wide  Index       Value   Field name
+V    0     4                  3   a
+""");
+   }
+
   static void oldTests()                                                        // Tests thought to be in good shape
    {test_1();
     test_memory();
@@ -991,11 +1008,11 @@ V   16     4                  4       d
     test_unary();
     test_duplicate();
     test_duplicate_sub_layout();
+    test_single_variable();
    }
 
   static void newTests()                                                        // Tests being worked on
    {oldTests();
-    test_duplicate_sub_layout();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
