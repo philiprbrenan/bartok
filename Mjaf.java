@@ -11,6 +11,7 @@ class Mjaf extends BitMachine                                                   
   final int maxKeysPerLeaf;                                                     // The maximum number of keys per leaf.  This should be an even number greater than three. The maximum number of keys per branch is one less. The normal Btree algorithm requires an odd number greater than two for both leaves and branches.  The difference arises because we only store data in leaves not in leaves and branches as does the classic Btree algorithm.
   final int maxKeysPerBranch;                                                   // The maximum number of keys per branch.
   final int maxNodes;                                                           // The maximum number of nodes in the tree
+  final int leafSplitPoint;                                                     // The point at which to split a leaf
 
   final Layout.Bit       hasNode;                                               // Tree has at least one node. Or perhaps use the fact that the nodes free stuck will not be full if there is  anode in the tree
   final Layout.Variable  nodesCreated;                                          // Number of nodes created
@@ -46,22 +47,23 @@ class Mjaf extends BitMachine                                                   
 
   Mjaf(int BitsPerKey, int BitsPerData, int MaxKeysPerLeaf, int size)           // Define a Btree with a specified maximum number of keys per leaf.
    {super();
-    final int N = MaxKeysPerLeaf;                                               // Assign a shorter name
-    bitsPerKey  = BitsPerKey;
-    bitsPerNext = BitsPerKey + 1;
-    bitsPerData = BitsPerData;
+    final int N      = MaxKeysPerLeaf;                                          // Assign a shorter name
+    bitsPerKey       = BitsPerKey;
+    bitsPerNext      = BitsPerKey + 1;
+    bitsPerData      = BitsPerData;
 
     if (N % 2 == 1) stop("# keys per leaf must be even not odd:", N);
     if (N     <= 3) stop("# keys per leaf must be greater than three, not:", N);
     maxKeysPerLeaf   = N;                                                       // Some even number
     maxKeysPerBranch = N-1;                                                     // Ideally should be some number that makes the leaf nodes and the branch nodes the same size
     maxNodes         = size;
+    leafSplitPoint   = N >> 1;                                                  // Point at which to split a leaf
 
     final Layout W   = work = new Layout();                                     // Layout of working memory
     leafSplitIdx     = W.new Variable ("leafSplitIdx",  N);                     // Index of leaf splitting key
     workStructure    = W.new Structure("workStructure", leafSplitIdx);          // An entry in a leaf node
     W.layout(workStructure);                                                    // Layout of a leaf key data pair
-    leafSplitIdx.fromUnary(maxKeysPerBranch >> 1);                              // Index of splitting key in leaf
+    leafSplitIdx.fromUnary(leafSplitPoint);                                     // Index of splitting key in leaf
 
     final Layout L   = layoutLeafKeyData = new Layout();                        // Layout of a leaf key data pair
     leafKey          = L.new Variable ("leafKey",  bitsPerKey);                 // Key in a leaf
@@ -93,8 +95,8 @@ class Mjaf extends BitMachine                                                   
     branch         = T.structure("branch",         branchStuck, topNode);       // Branch of the tree
 
     branchOrLeaf   = T.union    ("branchOrLeaf",   branch, leaf);               // Branch or leaf of the tree
-    isBranch       = T.variable ("isBranch",       1);                          // The node is a branch if true
-    isLeaf         = T.variable ("isLeaf",         1);                          // The node is a leaf if true
+    isBranch       = T.bit      ("isBranch");                                   // The node is a branch if true
+    isLeaf         = T.bit      ("isLeaf");                                     // The node is a leaf if true
     node           = T.structure("node",  isLeaf,  isBranch, branchOrLeaf);     // Node of the tree
     nodes          = T.array    ("nodes", node,    size);                       // Array of nodes comprising tree
     hasNode        = T.bit      ("hasNode");                                    // Tree has at least one node in it
@@ -122,6 +124,23 @@ class Mjaf extends BitMachine                                                   
 
 //D1 Leaf                                                                       // Process a leaf
 
+  void leafMake(Layout.Variable iLeaf)                                          // Convert a node to a new leaf
+   {setIndex(nodes, iLeaf);                                                     // Select the leaf to process
+    leaf.unary.zero();
+    isLeaf.ones();
+    isBranch.zero();
+   }
+
+  void leafGet(Layout.Variable iLeaf, Layout.Variable index, Layout kd)         // Get the specified key, data pair in the specified leaf
+   {setIndex(nodes, iLeaf);                                                     // Select the leaf to process
+    leaf.elementAt(kd, index);                                                  // Insert the key, data pair at the specified index in the specified leaf
+   }
+
+  void leafPut(Layout.Variable iLeaf, Layout.Variable index, Layout kd)         // Put the specified key, data pair from the specified leaf
+   {setIndex(nodes, iLeaf);                                                     // Select the leaf to process
+    leaf.setElementAt(kd, index);                                               // Insert the key, data pair at the specified index in the specified leaf
+   }
+
   void leafInsert(Layout.Variable iLeaf, Layout.Variable index, Layout kd)      // Place the specified key, data pair at the specified location in the specified leaf
    {setIndex(nodes, iLeaf);                                                     // Select the leaf to process
     leaf.insertElementAt(kd, index);                                            // Insert the key, data pair at the specified index in the specified leaf
@@ -146,6 +165,31 @@ class Mjaf extends BitMachine                                                   
    {setIndex(nodes, index);
     leaf.elementAt(out, leafSplitIdx);
    }
+
+  void leafPush(Layout.Variable index, Layout kd)                               // Push a key, data pair onto the indicated leaf
+   {setIndex(nodes, index);
+    leaf.push(kd);
+   }
+
+  void leafShift(Layout.Variable index, Layout kd)                              // Shift a key, data pair from the indicated leaf
+   {setIndex(nodes, index);
+    leaf.shift(kd);
+   }
+
+  void leafFindIndexOf                                                          // Find index of the specified key, data pair in the specified leaf
+   (Layout.Variable index, Layout kd, Layout.Bit found, Layout.Variable result)
+   {setIndex(nodes, index);
+    leaf.indexOf(kd, found, result);
+   }
+
+  void leafSplit(Layout.Variable source, Layout.Variable target, Layout kd)     // Source leaf, target leaf, transfer data
+   {leafMake(target);
+    for (int i = 0; i < leafSplitPoint; i++)                                    // Transfer keys, data pairs
+     {leafShift(source, kd);                                                    // Current key, data pair
+      leafPush (target, kd);                                                    // Save key, data pair
+     }
+   }
+
 
 //D1 Node                                                                       // A branch or a leaf
 /*
@@ -1391,7 +1435,7 @@ V   58     4                  0             unary
 """);
    }
 
-  static void test_create_leaf()
+  static void test_leaf()
    {final int W = 8, M = 4, N = 2;
     final String leaf = "tree.nodes.node.branchOrLeaf.leaf";
 
@@ -1401,7 +1445,8 @@ V   58     4                  0             unary
     Layout k1 = m.leafKeyData.getLayoutField().duplicate();
     Layout k2 = m.leafKeyData.getLayoutField().duplicate();
     Layout k3 = m.leafKeyData.getLayoutField().duplicate();
-    Layout k  = m.leafKeyData.getLayoutField().duplicate();
+    Layout K1 = m.leafKeyData.getLayoutField().duplicate();
+    Layout K2 = m.leafKeyData.getLayoutField().duplicate();
 
     String lk = "leafKeyData.leafKey";
     String ld = "leafKeyData.leafData";
@@ -1410,13 +1455,18 @@ V   58     4                  0             unary
     k2.get(lk).fromInt(3); k2.get(ld).fromInt(33);
     k3.get(lk).fromInt(4); k3.get(ld).fromInt(44);
 
-    Layout           t     = new Layout();
-    Layout.Variable  i0    = t.variable ("i0",  M), n0 = t.variable ("n0",  N); Layout.Bit e0 = t.bit("e0"), f0 = t.bit("f0");
-    Layout.Variable  i1    = t.variable ("i1",  M), n1 = t.variable ("n1",  N); Layout.Bit e1 = t.bit("e1"), f1 = t.bit("f1");
-    Layout.Variable  i2    = t.variable ("i2",  M), n2 = t.variable ("n2",  N); Layout.Bit e2 = t.bit("e2"), f2 = t.bit("f2");
-    Layout.Variable  i3    = t.variable ("i3",  M), n3 = t.variable ("n3",  N); Layout.Bit e3 = t.bit("e3"), f3 = t.bit("f3");
-                                                                                Layout.Bit e4 = t.bit("e4"), f4 = t.bit("f4");
-    Layout.Structure temp  = t.structure("struct", i0, i1, i2, i3, n0, n1, n2, n3, e0, e1, e2, e3, e4, f0, f1, f2, f3, f4);
+    Layout          t  = new Layout();
+    Layout.Variable i0 = t.variable ("i0",  M), n0 = t.variable ("n0",  N); Layout.Bit e0 = t.bit("e0"), f0 = t.bit("f0");
+    Layout.Variable i1 = t.variable ("i1",  M), n1 = t.variable ("n1",  N); Layout.Bit e1 = t.bit("e1"), f1 = t.bit("f1");
+    Layout.Variable i2 = t.variable ("i2",  M), n2 = t.variable ("n2",  N); Layout.Bit e2 = t.bit("e2"), f2 = t.bit("f2");
+    Layout.Variable i3 = t.variable ("i3",  M), n3 = t.variable ("n3",  N); Layout.Bit e3 = t.bit("e3"), f3 = t.bit("f3");
+                                                                            Layout.Bit e4 = t.bit("e4"), f4 = t.bit("f4");
+    Layout.Variable I0 = t.variable("I0", M);
+    Layout.Variable I1 = t.variable("I1", M);
+    Layout.Variable I2 = t.variable("I2", M);
+    Layout.Variable I3 = t.variable("I3", M);
+
+    Layout.Structure temp  = t.structure("struct", i0, i1, i2, i3, n0, n1, n2, n3, e0, e1, e2, e3, e4, f0, f1, f2, f3, f4, I0, I1, I2, I3);
     t.layout(temp);
 
     i0.fromUnary(0);  n0.fromInt(0);
@@ -1429,12 +1479,12 @@ V   58     4                  0             unary
     m.leafInsert(n0, i1, k1); m.leafInsert(n1, i0, k1); m.leafIsEmpty(n0, e2); m.leafIsFull(n0, f2);
     m.leafInsert(n0, i2, k2); m.leafInsert(n1, i0, k2); m.leafIsEmpty(n0, e3); m.leafIsFull(n0, f3);
     m.leafInsert(n0, i3, k3); m.leafInsert(n1, i0, k3); m.leafIsEmpty(n0, e4); m.leafIsFull(n0, f4);
-    m.leafSplitKey(n0, k);
+    m.leafSplitKey(n0, K1);
     m.execute();
 
     m.nodes.setIndex(0);
-    //stop(m.layout.get("tree.nodes.node.branchOrLeaf.leaf"));
-    m.layout.get("tree.nodes.node.branchOrLeaf.leaf").copy().ok("""
+    //stop(m.layout.get(leaf));
+    m.layout.get(leaf).copy().ok("""
 T   At  Wide  Index       Value   Field name
 S   50    68                              leaf
 A   50    64      0                         array
@@ -1482,7 +1532,7 @@ V  184     4                 15             unary
     //stop(t);
     t.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    34                      struct
+S    0    50                      struct
 V    0     4                  0     i0
 V    4     4                  1     i1
 V    8     4                  3     i2
@@ -1501,13 +1551,17 @@ B   30     1                  0     f1
 B   31     1                  0     f2
 B   32     1                  0     f3
 B   33     1                  1     f4
+V   34     4                  0     I0
+V   38     4                  0     I1
+V   42     4                  0     I2
+V   46     4                  0     I3
 """);
 
-    k.ok("""
+    K1.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    16               5634   leafKeyData
-V    0     8                  2     leafKey
-V    8     8                 22     leafData
+S    0    16               8451   leafKeyData
+V    0     8                  3     leafKey
+V    8     8                 33     leafData
 """);
 
     m.instructions.clear();
@@ -1515,6 +1569,7 @@ V    8     8                 22     leafData
     m.execute();
 
     m.nodes.setIndex(1);
+    //stop(m.layout.get(leaf).copy());
     m.layout.get(leaf).copy().ok("""
 T   At  Wide  Index       Value   Field name
 S  120    68                              leaf
@@ -1563,11 +1618,186 @@ V  168     8                  1                 leafKey
 V  176     8                 11                 leafData
 V  184     4                  3             unary
 """);
+
+    m.instructions.clear();
+    m.leafPush(n1, k1);
+    m.execute();
+    //stop(m.layout.get(leaf).copy());
+
+    m.layout.get(leaf).copy().ok("""
+T   At  Wide  Index       Value   Field name
+S  120    68                              leaf
+A  120    64      0                         array
+S  120    16               8451               leafKeyData
+V  120     8                  3                 leafKey
+V  128     8                 33                 leafData
+A  136    64      1                         array
+S  136    16               2817               leafKeyData
+V  136     8                  1                 leafKey
+V  144     8                 11                 leafData
+A  152    64      2                         array
+S  152    16               5634               leafKeyData
+V  152     8                  2                 leafKey
+V  160     8                 22                 leafData
+A  168    64      3                         array
+S  168    16               2817               leafKeyData
+V  168     8                  1                 leafKey
+V  176     8                 11                 leafData
+V  184     4                  7             unary
+""");
+
+    m.instructions.clear();
+    m.leafShift(n1, K1);
+    m.execute();
+    //stop(k);
+
+    K1.ok("""
+T   At  Wide  Index       Value   Field name
+S    0    16               8451   leafKeyData
+V    0     8                  3     leafKey
+V    8     8                 33     leafData
+""");
+
+    //stop(m.layout.get(leaf));
+    m.layout.get(leaf).copy().ok("""
+T   At  Wide  Index       Value   Field name
+S  120    68                              leaf
+A  120    64      0                         array
+S  120    16               2817               leafKeyData
+V  120     8                  1                 leafKey
+V  128     8                 11                 leafData
+A  136    64      1                         array
+S  136    16               5634               leafKeyData
+V  136     8                  2                 leafKey
+V  144     8                 22                 leafData
+A  152    64      2                         array
+S  152    16               2817               leafKeyData
+V  152     8                  1                 leafKey
+V  160     8                 11                 leafData
+A  168    64      3                         array
+S  168    16               2817               leafKeyData
+V  168     8                  1                 leafKey
+V  176     8                 11                 leafData
+V  184     4                  3             unary
+""");
+
+    m.instructions.clear();
+    m.leafFindIndexOf(n1, k0, f0, I0);
+    m.leafFindIndexOf(n1, k1, f1, I1);
+    m.leafFindIndexOf(n1, k2, f2, I2);
+    m.leafFindIndexOf(n1, k3, f3, I3);
+    m.execute();
+
+    //stop(t);
+    f0.ok(1); f1.ok(1); f2.ok(0); f3.ok(0);
+    I0.ok(0); I1.ok(1);
+
+    m.instructions.clear();
+    m.leafPut(n1, i2, k2);
+    m.leafPut(n1, i3, k3);
+    m.execute();
+    //stop(m.layout.get(leaf));
+
+    m.layout.get(leaf).copy().ok("""
+T   At  Wide  Index       Value   Field name
+S  120    68                              leaf
+A  120    64      0                         array
+S  120    16               2817               leafKeyData
+V  120     8                  1                 leafKey
+V  128     8                 11                 leafData
+A  136    64      1                         array
+S  136    16               5634               leafKeyData
+V  136     8                  2                 leafKey
+V  144     8                 22                 leafData
+A  152    64      2                         array
+S  152    16               8451               leafKeyData
+V  152     8                  3                 leafKey
+V  160     8                 33                 leafData
+A  168    64      3                         array
+S  168    16              11268               leafKeyData
+V  168     8                  4                 leafKey
+V  176     8                 44                 leafData
+V  184     4                  3             unary
+""");
+
+    m.instructions.clear();
+    m.leafGet(n1, i2, K1);
+    m.leafGet(n1, i3, K2);
+    m.execute();
+
+    K1.ok("""
+T   At  Wide  Index       Value   Field name
+S    0    16               8451   leafKeyData
+V    0     8                  3     leafKey
+V    8     8                 33     leafData
+""");
+    K2.ok("""
+T   At  Wide  Index       Value   Field name
+S    0    16              11268   leafKeyData
+V    0     8                  4     leafKey
+V    8     8                 44     leafData
+""");
+
+    m.instructions.clear();
+    m.leafSplit(n0, n1, K1);
+    m.execute();
+
+    m.nodes.setIndex(0);
+    //stop(m.layout.get(leaf));
+
+    m.layout.get(leaf).copy().ok("""
+T   At  Wide  Index       Value   Field name
+S   50    68                              leaf
+A   50    64      0                         array
+S   50    16               8451               leafKeyData
+V   50     8                  3                 leafKey
+V   58     8                 33                 leafData
+A   66    64      1                         array
+S   66    16              11268               leafKeyData
+V   66     8                  4                 leafKey
+V   74     8                 44                 leafData
+A   82    64      2                         array
+S   82    16              11268               leafKeyData
+V   82     8                  4                 leafKey
+V   90     8                 44                 leafData
+A   98    64      3                         array
+S   98    16              11268               leafKeyData
+V   98     8                  4                 leafKey
+V  106     8                 44                 leafData
+V  114     4                  3             unary
+""");
+
+    m.nodes.setIndex(1);
+    //stop(m.layout.get(leaf));
+    m.isLeaf  .ok(1);
+    m.isBranch.ok(0);
+    m.layout.get(leaf).copy().ok("""
+T   At  Wide  Index       Value   Field name
+S  120    68                              leaf
+A  120    64      0                         array
+S  120    16               2817               leafKeyData
+V  120     8                  1                 leafKey
+V  128     8                 11                 leafData
+A  136    64      1                         array
+S  136    16               5634               leafKeyData
+V  136     8                  2                 leafKey
+V  144     8                 22                 leafData
+A  152    64      2                         array
+S  152    16               8451               leafKeyData
+V  152     8                  3                 leafKey
+V  160     8                 33                 leafData
+A  168    64      3                         array
+S  168    16              11268               leafKeyData
+V  168     8                  4                 leafKey
+V  176     8                 44                 leafData
+V  184     4                  3             unary
+""");
+
    }
 
   static void oldTests()                                                        // Tests thought to be in good shape
    {test_create_empty_tree();
-    test_create_leaf();
+    test_leaf();
     //test_create_branch();
     //test_join_branch();
     //test_create_leaf();
@@ -1581,7 +1811,7 @@ V  184     4                  3             unary
 
   static void newTests()                                                        // Tests being worked on
    {//oldTests();
-    test_create_leaf();
+    test_leaf();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
