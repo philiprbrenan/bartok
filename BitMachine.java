@@ -270,6 +270,19 @@ public class BitMachine extends Test implements LayoutAble                      
    }
   Not not(Layout.Field Field) {return new Not(Field);}                          // Invert a field
 
+  class UnaryFilled extends Instruction                                         // Check that two unary fields fill the maximum value allowed
+   {final Layout.Field f1, f2;                                                  // Unary fields
+    final Layout.Bit   result;                                                  // Result
+    UnaryFilled(Layout.Field F1, Layout.Field F2, Layout.Bit R)                 // Check that two unary fields fill the maximum value allowed
+    void action()                                                               // Invert fields
+     {for (int i = 0; i < field.width; i++) field.set(i, !field.get(i));        // Invert the field bit by bit
+     }
+   }
+  UnaryFilled unaryFilled                                                       // Check that two unary fields fill the maximum value allowed
+   (Layout.Field F1, Layout.Field F2, Layout.Bit R)
+   {return new UnaryFilled(F1, F2, R);
+   }
+
 //D1 Branch instructions                                                        // Instructions that alter the flow of execution of the code
 
 //D2 Constant comparison                                                        // Compare the value of a field  with a constant value to determine whether to branch or not
