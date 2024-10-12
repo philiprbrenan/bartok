@@ -46,7 +46,7 @@ class Mjaf extends BitMachine                                                   
 //D1 Construction                                                               // Create a Btree from nodes which can be branches or leaves.  The data associated with the Btree is stored only in the leaves opposite the keys
 
   Mjaf(int BitsPerKey, int BitsPerData, int MaxKeysPerLeaf, int size)           // Define a Btree with a specified maximum number of keys per leaf.
-   {super();
+   {super("Mjaf");
     final int N      = MaxKeysPerLeaf;                                          // Assign a shorter name
     bitsPerKey       = BitsPerKey;
     bitsPerNext      = BitsPerKey + 1;
@@ -83,13 +83,12 @@ class Mjaf extends BitMachine                                                   
     branchStuck    = new Stuck("branchStuck",                                   // Branch key, next pairs stuck
       maxKeysPerBranch, layoutBranchKeyNext);
 
-
     final Layout T = layout = new Layout();                                     // Tree level layout
     nodesCreated   = T.variable ("nodesCreated",   bitsPerNext);                // Number of nodes created
     keyDataStored  = T.variable ("keyDataStored",  bitsPerNext);                // Field to track number of keys stored in twos complement form hence an extra bit for the sign
     root           = T.variable ("root",           bitsPerNext);                // Root
-    nodeFree       = T.variable ("nodeFree",       bitsPerNext);                // Index of a free node as a positive binary integer
-    nodesFree      = new Stuck  ("free", size,     nodeFree.duplicate());       // Free nodes stuck
+    nodeFree       = T.variable ("nodeFree",       logTwo(size));               // Index of a free node as a positive binary integer
+    nodesFree      = new Stuck  ("nodesFree", size, nodeFree.duplicate());      // Free nodes stuck
 
     topNode        = T.variable ("topNode",        bitsPerNext);                // Next node if search key is greater than all keys in this node
     branch         = T.structure("branch",         branchStuck, topNode);       // Branch of the tree
@@ -112,7 +111,7 @@ class Mjaf extends BitMachine                                                   
      }
     nodesFree.unary.value.ones();                                               // The stuck is initially full of free nodes
 
-    bitMachine(nodesFree, branchStuck, leaf); bitMachines(this);                // Place all the instruction that woukld oether be generated in these anchines into this machine instead
+    bitMachine(nodesFree, branchStuck, leaf); bitMachines(this);                // Place all the instruction that would otherwise be generated in these machines into this machine instead
    }
 
   static Mjaf mjaf(int Key, int Data, int MaxKeysPerLeaf, int size)             // Define a Btree with a specified maximum number of keys per leaf.
@@ -122,8 +121,16 @@ class Mjaf extends BitMachine                                                   
   void size     (Layout.Variable size) {copy(size, keyDataStored);}             // Number of entries in the tree
   void emptyTree(Layout.Bit    result) {copy(result, hasNode); not(result);}    // Test for an empty tree
 
+  void allocate(Layout.Variable index)                                          // Allocate a node from the free node stack
+   {final Layout b = Layout.createVariable("binary", nodeFree.width);
+    nodesFree.pop(b);
+    convertBinaryToUnary(index, b.getLayoutField().toVariable());
+   }
+
   void free(Layout.Variable index)                                              // Free the indexed node
-   {nodesFree.push(index.copy());
+   {final Layout b = Layout.createVariable("unary", nodeFree.width);
+    convertUnaryToBinary(b.getLayoutField().toVariable(), index);
+    nodesFree.push(b);
    }
 
 //D1 Leaf                                                                       // Process a leaf
@@ -186,8 +193,10 @@ class Mjaf extends BitMachine                                                   
     leaf.indexOf(kd, found, result);
    }
 
-  void leafSplit(Layout.Variable source, Layout.Variable target, Layout kd)     // Source leaf, target leaf, transfer data
-   {leafMake(target);
+  void leafSplit(Layout.Variable source, Layout.Variable target)                // Source leaf, target leaf. After the leaf has been split the upper half will appear in the source and the loweer half in the target
+   {final Layout kd = leafKeyData.duplicate();                                  // Work area for transferring key data pairs form the source code to the target node
+
+    leafMake(target);
     for (int i = 0; i < leafSplitPoint; i++)                                    // Transfer keys, data pairs
      {leafShift(source, kd);                                                    // Current key, data pair
       leafPush (target, kd);                                                    // Save key, data pair
@@ -196,15 +205,20 @@ class Mjaf extends BitMachine                                                   
 
   void joinable                                                                 // Check that we can join two leaves
    (Layout.Variable target, Layout.Variable source, Layout.Bit result)
-   {unaryFilled(source, target, result);
+   {setIndex(nodes, target);                                                    // Index the target leaf
+    Layout.Variable t = leaf.unary.value.copy().getLayoutField().toVariable();  //
+    setIndex(nodes, source);
+    Layout.Variable s = leaf.unary.value.copy().getLayoutField().toVariable();
+
+    unaryFilled(s, t, result);
    }
 
   void join(Layout.Variable target, Layout.Variable source)                     // Join the specified leaf onto the end of this leaf
    {new Repeat()
-     {final Layout kd = leafKeyData.duplicate();                                // Key data pair bufer
-      void code()
+     {void code()
        {setIndex(nodes, source);
-        returnIfAllZero(leaf.unary.getLayoutField());                           // Exit then the source leaf has been emptied
+        returnIfAllZero(leaf.unary.value);                                      // Exit then the source leaf has been emptied
+        final Layout kd = leafKeyData.duplicate();                              // Key data pair buffer
         leaf.shift(kd);
         setIndex(nodes, target);
         leaf.push(kd);
@@ -1509,47 +1523,47 @@ V   58     4                  0             unary
     //stop(m.layout.get(leaf));
     m.layout.get(leaf).copy().ok("""
 T   At  Wide  Index       Value   Field name
-S   50    68                              leaf
-A   50    64      0                         array
-S   50    16               2817               leafKeyData
-V   50     8                  1                 leafKey
-V   58     8                 11                 leafData
-A   66    64      1                         array
-S   66    16               5634               leafKeyData
-V   66     8                  2                 leafKey
-V   74     8                 22                 leafData
-A   82    64      2                         array
-S   82    16               8451               leafKeyData
-V   82     8                  3                 leafKey
-V   90     8                 33                 leafData
-A   98    64      3                         array
-S   98    16              11268               leafKeyData
-V   98     8                  4                 leafKey
-V  106     8                 44                 leafData
-V  114     4                 15             unary
+S   34    68                              leaf
+A   34    64      0                         array
+S   34    16               2817               leafKeyData
+V   34     8                  1                 leafKey
+V   42     8                 11                 leafData
+A   50    64      1                         array
+S   50    16               5634               leafKeyData
+V   50     8                  2                 leafKey
+V   58     8                 22                 leafData
+A   66    64      2                         array
+S   66    16               8451               leafKeyData
+V   66     8                  3                 leafKey
+V   74     8                 33                 leafData
+A   82    64      3                         array
+S   82    16              11268               leafKeyData
+V   82     8                  4                 leafKey
+V   90     8                 44                 leafData
+V   98     4                 15             unary
 """);
     m.nodes.setIndex(1);
     //stop(m.layout.get(leaf));
     m.layout.get(leaf).copy().ok("""
 T   At  Wide  Index       Value   Field name
-S  120    68                              leaf
-A  120    64      0                         array
-S  120    16              11268               leafKeyData
-V  120     8                  4                 leafKey
-V  128     8                 44                 leafData
-A  136    64      1                         array
-S  136    16               8451               leafKeyData
-V  136     8                  3                 leafKey
-V  144     8                 33                 leafData
-A  152    64      2                         array
-S  152    16               5634               leafKeyData
-V  152     8                  2                 leafKey
-V  160     8                 22                 leafData
-A  168    64      3                         array
-S  168    16               2817               leafKeyData
-V  168     8                  1                 leafKey
-V  176     8                 11                 leafData
-V  184     4                 15             unary
+S  104    68                              leaf
+A  104    64      0                         array
+S  104    16              11268               leafKeyData
+V  104     8                  4                 leafKey
+V  112     8                 44                 leafData
+A  120    64      1                         array
+S  120    16               8451               leafKeyData
+V  120     8                  3                 leafKey
+V  128     8                 33                 leafData
+A  136    64      2                         array
+S  136    16               5634               leafKeyData
+V  136     8                  2                 leafKey
+V  144     8                 22                 leafData
+A  152    64      3                         array
+S  152    16               2817               leafKeyData
+V  152     8                  1                 leafKey
+V  160     8                 11                 leafData
+V  168     4                 15             unary
 """);
 
     //stop(t);
@@ -1588,6 +1602,11 @@ V    8     8                 33     leafData
 """);
 
     m.instructions.clear();
+    m.joinable(n1, n0, f0);
+    m.execute();
+    f0.ok(0);
+
+    m.instructions.clear();
     m.leafRemove(n1, i0);
     m.execute();
 
@@ -1595,24 +1614,24 @@ V    8     8                 33     leafData
     //stop(m.layout.get(leaf).copy());
     m.layout.get(leaf).copy().ok("""
 T   At  Wide  Index       Value   Field name
-S  120    68                              leaf
-A  120    64      0                         array
-S  120    16               8451               leafKeyData
-V  120     8                  3                 leafKey
-V  128     8                 33                 leafData
-A  136    64      1                         array
-S  136    16               5634               leafKeyData
-V  136     8                  2                 leafKey
-V  144     8                 22                 leafData
-A  152    64      2                         array
+S  104    68                              leaf
+A  104    64      0                         array
+S  104    16               8451               leafKeyData
+V  104     8                  3                 leafKey
+V  112     8                 33                 leafData
+A  120    64      1                         array
+S  120    16               5634               leafKeyData
+V  120     8                  2                 leafKey
+V  128     8                 22                 leafData
+A  136    64      2                         array
+S  136    16               2817               leafKeyData
+V  136     8                  1                 leafKey
+V  144     8                 11                 leafData
+A  152    64      3                         array
 S  152    16               2817               leafKeyData
 V  152     8                  1                 leafKey
 V  160     8                 11                 leafData
-A  168    64      3                         array
-S  168    16               2817               leafKeyData
-V  168     8                  1                 leafKey
-V  176     8                 11                 leafData
-V  184     4                  7             unary
+V  168     4                  7             unary
 """);
 
     m.instructions.clear();
@@ -1620,53 +1639,54 @@ V  184     4                  7             unary
     m.execute();
 
     m.nodes.setIndex(1);
+    //stop(m.layout.get(leaf).copy());
     m.layout.get(leaf).copy().ok("""
 T   At  Wide  Index       Value   Field name
-S  120    68                              leaf
-A  120    64      0                         array
-S  120    16               8451               leafKeyData
-V  120     8                  3                 leafKey
-V  128     8                 33                 leafData
-A  136    64      1                         array
+S  104    68                              leaf
+A  104    64      0                         array
+S  104    16               8451               leafKeyData
+V  104     8                  3                 leafKey
+V  112     8                 33                 leafData
+A  120    64      1                         array
+S  120    16               2817               leafKeyData
+V  120     8                  1                 leafKey
+V  128     8                 11                 leafData
+A  136    64      2                         array
 S  136    16               2817               leafKeyData
 V  136     8                  1                 leafKey
 V  144     8                 11                 leafData
-A  152    64      2                         array
+A  152    64      3                         array
 S  152    16               2817               leafKeyData
 V  152     8                  1                 leafKey
 V  160     8                 11                 leafData
-A  168    64      3                         array
-S  168    16               2817               leafKeyData
-V  168     8                  1                 leafKey
-V  176     8                 11                 leafData
-V  184     4                  3             unary
+V  168     4                  3             unary
 """);
 
     m.instructions.clear();
     m.leafPush(n1, k1);
     m.execute();
-    //stop(m.layout.get(leaf).copy());
 
+    //stop(m.layout.get(leaf).copy());
     m.layout.get(leaf).copy().ok("""
 T   At  Wide  Index       Value   Field name
-S  120    68                              leaf
-A  120    64      0                         array
-S  120    16               8451               leafKeyData
-V  120     8                  3                 leafKey
-V  128     8                 33                 leafData
-A  136    64      1                         array
-S  136    16               2817               leafKeyData
-V  136     8                  1                 leafKey
-V  144     8                 11                 leafData
-A  152    64      2                         array
-S  152    16               5634               leafKeyData
-V  152     8                  2                 leafKey
-V  160     8                 22                 leafData
-A  168    64      3                         array
-S  168    16               2817               leafKeyData
-V  168     8                  1                 leafKey
-V  176     8                 11                 leafData
-V  184     4                  7             unary
+S  104    68                              leaf
+A  104    64      0                         array
+S  104    16               8451               leafKeyData
+V  104     8                  3                 leafKey
+V  112     8                 33                 leafData
+A  120    64      1                         array
+S  120    16               2817               leafKeyData
+V  120     8                  1                 leafKey
+V  128     8                 11                 leafData
+A  136    64      2                         array
+S  136    16               5634               leafKeyData
+V  136     8                  2                 leafKey
+V  144     8                 22                 leafData
+A  152    64      3                         array
+S  152    16               2817               leafKeyData
+V  152     8                  1                 leafKey
+V  160     8                 11                 leafData
+V  168     4                  7             unary
 """);
 
     m.instructions.clear();
@@ -1684,24 +1704,24 @@ V    8     8                 33     leafData
     //stop(m.layout.get(leaf));
     m.layout.get(leaf).copy().ok("""
 T   At  Wide  Index       Value   Field name
-S  120    68                              leaf
-A  120    64      0                         array
-S  120    16               2817               leafKeyData
-V  120     8                  1                 leafKey
-V  128     8                 11                 leafData
-A  136    64      1                         array
-S  136    16               5634               leafKeyData
-V  136     8                  2                 leafKey
-V  144     8                 22                 leafData
-A  152    64      2                         array
+S  104    68                              leaf
+A  104    64      0                         array
+S  104    16               2817               leafKeyData
+V  104     8                  1                 leafKey
+V  112     8                 11                 leafData
+A  120    64      1                         array
+S  120    16               5634               leafKeyData
+V  120     8                  2                 leafKey
+V  128     8                 22                 leafData
+A  136    64      2                         array
+S  136    16               2817               leafKeyData
+V  136     8                  1                 leafKey
+V  144     8                 11                 leafData
+A  152    64      3                         array
 S  152    16               2817               leafKeyData
 V  152     8                  1                 leafKey
 V  160     8                 11                 leafData
-A  168    64      3                         array
-S  168    16               2817               leafKeyData
-V  168     8                  1                 leafKey
-V  176     8                 11                 leafData
-V  184     4                  3             unary
+V  168     4                  3             unary
 """);
 
     m.instructions.clear();
@@ -1719,28 +1739,28 @@ V  184     4                  3             unary
     m.leafPut(n1, i2, k2);
     m.leafPut(n1, i3, k3);
     m.execute();
-    //stop(m.layout.get(leaf));
 
+    //stop(m.layout.get(leaf));
     m.layout.get(leaf).copy().ok("""
 T   At  Wide  Index       Value   Field name
-S  120    68                              leaf
-A  120    64      0                         array
-S  120    16               2817               leafKeyData
-V  120     8                  1                 leafKey
-V  128     8                 11                 leafData
-A  136    64      1                         array
-S  136    16               5634               leafKeyData
-V  136     8                  2                 leafKey
-V  144     8                 22                 leafData
-A  152    64      2                         array
-S  152    16               8451               leafKeyData
-V  152     8                  3                 leafKey
-V  160     8                 33                 leafData
-A  168    64      3                         array
-S  168    16              11268               leafKeyData
-V  168     8                  4                 leafKey
-V  176     8                 44                 leafData
-V  184     4                  3             unary
+S  104    68                              leaf
+A  104    64      0                         array
+S  104    16               2817               leafKeyData
+V  104     8                  1                 leafKey
+V  112     8                 11                 leafData
+A  120    64      1                         array
+S  120    16               5634               leafKeyData
+V  120     8                  2                 leafKey
+V  128     8                 22                 leafData
+A  136    64      2                         array
+S  136    16               8451               leafKeyData
+V  136     8                  3                 leafKey
+V  144     8                 33                 leafData
+A  152    64      3                         array
+S  152    16              11268               leafKeyData
+V  152     8                  4                 leafKey
+V  160     8                 44                 leafData
+V  168     4                  3             unary
 """);
 
     m.instructions.clear();
@@ -1762,32 +1782,107 @@ V    8     8                 44     leafData
 """);
 
     m.instructions.clear();
-    m.leafSplit(n0, n1, K1);
+    m.leafSplit(n0, n1);
     m.execute();
 
     m.nodes.setIndex(0);
-    //stop(m.layout.get(leaf));
 
+    //stop(m.layout.get(leaf));
     m.layout.get(leaf).copy().ok("""
 T   At  Wide  Index       Value   Field name
-S   50    68                              leaf
-A   50    64      0                         array
-S   50    16               8451               leafKeyData
-V   50     8                  3                 leafKey
-V   58     8                 33                 leafData
-A   66    64      1                         array
+S   34    68                              leaf
+A   34    64      0                         array
+S   34    16               8451               leafKeyData
+V   34     8                  3                 leafKey
+V   42     8                 33                 leafData
+A   50    64      1                         array
+S   50    16              11268               leafKeyData
+V   50     8                  4                 leafKey
+V   58     8                 44                 leafData
+A   66    64      2                         array
 S   66    16              11268               leafKeyData
 V   66     8                  4                 leafKey
 V   74     8                 44                 leafData
-A   82    64      2                         array
+A   82    64      3                         array
 S   82    16              11268               leafKeyData
 V   82     8                  4                 leafKey
 V   90     8                 44                 leafData
-A   98    64      3                         array
-S   98    16              11268               leafKeyData
-V   98     8                  4                 leafKey
-V  106     8                 44                 leafData
-V  114     4                  3             unary
+V   98     4                  3             unary
+""");
+
+    m.nodes.setIndex(1);
+    m.isLeaf  .ok(1);
+    m.isBranch.ok(0);
+    //stop(m.layout.get(leaf));
+    m.layout.get(leaf).copy().ok("""
+T   At  Wide  Index       Value   Field name
+S  104    68                              leaf
+A  104    64      0                         array
+S  104    16               2817               leafKeyData
+V  104     8                  1                 leafKey
+V  112     8                 11                 leafData
+A  120    64      1                         array
+S  120    16               5634               leafKeyData
+V  120     8                  2                 leafKey
+V  128     8                 22                 leafData
+A  136    64      2                         array
+S  136    16               8451               leafKeyData
+V  136     8                  3                 leafKey
+V  144     8                 33                 leafData
+A  152    64      3                         array
+S  152    16              11268               leafKeyData
+V  152     8                  4                 leafKey
+V  160     8                 44                 leafData
+V  168     4                  3             unary
+""");
+
+    m.instructions.clear();
+    m.allocate(I0);
+    m.execute();
+
+    m.layout.get("tree.nodesFree").copy().ok("""
+T   At  Wide  Index       Value   Field name
+S    0     4                  6     nodesFree
+A    0     2      0           2       array
+V    0     1                  0         nodeFree
+A    1     2      1           2       array
+V    1     1                  1         nodeFree
+V    2     2                  1       unary
+""");
+    I0.copy().ok("""
+T   At  Wide  Index       Value   Field name
+V   34     4                  1     I0
+""");
+
+    m.instructions.clear();
+    m.joinable(n0, n1, f0);
+    m.join(n0, n1);
+    m.execute();
+
+    f0.ok(1);
+
+    m.nodes.setIndex(0);
+    //stop(m.layout.get(leaf));
+    m.layout.get(leaf).copy().ok("""
+T   At  Wide  Index       Value   Field name
+S   34    68                              leaf
+A   34    64      0                         array
+S   34    16               8451               leafKeyData
+V   34     8                  3                 leafKey
+V   42     8                 33                 leafData
+A   50    64      1                         array
+S   50    16              11268               leafKeyData
+V   50     8                  4                 leafKey
+V   58     8                 44                 leafData
+A   66    64      2                         array
+S   66    16               2817               leafKeyData
+V   66     8                  1                 leafKey
+V   74     8                 11                 leafData
+A   82    64      3                         array
+S   82    16               5634               leafKeyData
+V   82     8                  2                 leafKey
+V   90     8                 22                 leafData
+V   98     4                 15             unary
 """);
 
     m.nodes.setIndex(1);
@@ -1796,26 +1891,35 @@ V  114     4                  3             unary
     m.isBranch.ok(0);
     m.layout.get(leaf).copy().ok("""
 T   At  Wide  Index       Value   Field name
-S  120    68                              leaf
-A  120    64      0                         array
-S  120    16               2817               leafKeyData
-V  120     8                  1                 leafKey
-V  128     8                 11                 leafData
-A  136    64      1                         array
-S  136    16               5634               leafKeyData
-V  136     8                  2                 leafKey
-V  144     8                 22                 leafData
-A  152    64      2                         array
-S  152    16               8451               leafKeyData
-V  152     8                  3                 leafKey
-V  160     8                 33                 leafData
-A  168    64      3                         array
-S  168    16              11268               leafKeyData
-V  168     8                  4                 leafKey
-V  176     8                 44                 leafData
-V  184     4                  3             unary
+S  104    68                              leaf
+A  104    64      0                         array
+S  104    16               8451               leafKeyData
+V  104     8                  3                 leafKey
+V  112     8                 33                 leafData
+A  120    64      1                         array
+S  120    16              11268               leafKeyData
+V  120     8                  4                 leafKey
+V  128     8                 44                 leafData
+A  136    64      2                         array
+S  136    16              11268               leafKeyData
+V  136     8                  4                 leafKey
+V  144     8                 44                 leafData
+A  152    64      3                         array
+S  152    16              11268               leafKeyData
+V  152     8                  4                 leafKey
+V  160     8                 44                 leafData
+V  168     4                  0             unary
 """);
 
+    m.layout.get("tree.nodesFree").copy().ok("""
+T   At  Wide  Index       Value   Field name
+S    0     4                 14     nodesFree
+A    0     2      0           2       array
+V    0     1                  0         nodeFree
+A    1     2      1           2       array
+V    1     1                  1         nodeFree
+V    2     2                  3       unary
+""");
    }
 
   static void oldTests()                                                        // Tests thought to be in good shape
