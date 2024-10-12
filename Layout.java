@@ -502,11 +502,11 @@ public class Layout extends Test implements LayoutAble                          
   Structure structure(String name, LayoutAble...ml)           {return new Structure(name, ml);}
   Union     union    (String name, LayoutAble...ml)           {return new Union    (name, ml);}
 
-  static Variable createVariable(String name, int width)                        // Create a single variable
+  static Layout createVariable(String name, int width)                          // Create a single variable
    {final Layout          l = new Layout();
     final Layout.Variable v = l.variable(name, width);                          // New variable
     l.layout(v);                                                                // Layout the variable
-    return l.top.toVariable();                                                  // Variable
+    return l;                                                                   // Variable
    }
 
 //D0                                                                            // Tests.
@@ -989,7 +989,8 @@ V   16     4                  4       d
    }
 
   static void test_single_variable()
-   {Layout.Variable a = createVariable("a", 4);
+   {Layout A = createVariable("a", 4);
+    Layout.Variable a = A.getLayoutField().toVariable();
     a.fromInt(3);
     //stop(a);
     ok(a.toString(), """
