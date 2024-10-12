@@ -10,6 +10,7 @@ import java.util.*;
 
 public class BitMachine extends Test implements LayoutAble                      // A machine whose assembler code is just capable enough to manipulate a b-tree
  {final int maxSteps = 999;                                                     // Maximum number of steps to be executed
+  final String bitMachineName;                                                  // Thename of the bit amchine
   BitMachine bitMachine = this;                                                 // The bit machine in which to load instructions
   final StringBuilder printer = new StringBuilder();                            // Place test output here for comparison with expected values
   final Stack<BitMachine>  machines     = new Stack<>();                        // Machines that will generate instructions for this machine
@@ -22,13 +23,17 @@ public class BitMachine extends Test implements LayoutAble                      
   public Layout       getLayout     ()         {return layout;}                 // Layout associated with this bit machine
   void                setLayout(Layout Layout) {layout = Layout;}               // Set the layout associated with this bit machine
 
-  void bitMachine(BitMachine machine, BitMachine...subMachines)                 // Save machines this machine is dependent on
+  BitMachine(String Name) {bitMachineName = Name;}                              // Assign a name to the bit machine to assist debugging
+  BitMachine()            {bitMachineName = "BitMachine";}                      // Default name for bit machine
+  String getBitMachineName() {return bitMachine.bitMachineName;}                // Get the name of the bit machine that we are going to place generated code into
+
+  void bitMachine(BitMachine...subMachines)                                     // Save machines this machine is dependent on
    {for (BitMachine b : subMachines) machines.push(b);
    }
 
   void bitMachines(BitMachine machine)                                          // Have the sub machines put their instructions into this machine
    {for (BitMachine b : machines)
-     {b.bitMachine = machine;
+     {b.bitMachine = machine;                                                   // target this machine
       b.bitMachines(machine);
      }
    }
@@ -46,7 +51,7 @@ public class BitMachine extends Test implements LayoutAble                      
     step = 0;
     for(instructionIndex = 0; instructionIndex < N; ++instructionIndex)         // Instruction sequence
      {final Instruction i = instructions.elementAt(instructionIndex);
-//say("AAAA", step+1, instructionIndex, i.position, i.name);
+//say("XXXX", step+1, instructionIndex, i.position, i.name);
       i.action();
       trace();
       if (++step > maxSteps) stop("Terminating after", maxSteps, "steps");
@@ -271,27 +276,54 @@ public class BitMachine extends Test implements LayoutAble                      
   Not not(Layout.Field Field) {return new Not(Field);}                          // Invert a field
 
   class UnaryFilled extends Instruction                                         // Check that two unary fields fill the maximum value allowed
-   {final int N, N1;
-    final Layout.Field f1, f2, im;                                              // Unary fields, intermediate result
+   {final int N;                                                                // Width of fields to test
+    final Layout.Field f1, f2;                                                  // Unary fields, intermediate result
     final Layout.Bit   r;                                                       // Result
     UnaryFilled(Layout.Field F1, Layout.Field F2, Layout.Bit R)                 // Check that two unary fields fill the maximum value allowed
      {F1.sameSize(F2);
       f1 = F1; f2 = F2; r = R;
-      im = Layout.createVariable("im", N = f1.width); N1 = N - 1;               // Temporary work area
+      N = f1.width;
      }
     void action()                                                               // Invert fields
-     {im.zero();
-      for (int i = 0; i < N; i++) if (f1.get(i)) im.set(   i, true);            // Invert the field bit by bit
-      for (int i = 0; i < N; i++) if (f2.get(i)) im.set(N1-i, true);            // Invert the field bit by bit
-      for (int i = 0; i < N; i++) if (!im.get(i))                               // Invert the field bit by bit
-       {r.set(false);
-        return;
-       }
-      r.set(true);                                                              // Invert the field bit by bit
+     {int n = 0;
+      for (int i = 0; i < N; i++) if (f1.get(i)) ++n;                           // Count bits in the first field
+      for (int i = 0; i < N; i++) if (f2.get(i)) ++n;                           // Count bits in the second field
+      r.set(n == N);                                                            // Invert the field bit by bit
      }
    }
   UnaryFilled unaryFilled(Layout.Field F1, Layout.Field F2, Layout.Bit R)       // Check that two unary fields fill the maximum value allowed
    {return new UnaryFilled(F1, F2, R);
+   }
+
+  class ConvertUnaryToBinary extends Instruction                                // Convert a unary value to binary
+   {final Layout.Variable source, target;                                       // Unary source, binary target
+    ConvertUnaryToBinary(Layout.Variable Target, Layout.Variable Source)        // Convert a unary value to binary
+     {source = Source; target = Target;
+     }
+    void action()                                                               // Invert fields
+     {int n = 0;
+      for (int i = 0; i < source.width; i++) if (source.get(i)) ++n;            // Count bits in unary
+      target.fromInt(n);
+     }
+   }
+  ConvertUnaryToBinary convertUnaryToBinary                                     // Check that two unary fields fill the maximum value allowed
+   (Layout.Variable target, Layout.Variable source)
+   {return new ConvertUnaryToBinary(target, source);
+   }
+
+  class ConvertBinaryToUnary extends Instruction                                // Convert a binary value to unary
+   {final Layout.Variable source, target;                                       // Unary source, binary target
+    ConvertBinaryToUnary(Layout.Variable Target, Layout.Variable Source)        // Convert a unary value to binary
+     {source = Source; target = Target;
+     }
+    void action()                                                               // Invert fields
+     {final int N = source.asInt();
+      for (int i = 0; i < target.width; i++) target.set(i, i < N);              // Count bits in unary
+     }
+   }
+  ConvertBinaryToUnary convertBinaryToUnary                                     // Convert binary to unary
+   (Layout.Variable target, Layout.Variable source)
+   {return new ConvertBinaryToUnary(target, source);
    }
 
 //D1 Branch instructions                                                        // Instructions that alter the flow of execution of the code
