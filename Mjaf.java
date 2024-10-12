@@ -204,7 +204,7 @@ class Mjaf extends BitMachine                                                   
      }
    }
 
-  void joinable                                                                 // Check that we can join two leaves
+  void leafJoinable                                                             // Check that we can join two leaves
    (Layout.Variable target, Layout.Variable source, Layout.Bit result)
    {setIndex(nodes, target);                                                    // Index the target leaf
     Layout.Variable t = leaf.unary.value.copy().getLayoutField().toVariable();  //
@@ -214,7 +214,7 @@ class Mjaf extends BitMachine                                                   
     unaryFilled(s, t, result);
    }
 
-  void join(Layout.Variable target, Layout.Variable source)                     // Join the specified leaf onto the end of this leaf
+  void leafJoin(Layout.Variable target, Layout.Variable source)                 // Join the specified leaf onto the end of this leaf
    {new Repeat()
      {void code()
        {setIndex(nodes, source);
@@ -1609,7 +1609,7 @@ V    8     8                 33     leafData
 """);
 
     m.instructions.clear();
-    m.joinable(n1, n0, f0);
+    m.leafJoinable(n1, n0, f0);
     m.execute();
     f0.ok(0);
 
@@ -1857,8 +1857,8 @@ V   52     2                  1     N1
 """);
 
     m.instructions.clear();
-    m.joinable(n0, N1, f0);
-    m.join(n0, N1);
+    m.leafJoinable(n0, N1, f0);
+    m.leafJoin(n0, N1);
     m.execute();
 
     f0.ok(1);
