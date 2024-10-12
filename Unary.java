@@ -14,7 +14,8 @@ class Unary extends BitMachine implements LayoutAble                            
 //D1 Construction                                                               // Create a unary number
 
   Unary(int Max)                                                                // Create a unary number of specified size
-   {if (Max <= 0) stop("Unary size must be at least one, not", Max);            // Size check
+   {super("Unary");
+    if (Max <= 0) stop("Unary size must be at least one, not", Max);            // Size check
     layout = new Layout();
     value  = layout.variable("unary", Max);                                     // The value of the unary number
     layout.layout(value);                                                       // Layout memory
