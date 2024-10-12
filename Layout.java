@@ -79,6 +79,10 @@ public class Layout extends Test implements LayoutAble                          
 
   void ok(String expected) {Test.ok(toString(), expected);}                     // Confirm layout is as expected
 
+  static void constants(Field...fields)                                         // Mark the specified fields as constants
+   {for (Field f : fields) f.constant = true;
+   }
+
 //D1 Bit Memory                                                                 // A bit is the element from which memory is constructed.
 
   void    set(int i, Boolean b) {       memory.setElementAt(b, i);}             // Set a bit in the sample memory. This method should be overridden to drive a more useful memory that captures more information about its bits than just their values.
@@ -206,7 +210,7 @@ public class Layout extends Test implements LayoutAble                          
 
     StringBuilder print(boolean printHeader)                                    // Print the field
      {final String  i = printInt();                                             // Format value of field if available
-      final String  n = indent()+ (constant ? name.toUpperCase() : name);       // Name using indentation to show depth
+      final String  n = indent()+(constant ? "=" : "") + name;                  // Name using indentation to show depth
       final char    c = fieldType();                                            // First letter of inner most class name to identify type of field
 
       final StringBuilder s = header(printHeader);                              // Print header if requested
@@ -306,10 +310,6 @@ public class Layout extends Test implements LayoutAble                          
       d.top.layout(0, 0);                                                       // Locate field positions relative to new top
       d.memory = d.new Memory();                                                // New memory
       return d;                                                                 // Duplicate
-     }
-
-    static void constants(Field...fields)                                       // Mark the specified fields as constants
-     {for (Field f : fields) f.constant = true;
      }
    }
 
@@ -1015,10 +1015,10 @@ V    0     4                  3   a
 T   At  Wide  Index       Value   Field name
 V    0     4                  3   a
 """);
-    Layout.Field.constants(a);
+    Layout.constants(a);
     ok(a.toString(), """
 T   At  Wide  Index       Value   Field name
-V    0     4                  3   A
+V    0     4                  3   =a
 """);
     //a.fromInt(4);
    }
