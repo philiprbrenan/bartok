@@ -29,7 +29,8 @@ class Stuck extends BitMachine implements LayoutAble                            
 //D1 Construction                                                               // Create a stuck
 
   Stuck(String Name, int Max, Layout repeat)                                    // Create the stuck with a maximum number of the specified elements
-   {name     = Name;                                                            // Name of stuck
+   {super(Name);
+    name     = Name;                                                            // Name of stuck
     max      = Max;                                                             // Maximum size
     width    = repeat.size();                                                   // Width of element of stuck
     unary    = Unary.unary(max);                                                // Unary number showing which elements in the stack are valid
@@ -46,7 +47,7 @@ class Stuck extends BitMachine implements LayoutAble                            
     temp     = tempLay.structure("structure", source, target, buffer);          // Temporary structure
     tempLay.layout(temp);                                                       // Layout of temporary storage
     temp.zero();                                                                // Clear temporary storage
-    bitMachine(this, unary); bitMachines(this);
+    bitMachine(unary); bitMachines(this);
    }
 
   static Stuck stuck(String Name, int Max, Layout Layout)                       // Create the stuck
