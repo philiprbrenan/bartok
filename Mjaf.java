@@ -135,11 +135,12 @@ class Mjaf extends BitMachine                                                   
 
 //D1 Leaf                                                                       // Process a leaf
 
-  void leafMake(Layout.Variable iLeaf)                                          // Convert a node to a new leaf
-   {setIndex(nodes, iLeaf);                                                     // Select the leaf to process
-    leaf.unary.zero();
-    isLeaf.ones();
-    isBranch.zero();
+  void leafMake(Layout.Variable iLeaf)                                          // Make a new leaf by taking a node off the free nodes stack and converting it into a branch
+   {allocate(iLeaf);                                                            // Allocate a new node
+    setIndex(nodes, iLeaf);                                                     // Select the leaf to process
+    leaf.unary.zero();                                                          // Clear leaf
+    ones(isLeaf);                                                               // Flag as a leaf
+    zero(isBranch);                                                             // Flag as not a branch
    }
 
   void leafGet(Layout.Variable iLeaf, Layout.Variable index, Layout kd)         // Get the specified key, data pair in the specified leaf
@@ -193,7 +194,7 @@ class Mjaf extends BitMachine                                                   
     leaf.indexOf(kd, found, result);
    }
 
-  void leafSplit(Layout.Variable source, Layout.Variable target)                // Source leaf, target leaf. After the leaf has been split the upper half will appear in the source and the loweer half in the target
+  void leafSplit(Layout.Variable target, Layout.Variable source)                // Source leaf, target leaf. After the leaf has been split the upper half will appear in the source and the loweer half in the target
    {final Layout kd = leafKeyData.duplicate();                                  // Work area for transferring key data pairs form the source code to the target node
 
     leafMake(target);
@@ -1377,7 +1378,7 @@ class Mjaf extends BitMachine                                                   
   static void test_create_empty_tree()
    {final int N = 2, M = 4;
     Mjaf m = mjaf(N, N, M, N);
-    //stop(m.layout);
+    stop(m.layout);
     m.layout.ok("""
 T   At  Wide  Index       Value   Field name
 S    0    62                  0   tree
@@ -1493,17 +1494,19 @@ V   58     4                  0             unary
     k3.get(lk).fromInt(4); k3.get(ld).fromInt(44);
 
     Layout          t  = new Layout();
-    Layout.Variable i0 = t.variable ("i0",  M), n0 = t.variable ("n0",  N); Layout.Bit e0 = t.bit("e0"), f0 = t.bit("f0");
-    Layout.Variable i1 = t.variable ("i1",  M), n1 = t.variable ("n1",  N); Layout.Bit e1 = t.bit("e1"), f1 = t.bit("f1");
-    Layout.Variable i2 = t.variable ("i2",  M), n2 = t.variable ("n2",  N); Layout.Bit e2 = t.bit("e2"), f2 = t.bit("f2");
-    Layout.Variable i3 = t.variable ("i3",  M), n3 = t.variable ("n3",  N); Layout.Bit e3 = t.bit("e3"), f3 = t.bit("f3");
-                                                                            Layout.Bit e4 = t.bit("e4"), f4 = t.bit("f4");
-    Layout.Variable I0 = t.variable("I0", M);
-    Layout.Variable I1 = t.variable("I1", M);
-    Layout.Variable I2 = t.variable("I2", M);
-    Layout.Variable I3 = t.variable("I3", M);
+    Layout.Variable i0 = t.variable("i0", M), n0 = t.variable("n0", N); Layout.Bit e0 = t.bit("e0"), f0 = t.bit("f0");
+    Layout.Variable i1 = t.variable("i1", M), n1 = t.variable("n1", N); Layout.Bit e1 = t.bit("e1"), f1 = t.bit("f1");
+    Layout.Variable i2 = t.variable("i2", M), n2 = t.variable("n2", N); Layout.Bit e2 = t.bit("e2"), f2 = t.bit("f2");
+    Layout.Variable i3 = t.variable("i3", M), n3 = t.variable("n3", N); Layout.Bit e3 = t.bit("e3"), f3 = t.bit("f3");
+                                                                        Layout.Bit e4 = t.bit("e4"), f4 = t.bit("f4");
+    Layout.Variable I0 = t.variable("I0", M), N0 = t.variable("N0", N);
+    Layout.Variable I1 = t.variable("I1", M), N1 = t.variable("N1", N);
+    Layout.Variable I2 = t.variable("I2", M), N2 = t.variable("N2", N);
+    Layout.Variable I3 = t.variable("I3", M), N3 = t.variable("N3", N);
 
-    Layout.Structure temp  = t.structure("struct", i0, i1, i2, i3, n0, n1, n2, n3, e0, e1, e2, e3, e4, f0, f1, f2, f3, f4, I0, I1, I2, I3);
+    Layout.Structure temp  = t.structure("struct",
+      i0, i1, i2, i3, n0, n1, n2, n3, e0, e1, e2, e3, e4, f0, f1, f2, f3, f4,
+      I0, I1, I2, I3, N0, N1, N2, N3);
     t.layout(temp);
 
     i0.fromUnary(0);  n0.fromInt(0);
@@ -1569,7 +1572,7 @@ V  168     4                 15             unary
     //stop(t);
     t.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    50                      struct
+S    0    58                      struct
 V    0     4                  0     i0
 V    4     4                  1     i1
 V    8     4                  3     i2
@@ -1592,6 +1595,10 @@ V   34     4                  0     I0
 V   38     4                  0     I1
 V   42     4                  0     I2
 V   46     4                  0     I3
+V   50     2                  0     N0
+V   52     2                  0     N1
+V   54     2                  0     N2
+V   56     2                  0     N3
 """);
 
     K1.ok("""
@@ -1782,11 +1789,10 @@ V    8     8                 44     leafData
 """);
 
     m.instructions.clear();
-    m.leafSplit(n0, n1);
+    m.leafSplit(N1, n0);
     m.execute();
 
     m.nodes.setIndex(0);
-
     //stop(m.layout.get(leaf));
     m.layout.get(leaf).copy().ok("""
 T   At  Wide  Index       Value   Field name
@@ -1836,10 +1842,6 @@ V  160     8                 44                 leafData
 V  168     4                  3             unary
 """);
 
-    m.instructions.clear();
-    m.allocate(I0);
-    m.execute();
-
     m.layout.get("tree.nodesFree").copy().ok("""
 T   At  Wide  Index       Value   Field name
 S    0     4                  6     nodesFree
@@ -1849,14 +1851,14 @@ A    1     2      1           2       array
 V    1     1                  1         nodeFree
 V    2     2                  1       unary
 """);
-    I0.copy().ok("""
+    N1.copy().ok("""
 T   At  Wide  Index       Value   Field name
-V   34     4                  1     I0
+V   52     2                  1     N1
 """);
 
     m.instructions.clear();
-    m.joinable(n0, n1, f0);
-    m.join(n0, n1);
+    m.joinable(n0, N1, f0);
+    m.join(n0, N1);
     m.execute();
 
     f0.ok(1);
