@@ -12,6 +12,7 @@ class Mjaf extends BitMachine                                                   
   final int maxKeysPerBranch;                                                   // The maximum number of keys per branch.
   final int maxNodes;                                                           // The maximum number of nodes in the tree
   final int leafSplitPoint;                                                     // The point at which to split a leaf
+  final int branchSplitPoint;                                                   // The point at which to split a branch
 
   final Layout.Bit       hasNode;                                               // Tree has at least one node. Or perhaps use the fact that the nodes free stuck will not be full if there is  anode in the tree
   final Layout.Variable  nodesCreated;                                          // Number of nodes created
@@ -39,7 +40,8 @@ class Mjaf extends BitMachine                                                   
   final Layout           layoutBranchKeyNext;                                   // Layout of a branch key next pair
   final Layout           layout;                                                // Layout of tree
 
-  final Layout.Variable  leafSplitIdx;                                          // Index of splitting key
+  final Layout.Variable  leafSplitIdx;                                          // Index of leaf splitting key
+  final Layout.Variable  branchSplitIdx;                                        // Index of branch splitting key
   final Layout.Structure workStructure;                                         // Work structure
   final Layout           work;                                                  // Memory work area for temporary, intermediate results
 
@@ -58,12 +60,17 @@ class Mjaf extends BitMachine                                                   
     maxKeysPerBranch = N-1;                                                     // Ideally should be some number that makes the leaf nodes and the branch nodes the same size
     maxNodes         = size;
     leafSplitPoint   = N >> 1;                                                  // Point at which to split a leaf
+    branchSplitPoint = N >> 1;                                                  // Point at which to split a branch
 
     final Layout W   = work = new Layout();                                     // Layout of working memory
-    leafSplitIdx     = W.new Variable ("leafSplitIdx",  N);                     // Index of leaf splitting key
-    workStructure    = W.new Structure("workStructure", leafSplitIdx);          // An entry in a leaf node
+    leafSplitIdx     = W.new Variable ("leafSplitIdx",   N);                    // Index of leaf splitting key
+    branchSplitIdx   = W.new Variable ("branchSplitIdx", N);                    // Index of branch splitting key
+    workStructure    = W.new Structure("workStructure",                         // An entry in a leaf node
+      leafSplitIdx, branchSplitIdx);
     W.layout(workStructure);                                                    // Layout of a leaf key data pair
     leafSplitIdx.fromUnary(leafSplitPoint);                                     // Index of splitting key in leaf
+    branchSplitIdx.fromUnary(branchSplitPoint);                                 // Index of splitting key in branch
+    Layout.constants(leafSplitIdx, branchSplitIdx);                             // Mark as constants
 
     final Layout L   = layoutLeafKeyData = new Layout();                        // Layout of a leaf key data pair
     leafKey          = L.new Variable ("leafKey",  bitsPerKey);                 // Key in a leaf
@@ -223,6 +230,101 @@ class Mjaf extends BitMachine                                                   
         leaf.shift(kd);
         setIndex(nodes, target);
         leaf.push(kd);
+       }
+     };
+    free(source);                                                               // Free the leaf that was joined
+   }
+
+//D1 Branch                                                                     // Process a branch
+
+  void branchMake(Layout.Variable iLeaf)                                        // Make a new leaf by taking a node off the free nodes stack and converting it into a branch
+   {allocate(iLeaf);                                                            // Allocate a new node
+    setIndex(nodes, iLeaf);                                                     // Select the leaf to process
+    branchStuck.unary.zero();                                                   // Clear leaf
+    ones(isLeaf);                                                               // Flag as a leaf
+    zero(isBranch);                                                             // Flag as not a branch
+   }
+
+  void branchGet(Layout.Variable iLeaf, Layout.Variable index, Layout kd)       // Get the specified key, data pair in the specified leaf
+   {setIndex(nodes, iLeaf);                                                     // Select the leaf to process
+    branchStuck.elementAt(kd, index);                                           // Insert the key, data pair at the specified index in the specified leaf
+   }
+
+  void branchPut(Layout.Variable iLeaf, Layout.Variable index, Layout kd)       // Put the specified key, data pair from the specified leaf
+   {setIndex(nodes, iLeaf);                                                     // Select the leaf to process
+    branchStuck.setElementAt(kd, index);                                        // Insert the key, data pair at the specified index in the specified leaf
+   }
+
+  void branchInsert(Layout.Variable iLeaf, Layout.Variable index, Layout kd)    // Place the specified key, data pair at the specified location in the specified leaf
+   {setIndex(nodes, iLeaf);                                                     // Select the leaf to process
+    branchStuck.insertElementAt(kd, index);                                     // Insert the key, data pair at the specified index in the specified leaf
+   }
+
+  void branchRemove(Layout.Variable iLeaf, Layout.Variable index)               // Remove the key, data pair at the specified location in the specified leaf
+   {setIndex(nodes, iLeaf);                                                     // Select the leaf to process
+    branchStuck.removeElementAt(index);                                         // Remove the key, data pair at the specified index in the specified leaf
+   }
+
+  void branchIsEmpty(Layout.Variable index, Layout.Bit result)                  // Leaf is empty
+   {setIndex(nodes, index);
+    branchStuck.unary.canNotDec(result);
+   }
+
+  void branchIsFull(Layout.Variable index, Layout.Bit result)                   // Leaf is full
+   {setIndex(nodes, index);
+    branchStuck.unary.canNotInc(result);
+   }
+
+  void branchSplitKey(Layout.Variable index, Layout out)                        // Splitting key in a leaf
+   {setIndex(nodes, index);
+    branchStuck.elementAt(out, branchSplitIdx);
+   }
+
+  void branchPush(Layout.Variable index, Layout kd)                             // Push a key, data pair onto the indicated leaf
+   {setIndex(nodes, index);
+    branchStuck.push(kd);
+   }
+
+  void branchShift(Layout.Variable index, Layout kd)                            // Shift a key, data pair from the indicated leaf
+   {setIndex(nodes, index);
+    branchStuck.shift(kd);
+   }
+
+  void branchFindIndexOf                                                        // Find index of the specified key, data pair in the specified leaf
+   (Layout.Variable index, Layout kd, Layout.Bit found, Layout.Variable result)
+   {setIndex(nodes, index);
+    branchStuck.indexOf(kd, found, result);
+   }
+
+  void branchSplit(Layout.Variable target, Layout.Variable source)              // Source leaf, target branchStuck. After the leaf has been split the upper half will appear in the source and the loweer half in the target
+   {final Layout kd = leafKeyData.duplicate();                                  // Work area for transferring key data pairs form the source code to the target node
+
+    leafMake(target);
+    for (int i = 0; i < leafSplitPoint; i++)                                    // Transfer keys, data pairs
+     {leafShift(source, kd);                                                    // Current key, data pair
+      leafPush (target, kd);                                                    // Save key, data pair
+     }
+   }
+
+  void branchJoinable                                                           // Check that we can join two leaves
+   (Layout.Variable target, Layout.Variable source, Layout.Bit result)
+   {setIndex(nodes, target);                                                    // Index the target leaf
+    Layout.Variable t = branchStuck.unary.value.copy().getLayoutField().toVariable();  //
+    setIndex(nodes, source);
+    Layout.Variable s = branchStuck.unary.value.copy().getLayoutField().toVariable();
+
+    unaryFilled(s, t, result);
+   }
+
+  void branchJoin(Layout.Variable target, Layout.Variable source)               // Join the specified leaf onto the end of this leaf
+   {new Repeat()
+     {void code()
+       {setIndex(nodes, source);
+        returnIfAllZero(branchStuck.unary.value);                               // Exit then the source leaf has been emptied
+        final Layout kd = leafKeyData.duplicate();                              // Key data pair buffer
+        branchStuck.shift(kd);
+        setIndex(nodes, target);
+        branchStuck.push(kd);
        }
      };
     free(source);                                                               // Free the leaf that was joined
@@ -1513,6 +1615,7 @@ V   54     4                  0             unary
     i1.fromUnary(1);  n1.fromInt(1);
     i2.fromUnary(2);  n2.fromInt(2);
     i3.fromUnary(3);  n3.fromInt(3);
+    Layout.constants(i0, i1, i2, i3, n0, n1, n2, n3);
 
                                                         m.leafIsEmpty(n0, e0); m.leafIsFull(n0, f0);
     m.leafInsert(n0, i0, k0); m.leafInsert(n1, i0, k0); m.leafIsEmpty(n0, e1); m.leafIsFull(n0, f1);
@@ -1573,14 +1676,14 @@ V  168     4                 15             unary
     t.ok("""
 T   At  Wide  Index       Value   Field name
 S    0    58                      struct
-V    0     4                  0     i0
-V    4     4                  1     i1
-V    8     4                  3     i2
-V   12     4                  7     i3
-V   16     2                  0     n0
-V   18     2                  1     n1
-V   20     2                  2     n2
-V   22     2                  3     n3
+V    0     4                  0     =i0
+V    4     4                  1     =i1
+V    8     4                  3     =i2
+V   12     4                  7     =i3
+V   16     2                  0     =n0
+V   18     2                  1     =n1
+V   20     2                  2     =n2
+V   22     2                  3     =n3
 B   24     1                  1     e0
 B   25     1                  0     e1
 B   26     1                  0     e2
