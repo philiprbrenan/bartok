@@ -155,6 +155,7 @@ public class Layout extends Test implements LayoutAble                          
 
   abstract class Field implements LayoutAble                                    // Variable/Array/Structure/Union definition.
    {final String name;                                                          // Name of field
+    boolean  constant = false;                                                  // Whether the field can be modified
     int at;                                                                     // Offset of field from start of memory
     int width;                                                                  // Number of bits in a field
     int depth;                                                                  // Depth of field - the number of containing arrays/structures/unions above
@@ -205,7 +206,7 @@ public class Layout extends Test implements LayoutAble                          
 
     StringBuilder print(boolean printHeader)                                    // Print the field
      {final String  i = printInt();                                             // Format value of field if available
-      final String  n = indent()+name;                                          // Name using indentation to show depth
+      final String  n = indent()+ (constant ? name.toUpperCase() : name);       // Name using indentation to show depth
       final char    c = fieldType();                                            // First letter of inner most class name to identify type of field
 
       final StringBuilder s = header(printHeader);                              // Print header if requested
@@ -226,7 +227,10 @@ public class Layout extends Test implements LayoutAble                          
     Union     toUnion    () {return (Union)    this;}                           // Try to convert to a union
 
     Boolean get(int i)     {return Layout.this.get(at+i);}                      // Get a bit from this layout
-    void    set(int i, Boolean b) {Layout.this.set(at+i, b);}                   // Put a bit into this layout
+    void    set(int i, Boolean b)                                               // Put a bit into this layout as long as it os not a constant
+     {if (constant) stop("cannot modify constant:",name,"with value:",asInt()); // Complain if we try to set a field marked as constant
+      Layout.this.set(at+i, b);                                                 // Set this field
+     }
 
     public String asString()                                                    // Part of memory corresponding to this layout as a string of bits in low endian order
      {final StringBuilder s = new StringBuilder();
@@ -302,6 +306,10 @@ public class Layout extends Test implements LayoutAble                          
       d.top.layout(0, 0);                                                       // Locate field positions relative to new top
       d.memory = d.new Memory();                                                // New memory
       return d;                                                                 // Duplicate
+     }
+
+    static void constants(Field...fields)                                       // Mark the specified fields as constants
+     {for (Field f : fields) f.constant = true;
      }
    }
 
@@ -999,6 +1007,22 @@ V    0     4                  3   a
 """);
    }
 
+  static void test_constant()
+   {Layout A = createVariable("a", 4);
+    Layout.Variable a = A.getLayoutField().toVariable();
+    a.fromInt(3);
+    ok(a.toString(), """
+T   At  Wide  Index       Value   Field name
+V    0     4                  3   a
+""");
+    Layout.Field.constants(a);
+    ok(a.toString(), """
+T   At  Wide  Index       Value   Field name
+V    0     4                  3   A
+""");
+    //a.fromInt(4);
+   }
+
   static void oldTests()                                                        // Tests thought to be in good shape
    {test_1();
     test_memory();
@@ -1010,6 +1034,7 @@ V    0     4                  3   a
     test_duplicate();
     test_duplicate_sub_layout();
     test_single_variable();
+    test_constant();
    }
 
   static void newTests()                                                        // Tests being worked on
