@@ -2305,6 +2305,7 @@ V    2     2                  3       unary
   static void oldTests()                                                        // Tests thought to be in good shape
    {create_tree();
     test_leaf_make();
+    test_branch_make();
     test_leaf_split_key();
     test_branch_split_key();
     //test_leaf();
@@ -2321,7 +2322,6 @@ V    2     2                  3       unary
 
   static void newTests()                                                        // Tests being worked on
    {oldTests();
-    test_branch_make();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
