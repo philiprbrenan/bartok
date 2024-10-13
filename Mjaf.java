@@ -1702,7 +1702,7 @@ V  351     4                 15             unary     tree.nodes.node.branchOrLe
     //stop(n);
     n.copy().ok("""
 T   At  Wide  Index       Value   Field name
-B    0     2                  2   nodeFree     nodeFree
+V    0     2                  2   nodeFree     nodeFree
 """);
     //stop(l);
     l.copy().ok("""
@@ -1720,7 +1720,7 @@ B    0     1                  0   isBranch     isBranch
     //stop(n);
     n.copy().ok("""
 T   At  Wide  Index       Value   Field name
-B    0     2                  1   nodeFree     nodeFree
+V    0     2                  1   nodeFree     nodeFree
 """);
    }
 
@@ -2320,7 +2320,7 @@ V    2     2                  3       unary
    }
 
   static void newTests()                                                        // Tests being worked on
-   {//oldTests();
+   {oldTests();
     test_branch_make();
    }
 
