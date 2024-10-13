@@ -239,8 +239,8 @@ class Mjaf extends BitMachine                                                   
    {allocate(iBranch);                                                          // Allocate a new node
     setIndex(nodes, iBranch);                                                   // Select the leaf to process
     leaf.unary.zero();                                                          // Clear leaf
-    zero(isBranch);                                                             // Flag as a branch
-    ones(isBranch);                                                             // Flag as not a leaf
+    zero(isLeaf);                                                               // Flag as not a leaf
+    ones(isBranch);                                                             // Flag as a branch
    }
 
   void branchSplitKey(Layout.Variable index, LayoutAble out)                    // Splitting key in a branch
@@ -1552,14 +1552,14 @@ class Mjaf extends BitMachine                                                   
     m.layout.ok("""
 T   At  Wide  Index       Value   Field name
 S    0   355                      tree     tree
-S    0     9                228     nodesFree     tree.nodesFree
+S    0     9                484     nodesFree     tree.nodesFree
 A    0     6      0          36       array     tree.nodesFree.array
 V    0     2                  0         nodeFree     tree.nodesFree.array.nodeFree
 A    2     6      1          36       array     tree.nodesFree.array
 V    2     2                  1         nodeFree     tree.nodesFree.array.nodeFree
 A    4     6      2          36       array     tree.nodesFree.array
 V    4     2                  2         nodeFree     tree.nodesFree.array.nodeFree
-V    6     3                  3       unary     tree.nodesFree.unary
+V    6     3                  7       unary     tree.nodesFree.unary
 V    9    13                  3     nodesCreated     tree.nodesCreated
 V   22    13                  3     keyDataStored     tree.keyDataStored
 V   35    13                  1     root     tree.root
@@ -1688,17 +1688,70 @@ V  351     4                 15             unary     tree.nodes.node.branchOrLe
   static void test_leaf_make()                                                  // Make a new leaf
    {Mjaf m = create_tree();
     String N = "tree.nodesFree.array.nodeFree";                                 // The name of free node index
+    String L = "tree.nodes.node.isLeaf";                                        // Is leaf flag
+    String B = "tree.nodes.node.isBranch";                                      // Is branch flag
     Layout          t = m.layout;                                               // Tree layout
     Layout.Variable n = t.get(N).duplicate().asLayoutField().toVariable();      // Create index variable
+    Layout.Variable l = t.get(L).duplicate().asLayoutField().toVariable();      // Create is leaf flag
+    Layout.Variable b = t.get(B).duplicate().asLayoutField().toVariable();      // Create is branch flag
+
+    m.leafMake(n);                                                              // Choose the node
+    m.copy(l, m.isLeaf);                                                        // Copy its leaf flag
+    m.copy(b, m.isBranch);                                                      // Copy its branch flag
+    m.execute();                                                                // Execute the code to copy out the splitting key
+    //stop(n);
+    n.copy().ok("""
+T   At  Wide  Index       Value   Field name
+V    0     2                  2   nodeFree     nodeFree
+""");
+    //stop(l);
+    l.copy().ok("""
+T   At  Wide  Index       Value   Field name
+V    0     1                  1   isLeaf     isLeaf
+""");
+    //stop(b);
+    b.copy().ok("""
+T   At  Wide  Index       Value   Field name
+V    0     1                  0   isBranch     isBranch
+""");
 
     m.leafMake(n);                                                              // Choose the node
     m.execute();                                                                // Execute the code to copy out the splitting key
-    stop(n);
-    n.asLayout().ok("""
+    //stop(n);
+    n.copy().ok("""
 T   At  Wide  Index       Value   Field name
-S    0    24              20484   leafKeyData     leafKeyData
-V    0    12                  4     leafKey     leafKeyData.leafKey
-V   12    12                  5     leafData     leafKeyData.leafData
+V    0     2                  1   nodeFree     nodeFree
+""");
+   }
+
+  static void test_branch_make()                                                // Make a new branch
+   {Mjaf m = create_tree();
+    String N = "tree.nodesFree.array.nodeFree";                                 // The name of free node index
+    String L = "tree.nodes.node.isLeaf";                                        // Is leaf flag
+    String B = "tree.nodes.node.isBranch";                                      // Is branch flag
+    Layout          t = m.layout;                                               // Tree layout
+    Layout.Variable n = t.get(N).duplicate().asLayoutField().toVariable();      // Create index variable
+    Layout.Variable l = t.get(L).duplicate().asLayoutField().toVariable();      // Create is leaf flag
+    Layout.Variable b = t.get(B).duplicate().asLayoutField().toVariable();      // Create is branch flag
+
+    m.branchMake(n);                                                            // Choose the node
+    m.copy(l, m.isLeaf);                                                        // Copy its leaf flag
+    m.copy(b, m.isBranch);                                                      // Copy its branch flag
+    m.execute();                                                                // Execute the code to copy out the splitting key
+    //stop(n);
+    n.copy().ok("""
+T   At  Wide  Index       Value   Field name
+V    0     2                  2   nodeFree     nodeFree
+""");
+    //stop(l);
+    l.copy().ok("""
+T   At  Wide  Index       Value   Field name
+V    0     1                  0   isLeaf     isLeaf
+""");
+    //stop(b);
+    b.copy().ok("""
+T   At  Wide  Index       Value   Field name
+V    0     1                  1   isBranch     isBranch
 """);
    }
 
@@ -2251,6 +2304,7 @@ V    2     2                  3       unary
 
   static void oldTests()                                                        // Tests thought to be in good shape
    {create_tree();
+    test_leaf_make();
     test_leaf_split_key();
     test_branch_split_key();
     //test_leaf();
@@ -2267,7 +2321,7 @@ V    2     2                  3       unary
 
   static void newTests()                                                        // Tests being worked on
    {//oldTests();
-    test_leaf_make();
+    test_branch_make();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
