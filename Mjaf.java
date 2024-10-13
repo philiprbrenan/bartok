@@ -1693,7 +1693,7 @@ V  351     4                 15             unary     tree.nodes.node.branchOrLe
     Layout          t = m.layout;                                               // Tree layout
     Layout.Variable n = t.get(N).duplicate().asLayoutField().toVariable();      // Create index variable
     Layout.Variable l = t.get(L).duplicate().asLayoutField().toVariable();      // Create is leaf flag
-    Layout.Variable b = t.get(B).duplicate().asLayoutField().toVariable();      // Create is branch flag
+    Layout.Bit      b = t.get(B).duplicate().asLayoutField().toBit();           // Create is branch flag
 
     m.leafMake(n);                                                              // Choose the node
     m.copy(l, m.isLeaf);                                                        // Copy its leaf flag
@@ -1702,17 +1702,17 @@ V  351     4                 15             unary     tree.nodes.node.branchOrLe
     //stop(n);
     n.copy().ok("""
 T   At  Wide  Index       Value   Field name
-V    0     2                  2   nodeFree     nodeFree
+B    0     2                  2   nodeFree     nodeFree
 """);
     //stop(l);
     l.copy().ok("""
 T   At  Wide  Index       Value   Field name
-V    0     1                  1   isLeaf     isLeaf
+B    0     1                  1   isLeaf     isLeaf
 """);
     //stop(b);
     b.copy().ok("""
 T   At  Wide  Index       Value   Field name
-V    0     1                  0   isBranch     isBranch
+B    0     1                  0   isBranch     isBranch
 """);
 
     m.leafMake(n);                                                              // Choose the node
@@ -1720,7 +1720,7 @@ V    0     1                  0   isBranch     isBranch
     //stop(n);
     n.copy().ok("""
 T   At  Wide  Index       Value   Field name
-V    0     2                  1   nodeFree     nodeFree
+B    0     2                  1   nodeFree     nodeFree
 """);
    }
 
@@ -1732,7 +1732,7 @@ V    0     2                  1   nodeFree     nodeFree
     Layout          t = m.layout;                                               // Tree layout
     Layout.Variable n = t.get(N).duplicate().asLayoutField().toVariable();      // Create index variable
     Layout.Variable l = t.get(L).duplicate().asLayoutField().toVariable();      // Create is leaf flag
-    Layout.Variable b = t.get(B).duplicate().asLayoutField().toVariable();      // Create is branch flag
+    Layout.Bit      b = t.get(B).duplicate().asLayoutField().toBit();           // Create is branch flag
 
     m.branchMake(n);                                                            // Choose the node
     m.copy(l, m.isLeaf);                                                        // Copy its leaf flag
@@ -1746,12 +1746,12 @@ V    0     2                  2   nodeFree     nodeFree
     //stop(l);
     l.copy().ok("""
 T   At  Wide  Index       Value   Field name
-V    0     1                  0   isLeaf     isLeaf
+B    0     1                  0   isLeaf     isLeaf
 """);
     //stop(b);
     b.copy().ok("""
 T   At  Wide  Index       Value   Field name
-V    0     1                  1   isBranch     isBranch
+B    0     1                  1   isBranch     isBranch
 """);
    }
 
