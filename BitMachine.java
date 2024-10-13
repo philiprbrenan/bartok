@@ -39,10 +39,21 @@ public class BitMachine extends Test implements LayoutAble                      
    }
 
   void setInstructionIndex(int index) {bitMachine.instructionIndex = index;}    // Set the instruction pointer in the top level bit machine
-
+  void reset() {printer.setLength(0); instructions.clear(); step = 0;}          // Reset the machine
   void trace() {}                                                               // Trace the execution
 
   void ok(String expected) {Test.ok(toString(), expected);}                     // Check the code for this machine is as expected
+
+  Layout.Variable getVariable(String name)                                      // Get a variable by name
+   {final Layout.Field l = layout.get(name);
+    if (l == null) stop("No such field as", name);
+    return l.toVariable();
+   }
+
+  void setVariable(String name, int value)                                      // Set a variable by name from a specified integer
+   {final Layout.Variable v = getVariable(name);                                // Address the variable
+    v.fromInt(value);                                                           // Set the variable
+   }
 
 //D1 Instruction                                                                // Instructions recognized by the bit machine
 
@@ -83,24 +94,36 @@ public class BitMachine extends Test implements LayoutAble                      
 
   class Copy extends Instruction                                                // Copy data from the second field to the first field
    {Layout.Field source, target;                                                // Copy source to target
-    final int sOff, tOff, length;                                               // Copy source to target
+    final int sOff, tOff, length;                                               // Offsets relative to source and target
+    final int sourceInt;                                                        // Copy a constant integer
+    Copy(Layout.Field Target, int Source)                                       // Copy source to target
+     {source = null; sourceInt = Source; target = Target;
+      sOff = 0; tOff = 0; length = 0;
+     }
     Copy(Layout.Field Target, Layout.Field Source)                              // Copy source to target
      {Source.sameSize(Target);
       source = Source; target = Target;
-      sOff = 0; tOff = 0; length = source.width;
+      sOff = 0; tOff = 0; length = source.width; sourceInt = 0;
      }
     Copy(Layout.Field Target, int TOff,                                         // Copy some bits from source plus offset to target plus offset
          Layout.Field Source, int SOff, int Length)
-     {source = Source; target = Target;
+     {source = Source; target = Target; sourceInt = 0;
       sOff = SOff; tOff = TOff; length = Length;
      }
     void action()                                                               // Perform instruction
-     {for(int i = length-1; i >= 0; i--)                                        // Copy each bit assuming no overlap
-       {final Boolean b = source.get(sOff+i);
-        target.set(tOff+i, b);
+     {if (source != null)                                                       // Copy from source field to target field
+       {for(int i = length-1; i >= 0; i--)                                      // Copy each bit assuming no overlap
+         {final Boolean b = source.get(sOff+i);
+          target.set(tOff+i, b);
+         }
        }
+      else target.fromInt(sourceInt);                                            // Copy from source integer
      }
    }
+  Copy copy(Layout.Field target, int source)                                    // Copy integer from source to target
+   {return new Copy(target, source);
+   }
+
   Copy copy(Layout.Field target, Layout.Field source)                           // Copy bits from source to target
    {return new Copy(target, source);
    }
@@ -650,6 +673,19 @@ public class BitMachine extends Test implements LayoutAble                      
    {return new SetIndex(Array, Index);
    }
 
+  class SetIndexFromInt extends Instruction                                     // Set the index of an array from a constant integer
+   {final Layout.Array array;                                                   // Array to index
+    final int          index;                                                   // Index
+    SetIndexFromInt(Layout.Array Array, int Index)                              // Array, index value
+     {array = Array;
+      index = Index;
+     }
+    void action() {array.setIndex(index);}                                      // Set index for the indicated array from the specified integer
+   }
+  SetIndexFromInt setIndexFromInt(Layout.Array Array, int Index)                // Array, index value
+   {return new SetIndexFromInt(Array, Index);
+   }
+
   class SetIndexFromUnary extends Instruction                                   // Set the index of an array from a field interpreted as a unary number
    {final Layout.Array    array;                                                // Array to index
     final Layout.Variable index;                                                // Index
@@ -919,9 +955,9 @@ public class BitMachine extends Test implements LayoutAble                      
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0     8                240   s
-V    0     4                  0     a
-V    4     4                 15     b
+S    0     8                240   s     s
+V    0     4                  0     a     s.a
+V    4     4                 15     b     s.b
 """);
    }
 
@@ -997,19 +1033,19 @@ V    4     4                 15     b
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    21            1397025   s
-V    0     4                  1     a
-V    4     4                  2     b
-V    8     4                  1     c
-B   12     1                  1     aa
-B   13     1                  0     ab
-B   14     1                  1     ac
-B   15     1                  0     ba
-B   16     1                  1     bb
-B   17     1                  0     bc
-B   18     1                  1     ca
-B   19     1                  0     cb
-B   20     1                  1     cc
+S    0    21            1397025   s     s
+V    0     4                  1     a     s.a
+V    4     4                  2     b     s.b
+V    8     4                  1     c     s.c
+B   12     1                  1     aa     s.aa
+B   13     1                  0     ab     s.ab
+B   14     1                  1     ac     s.ac
+B   15     1                  0     ba     s.ba
+B   16     1                  1     bb     s.bb
+B   17     1                  0     bc     s.bc
+B   18     1                  1     ca     s.ca
+B   19     1                  0     cb     s.cb
+B   20     1                  1     cc     s.cc
 """);
    }
 
@@ -1048,19 +1084,19 @@ B   20     1                  1     cc
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    21             532769   s
-V    0     4                  1     a
-V    4     4                  2     b
-V    8     4                  1     c
-B   12     1                  0     aa
-B   13     1                  1     ab
-B   14     1                  0     ac
-B   15     1                  0     ba
-B   16     1                  0     bb
-B   17     1                  0     bc
-B   18     1                  0     ca
-B   19     1                  1     cb
-B   20     1                  0     cc
+S    0    21             532769   s     s
+V    0     4                  1     a     s.a
+V    4     4                  2     b     s.b
+V    8     4                  1     c     s.c
+B   12     1                  0     aa     s.aa
+B   13     1                  1     ab     s.ab
+B   14     1                  0     ac     s.ac
+B   15     1                  0     ba     s.ba
+B   16     1                  0     bb     s.bb
+B   17     1                  0     bc     s.bc
+B   18     1                  0     ca     s.ca
+B   19     1                  1     cb     s.cb
+B   20     1                  0     cc     s.cc
 """);
    }
 
@@ -1099,19 +1135,19 @@ B   20     1                  0     cc
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    21            1929505   s
-V    0     4                  1     a
-V    4     4                  2     b
-V    8     4                  1     c
-B   12     1                  1     aa
-B   13     1                  1     ab
-B   14     1                  1     ac
-B   15     1                  0     ba
-B   16     1                  1     bb
-B   17     1                  0     bc
-B   18     1                  1     ca
-B   19     1                  1     cb
-B   20     1                  1     cc
+S    0    21            1929505   s     s
+V    0     4                  1     a     s.a
+V    4     4                  2     b     s.b
+V    8     4                  1     c     s.c
+B   12     1                  1     aa     s.aa
+B   13     1                  1     ab     s.ab
+B   14     1                  1     ac     s.ac
+B   15     1                  0     ba     s.ba
+B   16     1                  1     bb     s.bb
+B   17     1                  0     bc     s.bc
+B   18     1                  1     ca     s.ca
+B   19     1                  1     cb     s.cb
+B   20     1                  1     cc     s.cc
 """);
    }
 
@@ -1137,10 +1173,10 @@ B   20     1                  1     cc
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    12               1911   s
-V    0     4                  7     a
-V    4     4                  7     b
-V    8     4                  7     c
+S    0    12               1911   s     s
+V    0     4                  7     a     s.a
+V    4     4                  7     b     s.b
+V    8     4                  7     c     s.c
 """);
    }
 
@@ -1163,10 +1199,10 @@ V    8     4                  7     c
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0     6                 23   s
-V    0     4                  7     a
-B    4     1                  1     b
-B    5     1                  0     c
+S    0     6                 23   s     s
+V    0     4                  7     a     s.a
+B    4     1                  1     b     s.b
+B    5     1                  0     c     s.c
 """);
    }
 
@@ -1193,11 +1229,11 @@ B    5     1                  0     c
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    13                239   x
-B    0     1                  1     i
-V    1     4                  7     s
-V    5     4                  7     t
-V    9     4                  0     e
+S    0    13                239   x     x
+B    0     1                  1     i     x.i
+V    1     4                  7     s     x.s
+V    5     4                  7     t     x.t
+V    9     4                  0     e     x.e
 """);
    }
 
@@ -1224,11 +1260,11 @@ V    9     4                  0     e
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    13               3598   x
-B    0     1                  0     i
-V    1     4                  7     s
-V    5     4                  0     t
-V    9     4                  7     e
+S    0    13               3598   x     x
+B    0     1                  0     i     x.i
+V    1     4                  7     s     x.s
+V    5     4                  0     t     x.t
+V    9     4                  7     e     x.e
 """);
    }
 
@@ -1248,28 +1284,29 @@ V    9     4                  7     e
       b.fromInt(2*(i+2));
       c.fromInt(3*(i+3));
      }
+    //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-A    0    96      0               A
-S    0    24             590849     s
-V    0     8                  1       a
-V    8     8                  4       b
-V   16     8                  9       c
-A   24    96      1               A
-S   24    24             787970     s
-V   24     8                  2       a
-V   32     8                  6       b
-V   40     8                 12       c
-A   48    96      2               A
-S   48    24             985091     s
-V   48     8                  3       a
-V   56     8                  8       b
-V   64     8                 15       c
-A   72    96      3               A
-S   72    24            1182212     s
-V   72     8                  4       a
-V   80     8                 10       b
-V   88     8                 18       c
+A    0    96      0               A     A
+S    0    24             590849     s     A.s
+V    0     8                  1       a     A.s.a
+V    8     8                  4       b     A.s.b
+V   16     8                  9       c     A.s.c
+A   24    96      1               A     A
+S   24    24             787970     s     A.s
+V   24     8                  2       a     A.s.a
+V   32     8                  6       b     A.s.b
+V   40     8                 12       c     A.s.c
+A   48    96      2               A     A
+S   48    24             985091     s     A.s
+V   48     8                  3       a     A.s.a
+V   56     8                  8       b     A.s.b
+V   64     8                 15       c     A.s.c
+A   72    96      3               A     A
+S   72    24            1182212     s     A.s
+V   72     8                  4       a     A.s.a
+V   80     8                 10       b     A.s.b
+V   88     8                 18       c     A.s.c
 """);
     BitMachine m = new BitMachine();
     m.new For(A)
@@ -1294,26 +1331,26 @@ Line                    OpCode Target
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-A    0    96      0               A
-S    0    24             590081     s
-V    0     8                  1       a
-V    8     8                  1       b
-V   16     8                  9       c
-A   24    96      1               A
-S   24    24             786946     s
-V   24     8                  2       a
-V   32     8                  2       b
-V   40     8                 12       c
-A   48    96      2               A
-S   48    24             983811     s
-V   48     8                  3       a
-V   56     8                  3       b
-V   64     8                 15       c
-A   72    96      3               A
-S   72    24            1180676     s
-V   72     8                  4       a
-V   80     8                  4       b
-V   88     8                 18       c
+A    0    96      0               A     A
+S    0    24             590081     s     A.s
+V    0     8                  1       a     A.s.a
+V    8     8                  1       b     A.s.b
+V   16     8                  9       c     A.s.c
+A   24    96      1               A     A
+S   24    24             786946     s     A.s
+V   24     8                  2       a     A.s.a
+V   32     8                  2       b     A.s.b
+V   40     8                 12       c     A.s.c
+A   48    96      2               A     A
+S   48    24             983811     s     A.s
+V   48     8                  3       a     A.s.a
+V   56     8                  3       b     A.s.b
+V   64     8                 15       c     A.s.c
+A   72    96      3               A     A
+S   72    24            1180676     s     A.s
+V   72     8                  4       a     A.s.a
+V   80     8                  4       b     A.s.b
+V   88     8                 18       c     A.s.c
 """);
    }
 
@@ -1337,10 +1374,10 @@ V   88     8                 18       c
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    12                 51   s
-V    0     4                  3     a
-V    4     4                  3     b
-V    8     4                  0     c
+S    0    12                 51   s     s
+V    0     4                  3     a     s.a
+V    4     4                  3     b     s.b
+V    8     4                  0     c     s.c
 """);
    }
 
@@ -1387,7 +1424,7 @@ V    8     4                  0     c
     m.new Block() {void code() {returnIfGreaterThan       (b, a); m.copy(gt10, c);}};
     m.new Block() {void code() {returnIfGreaterThanOrEqual(b, a); m.copy(ge10, c);}};
     m.execute();
-    //stop(l);
+    stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
 S    0    84                      s
@@ -1528,7 +1565,7 @@ V    4     4                  1     b
     m.copy(c, a);
     m.comeFromComparison(e);
     m.execute();
-    //stop(l);
+    stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
 S    0    12                819   s
@@ -1568,7 +1605,7 @@ AAAA 3
 BBBB 4
 AAAA 4
 """);
-    //stop(l);
+    stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
 S    0    12               2047   s
@@ -1594,7 +1631,7 @@ V    8     4                  7     c
     m.unaryFilled(a, b, r1);
     m.unaryFilled(a, c, r2);
     m.execute();
-    //stop(l);
+    stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
 S    0    14              10001   s
@@ -1604,6 +1641,59 @@ V    8     4                  7     c
 B   12     1                  0     r1
 B   13     1                  1     r2
 """);
+   }
+
+  static void test_set_index()
+   {final int N = 4;
+    Layout           l = new Layout();
+    Layout.Variable  a = l.variable ("a", N);
+    Layout.Variable  b = l.variable ("b", N);
+    Layout.Variable  c = l.variable ("c", N);
+    Layout.Structure s = l.structure("s", a, b, c);
+    Layout.Array     A = l.array    ("A", s, N);
+    Layout.Variable  d = l.variable ("d", N);
+    Layout.Structure S = l.structure("S", A, d);
+    l.layout(S);
+
+    BitMachine m = new BitMachine();
+    for(int i = 0; i < N; ++i)
+     {m.setIndexFromInt(A, i);
+      m.copy(a, i+1);
+      m.copy(b, i+2);
+      m.copy(c, i+3);
+     }
+    m.execute();
+    stop(l);
+    l.ok("""
+T   At  Wide  Index       Value   Field name
+S    0    52                      S
+A    0    48      0                 A
+S    0    12                801       s
+V    0     4                  1         a
+V    4     4                  2         b
+V    8     4                  3         c
+A   12    48      1                 A
+S   12    12               1074       s
+V   12     4                  2         a
+V   16     4                  3         b
+V   20     4                  4         c
+A   24    48      2                 A
+S   24    12               1347       s
+V   24     4                  3         a
+V   28     4                  4         b
+V   32     4                  5         c
+A   36    48      3                 A
+S   36    12               1620       s
+V   36     4                  4         a
+V   40     4                  5         b
+V   44     4                  6         c
+V   48     4                  0     d
+""");
+
+    m.reset();  m.copy(d, 1); m.setIndex(A, d); m.copy(d, a); m.execute(); d.ok(2);
+    m.reset();  m.copy(d, 1); m.setIndex(A, d); m.copy(d, b); m.execute(); d.ok(3);
+    m.reset();  m.copy(d, 3); m.setIndex(A, d); m.copy(d, a); m.execute(); d.ok(4);
+    m.reset();  m.copy(d, 3); m.setIndex(A, d); m.copy(d, c); m.execute(); d.ok(6);
    }
 
   static void oldTests()                                                        // Tests thought to be in good shape
@@ -1630,6 +1720,7 @@ B   13     1                  1     r2
 
   static void newTests()                                                        // Tests being worked on
    {oldTests();
+    test_set_index();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
@@ -1641,6 +1732,6 @@ B   13     1                  1     r2
      {System.err.println(e);
       System.err.println(fullTraceBack(e));
      }
-    testExit(0);                                                                // Exit with a return code if we failed any tests to alert github
+    System.exit(testsFailed);
    }
  }
