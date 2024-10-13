@@ -12,6 +12,7 @@ public class Test                                                               
  {final static boolean github_actions =                                         // Whether we are on a github
     "true".equals(System.getenv("GITHUB_ACTIONS"));
   final static long start = System.nanoTime();                                  // Start time
+  final static Stack<String> sayThisOrStop = new Stack<>();                     // The next says should say this or else we should stop
 
 //D1 Utility routines                                                           // Utility routines
 
@@ -230,7 +231,19 @@ public class Test                                                               
         !Character.isWhitespace(s.charAt(0))) b.append(" ");
       b.append(s);
      }
-    if (b.length() > 0) System.err.println(b.toString());
+
+    if (sayThisOrStop.size() > 0)                                               // Convert the say into a stop if the expected message does not eventuate
+     {final String act = b.toString() .replace("\n", "\\n").trim();             // Message we actually got
+      final String exp = sayThisOrStop.removeFirst().replace("\n", "\\n").trim();// Message we expected
+      if (!exp.equals(act))                                                     // Expected message does not match what we have got
+       {stop("Actual message does not equal expected message:\n"+
+          act+" length("+act.length()+")\n"+
+          exp+" length("+exp.length()+")\n");
+       }
+//    else --testsFailed;                                                       // the fialing test did not actually fail becuase we got the message we expected
+     }
+
+    else if (b.length() > 0) System.err.println(b.toString());
    }
 
   static StringBuilder say(StringBuilder b, Object...O)                         // Say something in a string builder
@@ -272,14 +285,20 @@ public class Test                                                               
    }
 
   static void err(Object...O)                                                   // Say something and provide an error trace.
-   {say(O);
-    System.err.println(traceBack());
+   {final boolean testing = sayThisOrStop.size() > 0;                           // We are testing something that would normally stop the system
+    say(O);
+    if (!testing) System.err.println(traceBack());
    }
 
   static void stop(Object...O)                                                  // Say something, provide an error trace and stop
    {say(O);
     System.err.println(traceBack());
     System.exit(1);
+   }
+
+  static void sayThisOrStop(Object...O)                                         // The next things to be said
+   {sayThisOrStop.clear();
+    for (Object o : O) sayThisOrStop.push(o.toString());
    }
 
 //D1 Testing                                                                    // Test expected output against got output
@@ -396,16 +415,7 @@ public class Test                                                               
     else if (testsPassed == 0 && testsFailed == 0) say("No",    d);             // No tests
     else if (testsFailed == 0)   say("PASSed ALL", testsPassed, d);             // Passed all tests
     else say("Passed "+testsPassed+",    FAILed:", testsFailed, d);             // Failed some tests
-   }
-
-  static void testExit(int expectedFailures)                                    // Exit with a return code showing the number of failed tests if there were an unexpected number of failures
-   {if (expectedFailures == testsFailed)
-     {if (expectedFailures > 0) say("Failures are as expected");
-      System.exit(0);
-     }
-    say("Expected to fail", expectedFailures,
-        "tests, but actually failed", testsFailed);
-    System.exit(1);
+    System.exit(testsFailed > 0 ? 1 : 0);                                       // Set the return code
    }
 
 //D0                                                                            // Tests
@@ -429,7 +439,17 @@ BBDBB
 CCCCC
 """;
 
-    ok(e, g);
+
+    sayThisOrStop("""
+Character 2, expected=D= got=B=
+0----+----1----+----2----+----3----+----4----+----5----+----6
+AAAAA
+BBBBB
+  ^
+CCCCC
+""");
+
+    ok(e, g); --testsFailed;
    }
 
   static void oldTests()                                                        // Tests thought to be in good shape
@@ -439,7 +459,6 @@ CCCCC
 
   static void newTests()                                                        // Tests being worked on
    {oldTests();
-    test_max_min();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
@@ -451,6 +470,5 @@ CCCCC
      {System.err.println(e);
       System.err.println(fullTraceBack(e));
      }
-    testExit(1);                                                                // Exit with a return code if there was an unexpected number of failures
    }
  }
