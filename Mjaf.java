@@ -1677,87 +1677,89 @@ V  351     4                 15             unary     tree.nodes.node.branchOrLe
     return m;
    }
 
-  static void test_leaf_make()                                                  // Make a new leaf
-   {Mjaf            m = create_tree();                                          // Create a sample tree
-    Layout          t = m.layout;                                               // Tree layout
-    Layout.Variable n = t.dupVariable("tree.nodesFree.array.nodeFree");         // Create index variable
-    Layout.Variable l = t.dupVariable("tree.nodes.node.isLeaf");                // Create is leaf flag
-    Layout.Variable b = t.dupVariable("tree.nodes.node.isBranch");              // Create is branch flag
+  static class TestTree                                                         // Create a test tree
+   {Mjaf                  mjaf = create_tree();                                 // Create a sample tree
+    Layout                   t = mjaf.layout;                                   // Tree layout
+    Layout.Variable nodeIndex  = t.dupVariable("tree.nodesFree.array.nodeFree");// Create index variable
+    Layout.Variable leafFlag   = t.dupVariable("tree.nodes.node.isLeaf");       // Create is leaf flag
+    Layout.Variable branchFlag = t.dupVariable("tree.nodes.node.isBranch");     // Create is branch flag
+   }
 
-    m.leafMake(n);                                                              // Choose the node
-    m.copy(l, m.isLeaf);                                                        // Copy its leaf flag
-    m.copy(b, m.isBranch);                                                      // Copy its branch flag
+  static void test_leaf_make()                                                  // Make a new leaf
+   {TestTree        t = new TestTree();                                         // Create a test tree
+    Mjaf            m = t.mjaf;
+
+    m.leafMake(t.nodeIndex);                                                    // Choose the node
+    m.copy(t.leafFlag,   m.isLeaf);                                             // Copy its leaf flag
+    m.copy(t.branchFlag, m.isBranch);                                           // Copy its branch flag
     m.execute();                                                                // Execute the code to copy out the splitting key
-    //stop(n);
-    n.copy().ok("""
+    //stop(t.n);
+    t.nodeIndex.copy().ok("""
 T   At  Wide  Index       Value   Field name
 V    0     2                  2   nodeFree     nodeFree
 """);
-    //stop(l);                                                                  // Check Leaf
-    l.copy().ok("""
+    //stop(t.l);                                                                // Check Leaf
+    t.leafFlag.copy().ok("""
 T   At  Wide  Index       Value   Field name
 B    0     1                  1   isLeaf     isLeaf
 """);
-    //stop(b);                                                                  // Check not branch
-    b.copy().ok("""
+    //stop(t.b);                                                                // Check not branch
+    t.branchFlag.copy().ok("""
 T   At  Wide  Index       Value   Field name
 B    0     1                  0   isBranch     isBranch
 """);
 
     m.reset();                                                                  // Next leaf from a leaf
-    m.leafMake(n);                                                              // Choose the node
+    m.leafMake(t.nodeIndex);                                                    // Choose the node
     m.execute();                                                                // Execute the code to copy out the splitting key
-    //stop(n);
-    n.copy().ok("""
+    //stop(t.n);
+    t.nodeIndex.copy().ok("""
 T   At  Wide  Index       Value   Field name
 V    0     2                  1   nodeFree     nodeFree
 """);
 
     m.reset();                                                                  // Next leaf from a branch
-    m.leafMake(n);                                                              // Choose the node
-    m.copy(l, m.isLeaf);                                                        // Copy its leaf flag
-    m.copy(b, m.isBranch);                                                      // Copy its branch flag
+    m.leafMake(t.nodeIndex);                                                    // Choose the node
+    m.copy(t.leafFlag, m.isLeaf);                                               // Copy its leaf flag
+    m.copy(t.branchFlag, m.isBranch);                                           // Copy its branch flag
     m.execute();                                                                // Execute the code to copy out the splitting key
     //stop(n);
-    n.copy().ok("""
+    t.nodeIndex.copy().ok("""
 T   At  Wide  Index       Value   Field name
 V    0     2                  0   nodeFree     nodeFree
 """);
     //stop(l);                                                                  // Check Leaf
-    l.copy().ok("""
+    t.leafFlag.copy().ok("""
 T   At  Wide  Index       Value   Field name
 B    0     1                  1   isLeaf     isLeaf
 """);
     //stop(b);                                                                  // Check not branch
-    b.copy().ok("""
+    t.branchFlag.copy().ok("""
 T   At  Wide  Index       Value   Field name
 B    0     1                  0   isBranch     isBranch
 """);
    }
 
   static void test_branch_make()                                                // Make a new branch
-   {Mjaf            m = create_tree();                                          // Create a sample tree
-    Layout          t = m.layout;                                               // Tree layout
-    Layout.Variable n = t.dupVariable("tree.nodesFree.array.nodeFree");         // Create index variable
-    Layout.Variable l = t.dupVariable("tree.nodes.node.isLeaf");                // Create is leaf flag
-    Layout.Variable b = t.dupVariable("tree.nodes.node.isBranch");              // Create is branch flag
+   {TestTree        t = new TestTree();                                         // Create a test tree
+    Mjaf            m = t.mjaf;
 
-    m.branchMake(n);                                                            // Choose the node
-    m.copy(l, m.isLeaf);                                                        // Copy its leaf flag
-    m.copy(b, m.isBranch);                                                      // Copy its branch flag
+    m.branchMake(t.nodeIndex);                                                  // Choose the node
+    m.copy(t.leafFlag, m.isLeaf);                                               // Copy its leaf flag
+    m.copy(t.branchFlag, m.isBranch);                                           // Copy its branch flag
     m.execute();                                                                // Execute the code to copy out the splitting key
     //stop(n);
-    n.copy().ok("""
+    t.nodeIndex.copy().ok("""
 T   At  Wide  Index       Value   Field name
 V    0     2                  2   nodeFree     nodeFree
 """);
-    //stop(l);
-    l.copy().ok("""
+    //stop(leafFlag);
+    t.leafFlag.copy().ok("""
 T   At  Wide  Index       Value   Field name
 B    0     1                  0   isLeaf     isLeaf
 """);
     //stop(b);
-    b.copy().ok("""
+    t.branchFlag.copy().ok("""
 T   At  Wide  Index       Value   Field name
 B    0     1                  1   isBranch     isBranch
 """);
