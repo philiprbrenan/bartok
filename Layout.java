@@ -25,7 +25,7 @@ public class Layout extends Test implements LayoutAble                          
 
   Field get(String path) {return fullNames.get(path);}                          // Locate a field from its full name path which must include the top most field
 
-  Layout copy()                                                                 // Copy a layout and share its memory
+  LayoutAble copy()                                                             // Copy a layout and share its memory
    {final Layout d = new Layout();                                              // New layout
     if (top == null) return d;                                                  // No fields to duplicate
     d.top = top.duplicate(d);                                                   // Copy each field into this layout
@@ -34,9 +34,9 @@ public class Layout extends Test implements LayoutAble                          
     return d;
    }
 
-  Layout duplicate()                                                            // Duplicate a layout and create a new memeory
-   {final Layout d = copy();                                                    // New layout
-    d.memory = d.new Memory();                                                  // New memory
+  LayoutAble duplicate()                                                        // Duplicate a layout and create a new memeory
+   {final LayoutAble d = copy();                                                // New layout
+    d.asLayout().memory = d.asLayout().new Memory();                          // New memory
     return d;                                                                   // Duplicate
    }
 
@@ -49,8 +49,8 @@ public class Layout extends Test implements LayoutAble                          
    {return top.toString();
    }
 
-  public Layout.Field getLayoutField() {return top;}                            // Layout associated with this class
-  public Layout       getLayout     () {return this;}                           // Layout associated with this class
+  public Layout.Field asLayoutField() {return top;}                             // Layout associated with this class
+  public Layout       asLayout     () {return this;}                            // Layout associated with this class
 
   void indexNames(Map<String,Field> names) {top.indexNames(names, null);}       // Index field names in each containing structure so fields can be accessed by a unique structured name
 
@@ -180,8 +180,8 @@ public class Layout extends Test implements LayoutAble                          
       return n;
      }
 
-    public Layout.Field getLayoutField() {return this;}                         // Layout associated with this field
-    public Layout       getLayout     () {return null;}                         // Layout associated with this field
+    public Layout.Field asLayoutField() {return this;}                         // Layout associated with this field
+    public Layout       asLayout     () {return null;}                         // Layout associated with this field
     abstract void indexNames(Map<String,Field> names, String prefix);           // Set the full names of all the fields in a layout
 
     Field get(String path) {return fullNames.get(path);}                        // Address a contained field by name
@@ -393,7 +393,7 @@ public class Layout extends Test implements LayoutAble                          
      {super(Name);                                                              // Name of array
       size = Size;                                                              // Size of array
       element = field(Element);                                                 // Field definition associated with this layout
-      final Layout l = Element.getLayout();
+      final Layout l = Element.asLayout();
       if (l != null) layouts.push(l);                                           // Add the element to the list of sub layouts if it is a sub layout
      }
 
@@ -464,7 +464,7 @@ public class Layout extends Test implements LayoutAble                          
      }
 
     void addField(LayoutAble layout)                                            // Add additional fields
-     {final Field field = layout.getLayoutField();                              // Field associated with this layout
+     {final Field field = layout.asLayoutField();                              // Field associated with this layout
       field.up = this;                                                          // Chain up to containing structure
       if (subMap.containsKey(field.name))
        {stop("Structure:", name, "already contains field with this name:",
@@ -472,7 +472,7 @@ public class Layout extends Test implements LayoutAble                          
        }
       subMap.put   (field.name, field);                                         // Add as a field by name to this structure
       subStack.push(field);                                                     // Add as a field in order to this structure
-      final Layout l = layout.getLayout();
+      final Layout l = layout.asLayout();
       if (l != null) layouts.push(l);                                           // Add the element to the list of sub layouts if it is a sub layout
      }
 
@@ -551,7 +551,7 @@ public class Layout extends Test implements LayoutAble                          
   Structure structure(String name, LayoutAble...ml)           {return new Structure(name, ml);}
   Union     union    (String name, LayoutAble...ml)           {return new Union    (name, ml);}
 
-  static Layout createVariable(String name, int width)                          // Create a single variable
+  static LayoutAble createVariable(String name, int width)                      // Create a single variable
    {final Layout          l = new Layout();
     final Layout.Variable v = l.variable(name, width);                          // New variable
     l.layout(v);                                                                // Layout the variable
@@ -618,7 +618,7 @@ V   24     4                  0         c     S.A.s.c
 V   28     4                  0     e     S.e
 """);
 
-    Layout m = l.duplicate();
+    Layout m = l.duplicate().asLayout();
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
@@ -947,7 +947,7 @@ V   16     4                 15     e     s.e
     var s = l.structure("s", a, b, c, d, e);
     l.layout(s);
 
-    Layout D = l.copy();
+    Layout D = l.copy().asLayout();
 
     a.fromUnary(0);
     b.fromUnary(1);
@@ -1041,8 +1041,8 @@ V   16     4                  4       d     S.t.d
    }
 
   static void test_single_variable()
-   {Layout A = createVariable("a", 4);
-    Layout.Variable a = A.getLayoutField().toVariable();
+   {LayoutAble A = createVariable("a", 4);
+    Layout.Variable a = A.asLayoutField().toVariable();
     a.fromInt(3);
     //stop(a);
     ok(a.toString(), """
@@ -1052,8 +1052,8 @@ V    0     4                  3   a     a
    }
 
   static void test_constant()
-   {Layout A = createVariable("a", 4);
-    Layout.Variable a = A.getLayoutField().toVariable();
+   {LayoutAble  A = createVariable("a", 4);
+    Layout.Variable a = A.asLayoutField().toVariable();
     a.fromInt(3);
     //stop(a);
     ok(a.toString(), """
@@ -1070,8 +1070,8 @@ V    0     4                  3   =a     a
    }
 
   static void test_classes()
-   {Layout A = createVariable("a", 4);
-    Layout.Variable a = A.getLayoutField().toVariable();
+   {LayoutAble A = createVariable("a", 4);
+    Layout.Variable a = A.asLayoutField().toVariable();
     a.addClasses("index node", "string");
     ok( a.checkClasses("node", "index"));
     sayThisOrStop("Class: a not contained in classes for: a with classes: [index, node, string]");
