@@ -8,8 +8,8 @@ class Unary extends BitMachine implements LayoutAble                            
  {final Layout          layout;                                                 // The layout of the unary number
   final Layout.Variable value;                                                  // The value of the unary number
 
-  public Layout.Field getLayoutField() {return layout.top;}                     // Layout field associated with this class
-  public Layout       getLayout     () {return layout;    }                     // Layout associated with this class
+  public Layout.Field asLayoutField() {return layout.top;}                      // Layout field associated with this class
+  public Layout       asLayout     () {return layout;    }                      // Layout associated with this class
 
 //D1 Construction                                                               // Create a unary number
 
