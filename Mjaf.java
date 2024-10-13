@@ -148,17 +148,17 @@ class Mjaf extends BitMachine                                                   
     zero(isBranch);                                                             // Flag as not a branch
    }
 
-  void leafGet(Layout.Variable iLeaf, Layout.Variable index, Layout kd)         // Get the specified key, data pair in the specified leaf
+  void leafGet(Layout.Variable iLeaf, Layout.Variable index, LayoutAble kd)     // Get the specified key, data pair in the specified leaf
    {setIndex(nodes, iLeaf);                                                     // Select the leaf to process
     leaf.elementAt(kd, index);                                                  // Insert the key, data pair at the specified index in the specified leaf
    }
 
-  void leafPut(Layout.Variable iLeaf, Layout.Variable index, Layout kd)         // Put the specified key, data pair from the specified leaf
+  void leafPut(Layout.Variable iLeaf, Layout.Variable index, LayoutAble kd)     // Put the specified key, data pair from the specified leaf
    {setIndex(nodes, iLeaf);                                                     // Select the leaf to process
     leaf.setElementAt(kd, index);                                               // Insert the key, data pair at the specified index in the specified leaf
    }
 
-  void leafInsert(Layout.Variable iLeaf, Layout.Variable index, Layout kd)      // Place the specified key, data pair at the specified location in the specified leaf
+  void leafInsert(Layout.Variable iLeaf, Layout.Variable index, LayoutAble kd)  // Place the specified key, data pair at the specified location in the specified leaf
    {setIndex(nodes, iLeaf);                                                     // Select the leaf to process
     leaf.insertElementAt(kd, index);                                            // Insert the key, data pair at the specified index in the specified leaf
    }
@@ -183,24 +183,25 @@ class Mjaf extends BitMachine                                                   
     leaf.elementAt(out, leafSplitIdx);
    }
 
-  void leafPush(Layout.Variable index, Layout kd)                               // Push a key, data pair onto the indicated leaf
+  void leafPush(Layout.Variable index, LayoutAble kd)                           // Push a key, data pair onto the indicated leaf
    {setIndex(nodes, index);
     leaf.push(kd);
    }
 
-  void leafShift(Layout.Variable index, Layout kd)                              // Shift a key, data pair from the indicated leaf
+  void leafShift(Layout.Variable index, LayoutAble kd)                          // Shift a key, data pair from the indicated leaf
    {setIndex(nodes, index);
     leaf.shift(kd);
    }
 
   void leafFindIndexOf                                                          // Find index of the specified key, data pair in the specified leaf
-   (Layout.Variable index, Layout kd, Layout.Bit found, Layout.Variable result)
+   (Layout.Variable index, LayoutAble kd, Layout.Bit found,
+    Layout.Variable result)
    {setIndex(nodes, index);
     leaf.indexOf(kd, found, result);
    }
 
   void leafSplit(Layout.Variable target, Layout.Variable source)                // Source leaf, target leaf. After the leaf has been split the upper half will appear in the source and the loweer half in the target
-   {final Layout kd = leafKeyData.duplicate();                                  // Work area for transferring key data pairs form the source code to the target node
+   {final LayoutAble kd = leafKeyData.duplicate();                              // Work area for transferring key data pairs form the source code to the target node
 
     leafMake(target);
     for (int i = 0; i < leafSplitPoint; i++)                                    // Transfer keys, data pairs
@@ -243,31 +244,17 @@ class Mjaf extends BitMachine                                                   
     ones(isBranch);                                                             // Flag as a branch
    }
 
-  void branchSplitKey(Layout.Variable index, LayoutAble out)                    // Splitting key in a branch
-   {setIndex(nodes, index);
-    branchStuck.elementAt(out, branchSplitIdx);
-   }
-
-/*
-  void branchMake(Layout.Variable iLeaf)                                        // Make a new leaf by taking a node off the free nodes stack and converting it into a branch
-   {allocate(iLeaf);                                                            // Allocate a new node
-    setIndex(nodes, iLeaf);                                                     // Select the leaf to process
-    branchStuck.unary.zero();                                                   // Clear leaf
-    ones(isLeaf);                                                               // Flag as a leaf
-    zero(isBranch);                                                             // Flag as not a branch
-   }
-
-  void branchGet(Layout.Variable iLeaf, Layout.Variable index, Layout kd)       // Get the specified key, data pair in the specified leaf
+  void branchGet(Layout.Variable iLeaf, Layout.Variable index, LayoutAble kd)   // Get the specified key, next pair in the specified leaf
    {setIndex(nodes, iLeaf);                                                     // Select the leaf to process
     branchStuck.elementAt(kd, index);                                           // Insert the key, data pair at the specified index in the specified leaf
    }
 
-  void branchPut(Layout.Variable iLeaf, Layout.Variable index, Layout kd)       // Put the specified key, data pair from the specified leaf
+  void branchPut(Layout.Variable iLeaf, Layout.Variable index, LayoutAble kd)   // Put the specified key, data pair from the specified leaf
    {setIndex(nodes, iLeaf);                                                     // Select the leaf to process
     branchStuck.setElementAt(kd, index);                                        // Insert the key, data pair at the specified index in the specified leaf
    }
 
-  void branchInsert(Layout.Variable iLeaf, Layout.Variable index, Layout kd)    // Place the specified key, data pair at the specified location in the specified leaf
+  void branchInsert(Layout.Variable iLeaf, Layout.Variable index, LayoutAble kd)// Place the specified key, data pair at the specified location in the specified leaf
    {setIndex(nodes, iLeaf);                                                     // Select the leaf to process
     branchStuck.insertElementAt(kd, index);                                     // Insert the key, data pair at the specified index in the specified leaf
    }
@@ -287,29 +274,30 @@ class Mjaf extends BitMachine                                                   
     branchStuck.unary.canNotInc(result);
    }
 
-  void branchSplitKey(Layout.Variable index, Layout out)                        // Splitting key in a leaf
+  void branchSplitKey(Layout.Variable index, LayoutAble out)                    // Splitting key in a branch
    {setIndex(nodes, index);
     branchStuck.elementAt(out, branchSplitIdx);
    }
 
-  void branchPush(Layout.Variable index, Layout kd)                             // Push a key, data pair onto the indicated leaf
+  void branchPush(Layout.Variable index, LayoutAble kd)                         // Push a key, data pair onto the indicated leaf
    {setIndex(nodes, index);
     branchStuck.push(kd);
    }
 
-  void branchShift(Layout.Variable index, Layout kd)                            // Shift a key, data pair from the indicated leaf
+  void branchShift(Layout.Variable index, LayoutAble kd)                        // Shift a key, data pair from the indicated leaf
    {setIndex(nodes, index);
     branchStuck.shift(kd);
    }
 
   void branchFindIndexOf                                                        // Find index of the specified key, data pair in the specified leaf
-   (Layout.Variable index, Layout kd, Layout.Bit found, Layout.Variable result)
+   (Layout.Variable index, LayoutAble kd,
+    Layout.Bit found, Layout.Variable result)
    {setIndex(nodes, index);
     branchStuck.indexOf(kd, found, result);
    }
 
   void branchSplit(Layout.Variable target, Layout.Variable source)              // Source leaf, target branchStuck. After the leaf has been split the upper half will appear in the source and the loweer half in the target
-   {final Layout kd = leafKeyData.duplicate();                                  // Work area for transferring key data pairs form the source code to the target node
+   {final LayoutAble kd = leafKeyData.duplicate();                              // Work area for transferring key data pairs form the source code to the target node
 
     leafMake(target);
     for (int i = 0; i < leafSplitPoint; i++)                                    // Transfer keys, data pairs
@@ -342,7 +330,7 @@ class Mjaf extends BitMachine                                                   
     free(source);                                                               // Free the leaf that was joined
    }
 
-
+/*
     void join(Branch Join, Key joinKeyName)                                     // Append the second branch to the first one adding the specified key
      {final int K = nKeys(), J = Join.nKeys();                                  // Number of keys currently in branch
       if (K + 1 + J > maxKeysPerLeaf) stop("Join of branch has too many keys",
@@ -1542,11 +1530,15 @@ class Mjaf extends BitMachine                                                   
         m.copy(m.isLeaf,      1);
        }
      }
-    m.copy(m.layout.get("tree.nodesFree.unary").toVariable(), Layout.unary(N));
+    m.copy(m.layout.get("tree.nodesFree.unary").toVariable(), Layout.unary(N)); // Tree globals
     m.copy(m.nodesCreated,  N);
     m.copy(m.keyDataStored, N);
     m.copy(m.root,          1);
     m.copy(m.hasNode,       1);
+
+    m.setIndexFromInt(m.nodes, 0);                                                    // Set first node to branch
+    m.copy(m.isLeaf,   0);
+    m.copy(m.isBranch, 1);
     m.execute();
     //stop(m.layout);
     m.layout.ok("""
@@ -1566,8 +1558,8 @@ V   35    13                  1     root     tree.root
 B   48     1                  1     hasNode     tree.hasNode
 A   49   306      0                 nodes     tree.nodes
 S   49   102                          node     tree.nodes.node
-B   49     1                  1         isLeaf     tree.nodes.node.isLeaf
-B   50     1                  0         isBranch     tree.nodes.node.isBranch
+B   49     1                  0         isLeaf     tree.nodes.node.isLeaf
+B   50     1                  1         isBranch     tree.nodes.node.isBranch
 U   51   100                            branchOrLeaf     tree.nodes.node.branchOrLeaf
 S   51    88                              branch     tree.nodes.node.branchOrLeaf.branch
 S   51    75                                branchStuck     tree.nodes.node.branchOrLeaf.branch.branchStuck
@@ -1704,23 +1696,45 @@ V  351     4                 15             unary     tree.nodes.node.branchOrLe
 T   At  Wide  Index       Value   Field name
 V    0     2                  2   nodeFree     nodeFree
 """);
-    //stop(l);
+    //stop(l);                                                                  // Check Leaf
     l.copy().ok("""
 T   At  Wide  Index       Value   Field name
 B    0     1                  1   isLeaf     isLeaf
 """);
-    //stop(b);
+    //stop(b);                                                                  // Check not branch
     b.copy().ok("""
 T   At  Wide  Index       Value   Field name
 B    0     1                  0   isBranch     isBranch
 """);
 
+    m.reset();                                                                  // Next leaf from a leaf
     m.leafMake(n);                                                              // Choose the node
     m.execute();                                                                // Execute the code to copy out the splitting key
     //stop(n);
     n.copy().ok("""
 T   At  Wide  Index       Value   Field name
 V    0     2                  1   nodeFree     nodeFree
+""");
+
+    m.reset();                                                                  // Next leaf from a branch
+    m.leafMake(n);                                                              // Choose the node
+    m.copy(l, m.isLeaf);                                                        // Copy its leaf flag
+    m.copy(b, m.isBranch);                                                      // Copy its branch flag
+    m.execute();                                                                // Execute the code to copy out the splitting key
+    //stop(n);
+    n.copy().ok("""
+T   At  Wide  Index       Value   Field name
+V    0     2                  0   nodeFree     nodeFree
+""");
+    //stop(l);                                                                  // Check Leaf
+    l.copy().ok("""
+T   At  Wide  Index       Value   Field name
+B    0     1                  1   isLeaf     isLeaf
+""");
+    //stop(b);                                                                  // Check not branch
+    b.copy().ok("""
+T   At  Wide  Index       Value   Field name
+B    0     1                  0   isBranch     isBranch
 """);
    }
 
