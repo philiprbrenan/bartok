@@ -10,17 +10,17 @@ import java.util.*;
 
 public class BitMachine extends Test implements LayoutAble                      // A machine whose assembler code is just capable enough to manipulate a b-tree
  {final int maxSteps = 999;                                                     // Maximum number of steps to be executed
-  final String bitMachineName;                                                  // Thename of the bit amchine
+  final String bitMachineName;                                                  // The name of the bit amchine
   BitMachine bitMachine = this;                                                 // The bit machine in which to load instructions
   final StringBuilder printer = new StringBuilder();                            // Place test output here for comparison with expected values
   final Stack<BitMachine>  machines     = new Stack<>();                        // Machines that will generate instructions for this machine
   final Stack<Instruction> instructions = new Stack<>();                        // Instructions to be executed
-  Layout layout;                                                                // Layout of bit memory being manipulated by this bit machine
-  int instructionIndex;                                                         // The current instruction
+  Layout layout = null;                                                         // Layout of bit memory being manipulated by this bit machine
+  int instructionIndex = 0;                                                     // The current instruction
   int step = 0;                                                                 // The number of the currently executing step
 
-  public Layout.Field getLayoutField()         {return layout.top;}             // Top most field of the layout associated with this bit machine
-  public Layout       getLayout     ()         {return layout;}                 // Layout associated with this bit machine
+  public Layout.Field asLayoutField()          {return layout.top;}             // Top most field of the layout associated with this bit machine
+  public Layout       asLayout     ()          {return layout;}                 // Layout associated with this bit machine
   void                setLayout(Layout Layout) {layout = Layout;}               // Set the layout associated with this bit machine
 
   BitMachine(String Name) {bitMachineName = Name;}                              // Assign a name to the bit machine to assist debugging
@@ -44,16 +44,14 @@ public class BitMachine extends Test implements LayoutAble                      
 
   void ok(String expected) {Test.ok(toString(), expected);}                     // Check the code for this machine is as expected
 
-  Layout.Variable getVariable(String name)                                      // Get a variable by name
-   {final Layout.Field l = this.layout.get(name);
+  Layout.Variable getVariable(Layout layout, String name)                       // Get a variable by name
+   {final Layout.Field l = layout.get(name);
     if (l == null) stop("No such field as", name);
     return l.toVariable();
    }
 
-  void setVariable(String name, int value)                                      // Set a variable by name from a specified integer
-   {say("AAAA", this);
-
-     final Layout.Variable v = getVariable(name);                                // Address the variable
+  void setVariable(Layout layout, String name, int value)                       // Set a variable by name from a specified integer
+   {final Layout.Variable v = getVariable(layout, name);                        // Address the variable
     copy(v, value);                                                             // Set the variable
    }
 
@@ -1481,7 +1479,7 @@ V   80     4                 15     ge10     s.ge10
      AllZero____f01, NotAllZero_f01, AllOnes____f01, NotAllOnes_f01,
      AllZero____f11, NotAllZero_f11, AllOnes____f11, NotAllOnes_f11);
 
-    l.layout(s); l.getLayoutField().ones();
+    l.layout(s); l.asLayoutField().ones();
 
     a  .zero();
     f00.fromInt(0);
