@@ -1678,14 +1678,11 @@ V  351     4                 15             unary     tree.nodes.node.branchOrLe
    }
 
   static void test_leaf_make()                                                  // Make a new leaf
-   {Mjaf m = create_tree();
-    String N = "tree.nodesFree.array.nodeFree";                                 // The name of free node index
-    String L = "tree.nodes.node.isLeaf";                                        // Is leaf flag
-    String B = "tree.nodes.node.isBranch";                                      // Is branch flag
+   {Mjaf            m = create_tree();                                          // Create a sample tree
     Layout          t = m.layout;                                               // Tree layout
-    Layout.Variable n = t.get(N).duplicate().asLayoutField().toVariable();      // Create index variable
-    Layout.Variable l = t.get(L).duplicate().asLayoutField().toVariable();      // Create is leaf flag
-    Layout.Bit      b = t.get(B).duplicate().asLayoutField().toBit();           // Create is branch flag
+    Layout.Variable n = t.dupVariable("tree.nodesFree.array.nodeFree");         // Create index variable
+    Layout.Variable l = t.dupVariable("tree.nodes.node.isLeaf");                // Create is leaf flag
+    Layout.Variable b = t.dupVariable("tree.nodes.node.isBranch");              // Create is branch flag
 
     m.leafMake(n);                                                              // Choose the node
     m.copy(l, m.isLeaf);                                                        // Copy its leaf flag
@@ -1739,14 +1736,11 @@ B    0     1                  0   isBranch     isBranch
    }
 
   static void test_branch_make()                                                // Make a new branch
-   {Mjaf m = create_tree();
-    String N = "tree.nodesFree.array.nodeFree";                                 // The name of free node index
-    String L = "tree.nodes.node.isLeaf";                                        // Is leaf flag
-    String B = "tree.nodes.node.isBranch";                                      // Is branch flag
+   {Mjaf            m = create_tree();                                          // Create a sample tree
     Layout          t = m.layout;                                               // Tree layout
-    Layout.Variable n = t.get(N).duplicate().asLayoutField().toVariable();      // Create index variable
-    Layout.Variable l = t.get(L).duplicate().asLayoutField().toVariable();      // Create is leaf flag
-    Layout.Bit      b = t.get(B).duplicate().asLayoutField().toBit();           // Create is branch flag
+    Layout.Variable n = t.dupVariable("tree.nodesFree.array.nodeFree");         // Create index variable
+    Layout.Variable l = t.dupVariable("tree.nodes.node.isLeaf");                // Create is leaf flag
+    Layout.Variable b = t.dupVariable("tree.nodes.node.isBranch");              // Create is branch flag
 
     m.branchMake(n);                                                            // Choose the node
     m.copy(l, m.isLeaf);                                                        // Copy its leaf flag
