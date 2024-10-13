@@ -59,8 +59,8 @@ class Mjaf extends BitMachine                                                   
     maxKeysPerLeaf   = N;                                                       // Some even number
     maxKeysPerBranch = N-1;                                                     // Ideally should be some number that makes the leaf nodes and the branch nodes the same size
     maxNodes         = size;
-    leafSplitPoint   = (N >> 1) - 1;                                            // Point at which to split a leaf
-    branchSplitPoint = (N >> 1) - 1;                                            // Point at which to split a branch
+    leafSplitPoint   = (N-1) >> 1;                                              // Point at which to split a leaf
+    branchSplitPoint = (N-1) >> 1;                                              // Point at which to split a branch
 
     final Layout W   = work = new Layout();                                     // Layout of working memory
     leafSplitIdx     = W.new Variable ("leafSplitIdx",   N);                    // Index of leaf splitting key
