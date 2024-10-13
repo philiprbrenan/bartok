@@ -1671,7 +1671,7 @@ V  351     4                 15             unary     tree.nodes.node.branchOrLe
     return m;
    }
 
-  static void test_leaf_split_key()                                             // Test actions on a leaf
+  static void test_leaf_split_key()                                             // Split key for a leaf
    {Mjaf m = create_tree();
     String K = "tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData";           // The name of a key,data pair
     String N = "tree.nodes.node.branchOrLeaf.leaf.unary";                       // The name of the node index
@@ -1711,6 +1711,49 @@ T   At  Wide  Index       Value   Field name
 S    0    24              94230   leafKeyData     leafKeyData
 V    0    12                 22     leafKey     leafKeyData.leafKey
 V   12    12                 23     leafData     leafKeyData.leafData
+""");
+   }
+
+  static void test_branch_split_key()                                           // Split key for a branch
+   {Mjaf m = create_tree();
+    String B = "tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext"; // The name of a key,data pair
+    String N = "tree.nodes.node.branchOrLeaf.branch.branchStuck.unary";               // The name of the node index
+    Layout          t = m.layout;                                               // Tree layout
+    LayoutAble      b = t.get(B).duplicate();                                   // Create a key, next pair
+    Layout.Variable n = t.get(N).duplicate().asLayoutField().toVariable();      // Create index variable
+
+    m.copy(n, 0);                                                               // Choose the node
+    m.leafSplitKey(n, b);                                                       // Get the splitting key for node 0
+    m.execute();                                                                // Execute the code to copy out the splitting key
+    //stop(b);
+    b.asLayout().ok("""
+T   At  Wide  Index       Value   Field name
+S    0    24              20484   branchKeyNext     branchKeyNext
+V    0    12                  4     branchKey     branchKeyNext.branchKey
+V   12    12                  5     branchNext     branchKeyNext.branchNext
+""");
+
+    m.copy(n, 1);                                                               // Choose the node
+    m.leafSplitKey(n, b);                                                       // Get the splitting key for node 0
+    m.execute();                                                                // Execute the code to copy out the splitting key
+    //stop(b);
+    b.asLayout().ok("""
+T   At  Wide  Index       Value   Field name
+S    0    24              57357   branchKeyNext     branchKeyNext
+V    0    12                 13     branchKey     branchKeyNext.branchKey
+V   12    12                 14     branchNext     branchKeyNext.branchNext
+""");
+
+    m.reset();
+    m.copy(n, 2);                                                               // Choose the node
+    m.leafSplitKey(n, b);                                                       // Get the splitting key for node 0
+    m.execute();                                                                // Execute the code to copy out the splitting key
+    //stop(b);
+    b.asLayout().ok("""
+T   At  Wide  Index       Value   Field name
+S    0    24              94230   branchKeyNext     branchKeyNext
+V    0    12                 22     branchKey     branchKeyNext.branchKey
+V   12    12                 23     branchNext     branchKeyNext.branchNext
 """);
    }
 
@@ -2178,6 +2221,7 @@ V    2     2                  3       unary
   static void oldTests()                                                        // Tests thought to be in good shape
    {create_tree();
     test_leaf_split_key();
+    test_branch_split_key();
     //test_leaf();
     //test_create_branch();
     //test_join_branch();
