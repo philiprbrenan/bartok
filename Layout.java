@@ -36,7 +36,7 @@ public class Layout extends Test implements LayoutAble                          
 
   LayoutAble duplicate()                                                        // Duplicate a layout and create a new memeory
    {final LayoutAble d = copy();                                                // New layout
-    d.asLayout().memory = d.asLayout().new Memory();                          // New memory
+    d.asLayout().memory = d.asLayout().new Memory();                            // New memory
     return d;                                                                   // Duplicate
    }
 
@@ -384,6 +384,12 @@ public class Layout extends Test implements LayoutAble                          
    {Bit(String name) {super(name, 1);}
     Boolean get()              {return get(0);}                                 // Get bit value as Boolean
     void    set(Boolean value) {       set(0, value);}                          // Set bit value from Boolean
+
+    Field duplicate(Layout d)                                                   // Duplicate a bit so we can modify it safely
+     {final Bit b = d.new Bit(name);
+      b.at = at; b.depth = depth;
+      return b;
+     }
    }
 
   class Array extends Field                                                     // Layout an array definition.
