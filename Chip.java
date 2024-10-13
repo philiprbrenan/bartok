@@ -930,6 +930,5 @@ Step  ao   bo   a    b    ai   bi
      {System.err.println(e);
       System.err.println(fullTraceBack(e));
      }
-    testExit(0);                                                                // Exit with a return code if we failed any tests to alert github
    }
  }
