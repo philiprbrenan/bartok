@@ -45,14 +45,16 @@ public class BitMachine extends Test implements LayoutAble                      
   void ok(String expected) {Test.ok(toString(), expected);}                     // Check the code for this machine is as expected
 
   Layout.Variable getVariable(String name)                                      // Get a variable by name
-   {final Layout.Field l = layout.get(name);
+   {final Layout.Field l = this.layout.get(name);
     if (l == null) stop("No such field as", name);
     return l.toVariable();
    }
 
   void setVariable(String name, int value)                                      // Set a variable by name from a specified integer
-   {final Layout.Variable v = getVariable(name);                                // Address the variable
-    v.fromInt(value);                                                           // Set the variable
+   {say("AAAA", this);
+
+     final Layout.Variable v = getVariable(name);                                // Address the variable
+    copy(v, value);                                                             // Set the variable
    }
 
 //D1 Instruction                                                                // Instructions recognized by the bit machine
@@ -1424,31 +1426,31 @@ V    8     4                  0     c     s.c
     m.new Block() {void code() {returnIfGreaterThan       (b, a); m.copy(gt10, c);}};
     m.new Block() {void code() {returnIfGreaterThanOrEqual(b, a); m.copy(ge10, c);}};
     m.execute();
-    stop(l);
+    //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    84                      s
-V    0     4                  0     a
-V    4     4                  1     b
-V    8     4                  0     c
-V   12     4                  0     eq01
-V   16     4                 15     eq11
-V   20     4                  0     eq10
-V   24     4                 15     ne01
-V   28     4                  0     ne11
-V   32     4                 15     ne10
-V   36     4                 15     lt01
-V   40     4                  0     lt11
-V   44     4                  0     lt10
-V   48     4                 15     le01
-V   52     4                 15     le11
-V   56     4                  0     le10
-V   60     4                  0     gt01
-V   64     4                  0     gt11
-V   68     4                 15     gt10
-V   72     4                  0     ge01
-V   76     4                 15     ge11
-V   80     4                 15     ge10
+S    0    84                      s     s
+V    0     4                  0     a     s.a
+V    4     4                  1     b     s.b
+V    8     4                  0     c     s.c
+V   12     4                  0     eq01     s.eq01
+V   16     4                 15     eq11     s.eq11
+V   20     4                  0     eq10     s.eq10
+V   24     4                 15     ne01     s.ne01
+V   28     4                  0     ne11     s.ne11
+V   32     4                 15     ne10     s.ne10
+V   36     4                 15     lt01     s.lt01
+V   40     4                  0     lt11     s.lt11
+V   44     4                  0     lt10     s.lt10
+V   48     4                 15     le01     s.le01
+V   52     4                 15     le11     s.le11
+V   56     4                  0     le10     s.le10
+V   60     4                  0     gt01     s.gt01
+V   64     4                  0     gt11     s.gt11
+V   68     4                 15     gt10     s.gt10
+V   72     4                  0     ge01     s.ge01
+V   76     4                 15     ge11     s.ge11
+V   80     4                 15     ge10     s.ge10
 """);
    }
 
@@ -1506,23 +1508,23 @@ V   80     4                 15     ge10
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    19             218344   s
-V    0     1                  0     a
-V    1     2                  0     f00
-V    3     2                  1     f01
-V    5     2                  3     f11
-V    7     1                  1     AllZero____f00
-V    8     1                  0     NotAllZero_f00
-V    9     1                  0     AllOnes____f00
-V   10     1                  1     NotAllOnes_f00
-V   11     1                  0     AllZero____f01
-V   12     1                  1     NotAllZero_f01
-V   13     1                  0     AllOnes____f01
-V   14     1                  1     NotAllOnes_f01
-V   15     1                  0     AllZero____f11
-V   16     1                  1     NotAllZero_f11
-V   17     1                  1     AllOnes____f11
-V   18     1                  0     NotAllOnes_f11
+S    0    19             218344   s     s
+V    0     1                  0     a     s.a
+V    1     2                  0     f00     s.f00
+V    3     2                  1     f01     s.f01
+V    5     2                  3     f11     s.f11
+V    7     1                  1     AllZero____f00     s.AllZero____f00
+V    8     1                  0     NotAllZero_f00     s.NotAllZero_f00
+V    9     1                  0     AllOnes____f00     s.AllOnes____f00
+V   10     1                  1     NotAllOnes_f00     s.NotAllOnes_f00
+V   11     1                  0     AllZero____f01     s.AllZero____f01
+V   12     1                  1     NotAllZero_f01     s.NotAllZero_f01
+V   13     1                  0     AllOnes____f01     s.AllOnes____f01
+V   14     1                  1     NotAllOnes_f01     s.NotAllOnes_f01
+V   15     1                  0     AllZero____f11     s.AllZero____f11
+V   16     1                  1     NotAllZero_f11     s.NotAllZero_f11
+V   17     1                  1     AllOnes____f11     s.AllOnes____f11
+V   18     1                  0     NotAllOnes_f11     s.NotAllOnes_f11
 """);
    }
 
@@ -1542,9 +1544,9 @@ V   18     1                  0     NotAllOnes_f11
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0     8                 19   s
-V    0     4                  3     a
-V    4     4                  1     b
+S    0     8                 19   s     s
+V    0     4                  3     a     s.a
+V    4     4                  1     b     s.b
 """);
    }
 
@@ -1565,13 +1567,13 @@ V    4     4                  1     b
     m.copy(c, a);
     m.comeFromComparison(e);
     m.execute();
-    stop(l);
+    //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    12                819   s
-V    0     4                  3     a
-V    4     4                  3     b
-V    8     4                  3     c
+S    0    12                819   s     s
+V    0     4                  3     a     s.a
+V    4     4                  3     b     s.b
+V    8     4                  3     c     s.c
 """);
    }
 
@@ -1605,13 +1607,13 @@ AAAA 3
 BBBB 4
 AAAA 4
 """);
-    stop(l);
+    //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    12               2047   s
-V    0     4                 15     a
-V    4     4                 15     b
-V    8     4                  7     c
+S    0    12               2047   s     s
+V    0     4                 15     a     s.a
+V    4     4                 15     b     s.b
+V    8     4                  7     c     s.c
 """);
    }
 
@@ -1631,15 +1633,15 @@ V    8     4                  7     c
     m.unaryFilled(a, b, r1);
     m.unaryFilled(a, c, r2);
     m.execute();
-    stop(l);
+    //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    14              10001   s
-V    0     4                  1     a
-V    4     4                  1     b
-V    8     4                  7     c
-B   12     1                  0     r1
-B   13     1                  1     r2
+S    0    14              10001   s     s
+V    0     4                  1     a     s.a
+V    4     4                  1     b     s.b
+V    8     4                  7     c     s.c
+B   12     1                  0     r1     s.r1
+B   13     1                  1     r2     s.r2
 """);
    }
 
@@ -1663,31 +1665,31 @@ B   13     1                  1     r2
       m.copy(c, i+3);
      }
     m.execute();
-    stop(l);
+    //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    52                      S
-A    0    48      0                 A
-S    0    12                801       s
-V    0     4                  1         a
-V    4     4                  2         b
-V    8     4                  3         c
-A   12    48      1                 A
-S   12    12               1074       s
-V   12     4                  2         a
-V   16     4                  3         b
-V   20     4                  4         c
-A   24    48      2                 A
-S   24    12               1347       s
-V   24     4                  3         a
-V   28     4                  4         b
-V   32     4                  5         c
-A   36    48      3                 A
-S   36    12               1620       s
-V   36     4                  4         a
-V   40     4                  5         b
-V   44     4                  6         c
-V   48     4                  0     d
+S    0    52                      S     S
+A    0    48      0                 A     S.A
+S    0    12                801       s     S.A.s
+V    0     4                  1         a     S.A.s.a
+V    4     4                  2         b     S.A.s.b
+V    8     4                  3         c     S.A.s.c
+A   12    48      1                 A     S.A
+S   12    12               1074       s     S.A.s
+V   12     4                  2         a     S.A.s.a
+V   16     4                  3         b     S.A.s.b
+V   20     4                  4         c     S.A.s.c
+A   24    48      2                 A     S.A
+S   24    12               1347       s     S.A.s
+V   24     4                  3         a     S.A.s.a
+V   28     4                  4         b     S.A.s.b
+V   32     4                  5         c     S.A.s.c
+A   36    48      3                 A     S.A
+S   36    12               1620       s     S.A.s
+V   36     4                  4         a     S.A.s.a
+V   40     4                  5         b     S.A.s.b
+V   44     4                  6         c     S.A.s.c
+V   48     4                  0     d     S.d
 """);
 
     m.reset();  m.copy(d, 1); m.setIndex(A, d); m.copy(d, a); m.execute(); d.ok(2);
