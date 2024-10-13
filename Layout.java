@@ -559,6 +559,13 @@ public class Layout extends Test implements LayoutAble                          
   Structure structure(String name, LayoutAble...ml)           {return new Structure(name, ml);}
   Union     union    (String name, LayoutAble...ml)           {return new Union    (name, ml);}
 
+  static LayoutAble createBit(String name)                                      // Create a single bit
+   {final Layout          l = new Layout();
+    final Layout.Variable v = l.bit(name);                                      // New variable
+    l.layout(v);                                                                // Layout the variable
+    return l;                                                                   // Variable
+   }
+
   static LayoutAble createVariable(String name, int width)                      // Create a single variable
    {final Layout          l = new Layout();
     final Layout.Variable v = l.variable(name, width);                          // New variable
@@ -1048,6 +1055,17 @@ V   16     4                  4       d     S.t.d
 """);
    }
 
+  static void test_single_bit()
+   {LayoutAble B = createBit("b");
+    Layout.Variable b = B.asLayoutField().toBit();
+    b.fromInt(1);
+    //stop(b);
+    ok(b.toString(), """
+T   At  Wide  Index       Value   Field name
+B    0     1                  1   b     b
+""");
+   }
+
   static void test_single_variable()
    {LayoutAble A = createVariable("a", 4);
     Layout.Variable a = A.asLayoutField().toVariable();
@@ -1106,6 +1124,7 @@ V    0     4                  3   =a     a
     test_duplicate();
     test_duplicate_sub_layout();
     test_single_variable();
+    test_single_bit();
     test_constant();
     test_classes();
     test_binary_to_unary();
