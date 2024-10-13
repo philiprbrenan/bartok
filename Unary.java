@@ -69,20 +69,20 @@ class Unary extends BitMachine implements LayoutAble                            
     u.canInc(d);
     u.execute();
     u.ok("1111");
-    //stop(u);
+    //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0     4                  6   s
-B    0     1                  0     a
-B    1     1                  1     b
-B    2     1                  1     c
-B    3     1                  0     d
+S    0     4                  6   s     s
+B    0     1                  0     a     s.a
+B    1     1                  1     b     s.b
+B    2     1                  1     c     s.c
+B    3     1                  0     d     s.d
 """);
 
     //stop(u.layout);
     u.layout.ok("""
 T   At  Wide  Index       Value   Field name
-V    0     4                 15   unary
+V    0     4                 15   unary     unary
 """);
 
     Unary u1 = unary(4);
@@ -93,7 +93,7 @@ V    0     4                 15   unary
     //stop(u1.layout);
     u1.layout.ok("""
 T   At  Wide  Index       Value   Field name
-V    0     4                  3   unary
+V    0     4                  3   unary     unary
 """);
    }
 
@@ -115,5 +115,6 @@ V    0     4                  3   unary
      {System.err.println(e);
       System.err.println(fullTraceBack(e));
      }
+    System.exit(testsFailed);
    }
  }
