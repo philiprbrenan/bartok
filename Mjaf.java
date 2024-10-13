@@ -133,14 +133,14 @@ class Mjaf extends BitMachine                                                   
    }
 
   void free(Layout.Variable index)                                              // Free the indexed node
-   {nodesFree.push(index.copy());                                                      // Place node on free nodes stuck
+   {nodesFree.push(index.copy());                                               // Place node on free nodes stuck
     setIndex(nodes, index);                                                     // Address node just freed
     zero(node);                                                                 // Clear the node
    }
 
 //D1 Leaf                                                                       // Process a leaf
 
-  void leafMake(Layout.Variable iLeaf)                                          // Make a new leaf by taking a node off the free nodes stack and converting it into a branch
+  void leafMake(Layout.Variable iLeaf)                                          // Make a new leaf by taking a node off the free nodes stack and converting it into a leaf
    {allocate(iLeaf);                                                            // Allocate a new node
     setIndex(nodes, iLeaf);                                                     // Select the leaf to process
     leaf.unary.zero();                                                          // Clear leaf
@@ -234,6 +234,20 @@ class Mjaf extends BitMachine                                                   
    }
 
 //D1 Branch                                                                     // Process a branch
+
+  void branchMake(Layout.Variable iBranch)                                      // Make a new branch by taking a node off the free nodes stack and converting it into a branch
+   {allocate(iBranch);                                                          // Allocate a new node
+    setIndex(nodes, iBranch);                                                   // Select the leaf to process
+    leaf.unary.zero();                                                          // Clear leaf
+    zero(isBranch);                                                             // Flag as a branch
+    ones(isBranch);                                                             // Flag as not a leaf
+   }
+
+  void branchSplitKey(Layout.Variable index, LayoutAble out)                    // Splitting key in a branch
+   {setIndex(nodes, index);
+    branchStuck.elementAt(out, branchSplitIdx);
+   }
+
 /*
   void branchMake(Layout.Variable iLeaf)                                        // Make a new leaf by taking a node off the free nodes stack and converting it into a branch
    {allocate(iLeaf);                                                            // Allocate a new node
@@ -1528,7 +1542,7 @@ class Mjaf extends BitMachine                                                   
         m.copy(m.isLeaf,      1);
        }
      }
-    m.copy(m.layout.get("tree.nodesFree.unary").toVariable(), N);
+    m.copy(m.layout.get("tree.nodesFree.unary").toVariable(), Layout.unary(N));
     m.copy(m.nodesCreated,  N);
     m.copy(m.keyDataStored, N);
     m.copy(m.root,          1);
@@ -1671,6 +1685,23 @@ V  351     4                 15             unary     tree.nodes.node.branchOrLe
     return m;
    }
 
+  static void test_leaf_make()                                                  // Make a new leaf
+   {Mjaf m = create_tree();
+    String N = "tree.nodesFree.array.nodeFree";                                 // The name of free node index
+    Layout          t = m.layout;                                               // Tree layout
+    Layout.Variable n = t.get(N).duplicate().asLayoutField().toVariable();      // Create index variable
+
+    m.leafMake(n);                                                              // Choose the node
+    m.execute();                                                                // Execute the code to copy out the splitting key
+    stop(n);
+    n.asLayout().ok("""
+T   At  Wide  Index       Value   Field name
+S    0    24              20484   leafKeyData     leafKeyData
+V    0    12                  4     leafKey     leafKeyData.leafKey
+V   12    12                  5     leafData     leafKeyData.leafData
+""");
+   }
+
   static void test_leaf_split_key()                                             // Split key for a leaf
    {Mjaf m = create_tree();
     String K = "tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData";           // The name of a key,data pair
@@ -1723,7 +1754,7 @@ V   12    12                 23     leafData     leafKeyData.leafData
     Layout.Variable n = t.get(N).duplicate().asLayoutField().toVariable();      // Create index variable
 
     m.copy(n, 0);                                                               // Choose the node
-    m.leafSplitKey(n, b);                                                       // Get the splitting key for node 0
+    m.branchSplitKey(n, b);                                                     // Get the splitting key
     m.execute();                                                                // Execute the code to copy out the splitting key
     //stop(b);
     b.asLayout().ok("""
@@ -1734,7 +1765,7 @@ V   12    12                  5     branchNext     branchKeyNext.branchNext
 """);
 
     m.copy(n, 1);                                                               // Choose the node
-    m.leafSplitKey(n, b);                                                       // Get the splitting key for node 0
+    m.branchSplitKey(n, b);                                                     // Get the splitting key
     m.execute();                                                                // Execute the code to copy out the splitting key
     //stop(b);
     b.asLayout().ok("""
@@ -1746,7 +1777,7 @@ V   12    12                 14     branchNext     branchKeyNext.branchNext
 
     m.reset();
     m.copy(n, 2);                                                               // Choose the node
-    m.leafSplitKey(n, b);                                                       // Get the splitting key for node 0
+    m.branchSplitKey(n, b);                                                     // Get the splitting key
     m.execute();                                                                // Execute the code to copy out the splitting key
     //stop(b);
     b.asLayout().ok("""
@@ -2235,8 +2266,8 @@ V    2     2                  3       unary
    }
 
   static void newTests()                                                        // Tests being worked on
-   {oldTests();
-    //test_leaf_split_key();
+   {//oldTests();
+    test_leaf_make();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
