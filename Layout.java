@@ -83,6 +83,8 @@ public class Layout extends Test implements LayoutAble                          
    {for (Field f : fields) f.constant = true;
    }
 
+  static int unary(int binary) {return (1<<binary) - 1;}                        // Convert a binary integer to a unary integer of the same value
+
 //D1 Bit Memory                                                                 // A bit is the element from which memory is constructed.
 
   void    set(int i, Boolean b) {       memory.setElementAt(b, i);}             // Set a bit in the sample memory. This method should be overridden to drive a more useful memory that captures more information about its bits than just their values.
@@ -1078,6 +1080,15 @@ V    0     4                  3   =a     a
     a.checkClasses("a b");
    }
 
+  static void test_binary_to_unary()
+   {ok(unary(0),  0);
+    ok(unary(1),  1);
+    ok(unary(2),  3);
+    ok(unary(3),  7);
+    ok(unary(4), 15);
+    ok(unary(5), 31);
+   }
+
   static void oldTests()                                                        // Tests thought to be in good shape
    {test_1();
     test_memory();
@@ -1091,6 +1102,7 @@ V    0     4                  3   =a     a
     test_single_variable();
     test_constant();
     test_classes();
+    test_binary_to_unary();
    }
 
   static void newTests()                                                        // Tests being worked on
