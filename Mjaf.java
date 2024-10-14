@@ -213,7 +213,7 @@ class Mjaf extends BitMachine                                                   
   void leafJoinable                                                             // Check that we can join two leaves
    (Layout.Variable target, Layout.Variable source, Layout.Bit result)
    {setIndex(nodes, target);                                                    // Index the target leaf
-    Layout.Variable t = leaf.unary.value.copy().asLayoutField().toVariable();  //
+    Layout.Variable t = leaf.unary.value.copy().asLayoutField().toVariable();
     setIndex(nodes, source);
     Layout.Variable s = leaf.unary.value.copy().asLayoutField().toVariable();
 
@@ -285,19 +285,19 @@ class Mjaf extends BitMachine                                                   
     branchStuck.push(kd);
    }
 
-  void branchShift(Layout.Variable index, LayoutAble kd)                        // Shift a key, next pair from the indicated branch
+  void branchShift(Layout.Variable index, LayoutAble kd)                        //t Shift a key, next pair from the indicated branch
    {setIndex(nodes, index);
     branchStuck.shift(kd);
    }
 
-  void branchFindIndexOf                                                        // Find index of the specified key, next pair in the specified leaf
+  void branchFindIndexOf                                                        //t Find index of the specified key, next pair in the specified leaf
    (Layout.Variable index, LayoutAble kd,
     Layout.Bit found, Layout.Variable result)
    {setIndex(nodes, index);
     branchStuck.indexOf(kd, found, result);
    }
 
-  void branchSplit(Layout.Variable target, Layout.Variable source)              // Source branch, target branchStuck. After the leaf has been split the upper half will appear in the source and the loweer half in the target
+  void branchSplit(Layout.Variable target, Layout.Variable source)              //t Source branch, target branchStuck. After the leaf has been split the upper half will appear in the source and the loweer half in the target
    {final LayoutAble kd = leafKeyData.duplicate();                              // Work area for transferring key data pairs form the source code to the target node
 
     leafMake(target);
@@ -307,7 +307,7 @@ class Mjaf extends BitMachine                                                   
      }
    }
 
-  void branchJoinable                                                           // Check that we can join two branches
+  void branchJoinable                                                           //t Check that we can join two branches
    (Layout.Variable target, Layout.Variable source, Layout.Bit result)
    {setIndex(nodes, target);                                                    // Index the target leaf
     Layout.Variable t = branchStuck.unary.value.copy().asLayoutField().toVariable();
@@ -317,7 +317,7 @@ class Mjaf extends BitMachine                                                   
     unaryFilled(s, t, result);
    }
 
-  void branchJoin(Layout.Variable target, Layout.Variable source)               // Join the specified branch onto the end of this branch
+  void branchJoin(Layout.Variable target, Layout.Variable source)               //t Join the specified branch onto the end of this branch
    {new Repeat()
      {void code()
        {setIndex(nodes, source);
@@ -1537,9 +1537,10 @@ class Mjaf extends BitMachine                                                   
     m.copy(m.root,          1);
     m.copy(m.hasNode,       1);
 
-    m.setIndexFromInt(m.nodes, 0);                                                    // Set first node to branch
+    m.setIndexFromInt(m.nodes, 0);                                              // Set first node to branch
     m.copy(m.isLeaf,   0);
     m.copy(m.isBranch, 1);
+    m.setVariable(m.layout, "tree.nodes.node.branchOrLeaf.branch.branchStuck.unary", Layout.unary(3));
     m.execute();
     //stop(m.layout);
     m.layout.ok("""
@@ -1576,7 +1577,7 @@ A   99    72      2                           array     tree.nodes.node.branchOr
 S   99    24              28678                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
 V   99    12                  6                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
 V  111    12                  7                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-V  123     3                  0               unary     tree.nodes.node.branchOrLeaf.branch.branchStuck.unary
+V  123     3                  7               unary     tree.nodes.node.branchOrLeaf.branch.branchStuck.unary
 V  126    13                  1             topNode     tree.nodes.node.branchOrLeaf.branch.topNode
 S   51   100                              leaf     tree.nodes.node.branchOrLeaf.leaf
 A   51    96      0                         array     tree.nodes.node.branchOrLeaf.leaf.array
@@ -1592,8 +1593,8 @@ S   99    24              28678               leafKeyData     tree.nodes.node.br
 V   99    12                  6                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
 V  111    12                  7                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
 A  123    96      3                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  123    24              36872               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  123    12                  8                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+S  123    24              36879               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  123    12                 15                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
 V  135    12                  9                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
 V  147     4                 15             unary     tree.nodes.node.branchOrLeaf.leaf.unary
 A  151   306      1                 nodes     tree.nodes
@@ -1789,6 +1790,68 @@ B    0     1                  0   isLeaf     isLeaf
     t.branchFlag.copy().ok("""
 T   At  Wide  Index       Value   Field name
 B    0     1                  1   isBranch     isBranch
+""");
+   }
+
+  static void test_leaf_is_full_empty()                                         // Test whether a leaf is full or emoty
+   {TestTree t = new TestTree();                                                // Allocate a new leaf
+    Mjaf     m = t.mjaf;                                                        // Bit machine to process the tree
+
+    Layout           l = new Layout();
+    Layout.Bit       e = l.bit("empty");
+    Layout.Bit       E = l.bit("Empty");
+    Layout.Bit       f = l.bit("full");
+    Layout.Bit       F = l.bit("Full");
+    Layout.Structure s = l.structure("s", e, f, E, F);
+    l.layout(s);
+
+    m.copy(t.nodeIndex, 2);
+    m.setIndex(m.nodes, t.nodeIndex);
+    m.leaf.isEmpty(e);
+    m.leaf.isFull (f);
+    m.leafMake(t.nodeIndex);                                                    // Choose the node
+    m.leaf.isEmpty(E);
+    m.leaf.isFull (F);
+    m.execute();                                                                // Execute the code to copy out the splitting key
+    //stop(l);
+    l.ok("""
+T   At  Wide  Index       Value   Field name
+S    0     4                  6   s     s
+B    0     1                  0     empty     s.empty
+B    1     1                  1     full     s.full
+B    2     1                  1     Empty     s.Empty
+B    3     1                  0     Full     s.Full
+""");
+   }
+
+  static void test_branch_is_full_empty()                                         // Test whether a leaf is full or emoty
+   {TestTree t = new TestTree();                                                // Allocate a new leaf
+    Mjaf     m = t.mjaf;                                                        // Bit machine to process the tree
+
+    Layout           l = new Layout();
+    Layout.Bit       e = l.bit("empty");
+    Layout.Bit       E = l.bit("Empty");
+    Layout.Bit       f = l.bit("full");
+    Layout.Bit       F = l.bit("Full");
+    Layout.Structure s = l.structure("s", e, f, E, F);
+    l.layout(s);
+
+    m.copy(t.nodeIndex, 0);
+    m.setIndex(m.nodes, t.nodeIndex);
+    m.branchStuck.isEmpty(e);
+    m.branchStuck.isFull (f);
+    m.branchMake(t.nodeIndex);                                                  // Choose the node
+    m.branchStuck.isEmpty(E);
+    m.branchStuck.isFull (F);
+    m.execute();                                                                // Execute the code to copy out the splitting key
+    //stop(l);
+    l.ok("""
+T   At  Wide  Index       Value   Field name
+S    0     4                  6   s     s
+B    0     1                  0     empty     s.empty
+B    1     1                  1     full     s.full
+B    2     1                  1     Empty     s.Empty
+B    3     1                  0     Full     s.Full
 """);
    }
 
@@ -2751,6 +2814,8 @@ V    2     2                  3       unary
     test_branch_insert_remove();
     test_leaf_split_key();
     test_branch_split_key();
+    test_leaf_is_full_empty();
+    test_branch_is_full_empty();
     //test_leaf();
     //test_create_branch();
     //test_join_branch();
@@ -2764,7 +2829,8 @@ V    2     2                  3       unary
    }
 
   static void newTests()                                                        // Tests being worked on
-   {oldTests();
+   {//oldTests();
+    test_branch_is_full_empty();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
