@@ -280,12 +280,12 @@ class Mjaf extends BitMachine                                                   
     branchStuck.elementAt(out, branchSplitIdx);
    }
 
-  void branchPush(Layout.Variable index, LayoutAble kd)                         //t Push a key, next pair onto the indicated branch
+  void branchPush(Layout.Variable index, LayoutAble kd)                         // Push a key, next pair onto the indicated branch
    {setIndex(nodes, index);
     branchStuck.push(kd);
    }
 
-  void branchShift(Layout.Variable index, LayoutAble kd)                        //t Shift a key, next pair from the indicated branch
+  void branchShift(Layout.Variable index, LayoutAble kd)                        // Shift a key, next pair from the indicated branch
    {setIndex(nodes, index);
     branchStuck.shift(kd);
    }
@@ -2412,6 +2412,106 @@ V  327     3                  1               unary     tree.nodes.node.branchOr
 """);
   }
 
+  static void test_leaf_indexOf()                                               // Find index of a key in a leaf
+   {TestTree t = new TestTree();                                                // Create a test tree
+    Mjaf     m = t.mjaf;                                                        // Bit machine to process the tree
+
+    Layout               l = new Layout();
+    Layout.Bit       found = l.bit     ("found");
+    Layout.Variable result = l.variable("result", m.maxKeysPerLeaf);
+    Layout.Structure     s = l.structure("s", found, result);
+    l.layout(s);
+
+    m.copy(t.sourceIndex, 2);                                                   // Key, data pair
+    m.copy(t.leafIndex,   Layout.unary(2));                                     // Address the last node
+    m.leafGet(t.sourceIndex, t.leafIndex, t.kd);                                // Copy the indexed key, data pair
+    m.leafFindIndexOf(t.sourceIndex, t.kd, found, result);
+    m.execute();
+
+    //stop(l);                                                                  // Unary "11" printed as "3" is binary "2"
+    l.ok("""
+T   At  Wide  Index       Value   Field name
+S    0     5                  7   s     s
+B    0     1                  1     found     s.found
+V    1     4                  3     result     s.result
+""");
+
+    m.reset();
+    m.copy(t.kd.asLayout().get("leafKeyData.leafKey"), 25);                                // Modify the key so it will not be found
+    m.leafFindIndexOf(t.sourceIndex, t.kd, found, result);
+    m.execute();
+
+    //stop(l);
+    l.ok("""
+T   At  Wide  Index       Value   Field name
+S    0     5                 30   s     s
+B    0     1                  0     found     s.found
+V    1     4                 15     result     s.result
+""");
+  }
+
+  static void test_branch_indexOf()                                             // Push some key, next pairs into a branch and then shift them
+   {TestTree t = new TestTree();                                                // Create a test tree
+    Mjaf     m = t.mjaf;                                                        // Bit machine to process the tree
+
+    m.branchMake(t.targetIndex);                                                // Allocate a branch
+    m.branchMake(t.sourceIndex);                                                // Allocate a branch
+
+    for (int i = 0; i < 3; i++)
+     {m.copy                     (t.branchIndex, Layout.unary(i));              // Choose the key, next pair
+      m.branchGet (t.sourceIndex, t.branchIndex, t.kn);                         // Copy the indexed key, next pair
+      m.branchPush(t.targetIndex, t.kn);                                        // Push the key, next pair
+     }
+    m.execute();
+
+    //stop(m.layout);                                                             // Source layout
+    t.ok("""
+S  255    75                                branchStuck     tree.nodes.node.branchOrLeaf.branch.branchStuck
+A  255    72      0                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
+S  255    24              49163                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  255    12                 11                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  267    12                 12                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A  279    72      1                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
+S  279    24              57357                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  279    12                 13                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  291    12                 14                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A  303    72      2                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
+S  303    24              65551                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  303    12                 15                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  315    12                 16                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+V  327     3                  7               unary     tree.nodes.node.branchOrLeaf.branch.branchStuck.unary
+""");
+
+    m.reset();
+    m.branchShift(t.targetIndex, t.kn);                                         // Shift the key, data pair
+    m.execute();
+
+    //stop(t.kn);
+    t.kn.asLayout().ok("""
+T   At  Wide  Index       Value   Field name
+S    0    24              49163   branchKeyNext     branchKeyNext
+V    0    12                 11     branchKey     branchKeyNext.branchKey
+V   12    12                 12     branchNext     branchKeyNext.branchNext
+""");
+
+    m.reset();
+    m.branchShift(t.targetIndex, t.kn);                                         // Shift the key, data pair
+    m.execute();
+
+    //stop(t.kn);
+    t.kn.asLayout().ok("""
+T   At  Wide  Index       Value   Field name
+S    0    24              57357   branchKeyNext     branchKeyNext
+V    0    12                 13     branchKey     branchKeyNext.branchKey
+V   12    12                 14     branchNext     branchKeyNext.branchNext
+""");
+
+   //stop(m.layout);
+   t.ok("""
+V  327     3                  1               unary     tree.nodes.node.branchOrLeaf.branch.branchStuck.unary
+""");
+  }
+
 
 
 
@@ -2987,7 +3087,8 @@ V    2     2                  3       unary
    }
 
   static void newTests()                                                        // Tests being worked on
-   {oldTests();
+   {//oldTests();
+    test_leaf_indexOf();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
