@@ -40,7 +40,11 @@ class Unary extends BitMachine implements LayoutAble                            
   void canNotDec(Layout.Bit result) {copy(result, 0, value, 0,             1); not(result);} // Empty
 
   void inc() {shiftLeftOneByOne  (value);}                                      // Increment the unary number
-  void dec() {shiftRightOneByZero(value);}                                      // Decrement the unary number
+  void dec() {
+say("DDDD11", value);
+    shiftRightOneByZero(value);                                       // Decrement the unary number
+say("DDDD22", value);
+}
 
 //D1 Print                                                                      // Print a unary number
 
