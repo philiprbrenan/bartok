@@ -702,7 +702,6 @@ public class BitMachine extends Test implements LayoutAble                      
      {final int N = index.width;
       int ones = N;                                                             // Faulte de mieux
       for (int i = 0; i < N; ++i) if (!index.get(i)) {ones = i; break;}         // First zero
-say("Set array index ", ones, array.name);
       array.setIndex(ones);                                                     // Set the array index
      }
    }
