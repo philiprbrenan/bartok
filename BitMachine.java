@@ -181,24 +181,52 @@ public class BitMachine extends Test implements LayoutAble                      
   class Equals extends Instruction                                              // Check that two fields are equal
    {final Layout.Field f1, f2;                                                  // Fields to compare
     final Layout.Field result;                                                  // Bit field showing result
-    Equals(Layout.Field Result, Layout.Field F1, Layout.Field F2)               // Check two fields and set result
-     {if (Result.width != 1) stop("Result field must be one bit, but it is",
-        Result.width, "bits");
-      F1.sameSize(F2);
+    final int off1, off2, length;                                               // Offsets relative to first and second field, length of comparison
+    final int f2Int;                                                            // Compare with a constant integer
+    Equals(Layout.Bit Result, Layout.Field F1, int F2)                                             // Constant integer
+     {f1 = F1; f2 = null; f2Int = F2; result = Result;
+      off1 = 0; off2 = 0; length = F1.width;
+     }
+    Equals(Layout.Bit Result, Layout.Field F1, Layout.Field F2)               // Check two fields and set result
+     {F1.sameSize(F2);
       result = Result; f1 = F1; f2 = F2;
+      f2Int  = off1 = off2 = 0;
+      length = F1.width;
+     }
+    Equals(Layout.Bit Result,
+         Layout.Field F1, int Off1,
+         Layout.Field F2, int Off2,
+         int          Length)
+     {f1 = F1; f2 = F2; f2Int = 0; result = Result; length = Length;
+      off1 = Off1; off2 = Off2;
      }
     void action()                                                               // Perform instruction
-     {for (int i = f1.width-1; i >= 0; i--)                                     // Check each bit
-       {if (f1.get(i) != f2.get(i))                                             // Unequal bit
-         {result.set(0, false);                                                 // Indicate that the fields are not equal becuase they differ in at least one bit
-          return;                                                               // No need to check further
+     {if (f2 != null)
+       {for (int i = length-1; i >= 0; i--)                                     // Check each bit
+         {if (f1.get(off1+i) != f2.get(off2+i))                                 // Unequal bit
+           {result.set(0, false);                                               // Indicate that the fields are not equal becuase they differ in at least one bit
+            return;                                                             // No need to check further
+           }
          }
+        result.set(0, true);                                                    // All bits are equal
        }
-      result.set(0, true);                                                      // All bits are equal
+      else
+       {final int a = f1.asInt();
+        result.set(0, a == f2Int);                                              // Compare the field with the constant
+       }
      }
    }
-  Equals equals(Layout.Field Result, Layout.Field F1, Layout.Field F2)          // Check two fields are equal
+  Equals equals(Layout.Bit Result, Layout.Field F1, int F2)                     // Check a field equals a constant
    {return new Equals(Result, F1, F2);
+   }
+  Equals equals(Layout.Bit Result, Layout.Field F1, Layout.Field F2)            // Check two fields are equal
+   {return new Equals(Result, F1, F2);
+   }
+  Equals equals(Layout.Bit Result,                                              // Check two sets of bits are equal
+    Layout.Field F1, int Off1,
+    Layout.Field F2, int Off2,
+    int          Length)
+   {return new Equals(Result, F1, Off1,  F2, Off2, Length);
    }
 
   class LessThan extends Instruction                                            // Check that the first field is less than the second field
@@ -1024,7 +1052,12 @@ V    4     4                 15     b     s.b
     Layout.Bit      ca = l.bit      ("ca");
     Layout.Bit      cb = l.bit      ("cb");
     Layout.Bit      cc = l.bit      ("cc");
-    Layout.Structure s = l.structure("s", a, b, c, aa, ab, ac, ba, bb, bc, ca, cb, cc);
+    Layout.Bit      a0 = l.bit      ("a0");
+    Layout.Bit      a1 = l.bit      ("a1");
+    Layout.Bit      b1 = l.bit      ("b1");
+    Layout.Bit      b2 = l.bit      ("b2");
+    Layout.Structure s = l.structure("s", a, b, c,
+      aa, ab, ac, ba, bb, bc, ca, cb, cc, a0, a1, b1, b2);
     l.layout(s);
 
     a.fromInt(1);
@@ -1041,11 +1074,15 @@ V    4     4                 15     b     s.b
     m.equals(ca, c, a);
     m.equals(cb, c, b);
     m.equals(cc, c, c);
+    m.equals(a0, a, 0);
+    m.equals(a1, a, 1);
+    m.equals(b1, b, 1, a, 0, 1);
+    m.equals(b2, b, 2, a, 0, 1);
     m.execute();
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    21            1397025   s     s
+S    0    25           13979937   s     s
 V    0     4                  1     a     s.a
 V    4     4                  2     b     s.b
 V    8     4                  1     c     s.c
@@ -1058,6 +1095,10 @@ B   17     1                  0     bc     s.bc
 B   18     1                  1     ca     s.ca
 B   19     1                  0     cb     s.cb
 B   20     1                  1     cc     s.cc
+B   21     1                  0     a0     s.a0
+B   22     1                  1     a1     s.a1
+B   23     1                  1     b1     s.b1
+B   24     1                  0     b2     s.b2
 """);
    }
 
@@ -1728,11 +1769,12 @@ V   48     4                  0     d     S.d
     test_repeat();
     test_inc_dec();
     test_unary_filled();
+    test_set_index();
    }
 
   static void newTests()                                                        // Tests being worked on
-   {oldTests();
-    test_set_index();
+   {//oldTests();
+    test_equal();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
