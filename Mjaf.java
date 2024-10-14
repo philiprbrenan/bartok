@@ -1871,7 +1871,6 @@ V  327     3                  2               unary     tree.nodes.node.branchOr
 """);
 
     m.reset();
-    debug = true;
     m.copy(t.branchIndex, 0);                                                   // Update key,next pair at this index
     m.branchPut(t.nodeIndex, t.branchIndex, t.kn);                              // Put the key, next pair
     m.execute();
