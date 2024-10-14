@@ -163,7 +163,9 @@ class Stuck extends BitMachine implements LayoutAble                            
         shiftLeftOneByOne(source);                                              // One step down on source
        }
      };
+say("AAAA11", unary);
     unary.dec();                                                                // New number of elements on stuck
+stop("AAAA22", unary);
    }
 
   void firstElement(LayoutAble FirstElement)                                    // Get the first element
