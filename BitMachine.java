@@ -91,7 +91,7 @@ public class BitMachine extends Test implements LayoutAble                      
 
     void addInstruction()                                                       // Add the instruction to the instruction stack
      {position = bitMachine.instructions.size();                                // Position of instruction in stack of instructions
-      bitMachine.instructions.push(this);                                      // Save instruction
+      bitMachine.instructions.push(this);                                       // Save instruction
      }
    }
 
@@ -101,7 +101,7 @@ public class BitMachine extends Test implements LayoutAble                      
   Nop nop() {return new Nop();}                                                 // No operation
 
   class Copy extends Instruction                                                // Copy data from the second field to the first field
-   {Layout.Field source, target;                                                // Copy source to target
+   {final Layout.Field source, target;                                          // Copy source to target
     final int sOff, tOff, length;                                               // Offsets relative to source and target
     final int sourceInt;                                                        // Copy a constant integer
     Copy(Layout.Field Target, int Source)                                       // Copy source to target
@@ -128,7 +128,7 @@ public class BitMachine extends Test implements LayoutAble                      
        }
       else
        {if (debug) say("Copy integer:", sourceInt, "to", target.name, "at", target.at);
-        target.fromInt(sourceInt);                                            // Copy from source integer
+        target.fromInt(sourceInt);                                              // Copy from source integer
        }
      }
    }
@@ -148,8 +148,8 @@ public class BitMachine extends Test implements LayoutAble                      
 //D2 Arithmetic                                                                 // Integer arithmetic
 
   class Add extends Instruction                                                 // Add two equal sized fields containing positive integers in binary form to get a field of the same size by ignoring any overflow
-   {Layout.Field f1, f2;                                                        // Fields to add
-    Layout.Field result;                                                        // Result of addition
+   {final Layout.Field f1, f2;                                                  // Fields to add
+    final Layout.Field result;                                                  // Result of addition
     Add(Layout.Field Result, Layout.Field F1, Layout.Field F2)                  // Check the two fields are the same size
      {if (Result.width != 1) stop("Result field must be one bit, but it is",
         Result.width, "bits");
@@ -163,14 +163,14 @@ public class BitMachine extends Test implements LayoutAble                      
    }
 
   class Inc extends Instruction                                                 // Increment a field containing a positive integer in binary form ignoring any overflow
-   {Layout.Field field;                                                         // Field to increment
+   {final Layout.Field field;                                                   // Field to increment
     Inc(Layout.Field Field) {field = Field;}                                    // Record field to increment
     void action()           {field.fromInt(field.asInt() + 1);}                 // Perform instruction
    }
   Inc inc(Layout.Field field) {return new Inc(field);}                          // Increment a field containing a positive integer ignoring the result
 
   class Dec extends Instruction                                                 // Increment a field containing a positive integer in binary form ignoring any overflow
-   {Layout.Field field;                                                         // Field to increment
+   {final Layout.Field field;                                                   // Field to increment
     Dec(Layout.Field Field) {field = Field;}                                    // Record field to increment
     void action()           {field.fromInt(field.asInt() - 1);}                 // Perform instruction
    }
@@ -179,8 +179,8 @@ public class BitMachine extends Test implements LayoutAble                      
 //D2 Boolean tests                                                              // Test the value of one fioeld against another to get a boolean result
 
   class Equals extends Instruction                                              // Check that two fields are equal
-   {Layout.Field f1, f2;                                                        // Fields to compare
-    Layout.Field result;                                                        // Bit field showing result
+   {final Layout.Field f1, f2;                                                  // Fields to compare
+    final Layout.Field result;                                                  // Bit field showing result
     Equals(Layout.Field Result, Layout.Field F1, Layout.Field F2)               // Check two fields and set result
      {if (Result.width != 1) stop("Result field must be one bit, but it is",
         Result.width, "bits");
@@ -202,8 +202,8 @@ public class BitMachine extends Test implements LayoutAble                      
    }
 
   class LessThan extends Instruction                                            // Check that the first field is less than the second field
-   {Layout.Field f1, f2;                                                        // Fields to compare
-    Layout.Field result;                                                        // Bit field showing result
+   {final Layout.Field f1, f2;                                                  // Fields to compare
+    final Layout.Field result;                                                  // Bit field showing result
     LessThan(Layout.Field Result, Layout.Field F1, Layout.Field F2)             // Check two fields and set result
      {Result.isBit();
       F1.sameSize(F2);
@@ -228,8 +228,8 @@ public class BitMachine extends Test implements LayoutAble                      
    }
 
   class LessThanOrEqual extends Instruction                                     // Check that the first field is less than or equal to the second field
-   {Layout.Field f1, f2;                                                        // Fields to compare
-    Layout.Field result;                                                        // Bit field showing result
+   {final Layout.Field f1, f2;                                                  // Fields to compare
+    final Layout.Field result;                                                  // Bit field showing result
     LessThanOrEqual(Layout.Field Result, Layout.Field F1, Layout.Field F2)      // Check two fields and set result
      {Result.isBit();
       F1.sameSize(F2);
@@ -271,7 +271,7 @@ public class BitMachine extends Test implements LayoutAble                      
    }
 
   class ShiftRightOneByZero extends Instruction                                 // Shift right one fill with zero
-   {Layout.Field field;                                                         // Field to shift
+   {final Layout.Field field;                                                         // Field to shift
     ShiftRightOneByZero(Layout.Field Field)                                     // Right shift a field by one place fillng with a zero
      {field = Field;
      }
