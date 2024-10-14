@@ -124,7 +124,8 @@ class Stuck extends BitMachine implements LayoutAble                            
 
   void setElementAt(LayoutAble elementIn, Layout.Variable index)                // Set the element at the indicated zero based index
    {setIndexFromUnary(array, index);                                            // Index of element to set
-    copy(element, elementIn.asLayoutField());                                  // Copy element in
+    new Say() {void action() {say("AAAA", index);}};
+    copy(element, elementIn.asLayoutField());                                   // Copy element in
    }
 
   void insertElementAt(LayoutAble elementToInsert, Layout.Variable index)       // Insert an element represented as memory into the stuckstack at the indicated zero based index after moving the elements above up one position
