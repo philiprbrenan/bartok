@@ -10,7 +10,8 @@ import java.util.*;
 
 public class BitMachine extends Test implements LayoutAble                      // A machine whose assembler code is just capable enough to manipulate a b-tree
  {final int maxSteps = 999;                                                     // Maximum number of steps to be executed
-  final String bitMachineName;                                                  // The name of the bit amchine
+  final String bitMachineName;                                                  // The name of the bit machine
+  final int bitMachineNumber;                                                   // The number of the bit machine
   BitMachine bitMachine = this;                                                 // The bit machine in which to load instructions
   final StringBuilder printer = new StringBuilder();                            // Place test output here for comparison with expected values
   final Stack<BitMachine>  machines     = new Stack<>();                        // Machines that will generate instructions for this machine
@@ -18,15 +19,21 @@ public class BitMachine extends Test implements LayoutAble                      
   Layout layout = null;                                                         // Layout of bit memory being manipulated by this bit machine
   int instructionIndex = 0;                                                     // The current instruction
   int step = 0;                                                                 // The number of the currently executing step
+  static int BitMachineNumber = 0;                                              // Bit machine enumerator
   static boolean debug = false;                                                 // Debug if true
 
   public Layout.Field asLayoutField()          {return layout.top;}             // Top most field of the layout associated with this bit machine
   public Layout       asLayout     ()          {return layout;}                 // Layout associated with this bit machine
   void                setLayout(Layout Layout) {layout = Layout;}               // Set the layout associated with this bit machine
 
-  BitMachine(String Name) {bitMachineName = Name;}                              // Assign a name to the bit machine to assist debugging
-  BitMachine()            {bitMachineName = "BitMachine";}                      // Default name for bit machine
-  String getBitMachineName() {return bitMachine.bitMachineName;}                // Get the name of the bit machine that we are going to place generated code into
+  BitMachine(String Name)                                                       // Assign a name and number to the bit machine to assist debugging
+   {bitMachineName = Name;
+    bitMachineNumber = ++BitMachineNumber;
+   }
+
+  BitMachine()            {this("BitMachine");}                                 // Default name for bit machine
+
+  String bitMachineName() {return bitMachineName+"_"+bitMachineNumber;}         // Get the name of the bit machine that we are going to place generated code into
 
   void bitMachine(BitMachine...subMachines)                                     // Save machines this machine is dependent on
    {for (BitMachine b : subMachines) machines.push(b);
@@ -270,7 +277,6 @@ public class BitMachine extends Test implements LayoutAble                      
      }
     void action()                                                               // Perform instruction
      {final int N  = field.width;
-stop("EEEE", N);
       for (int i = 1; i < N; ++i) field.set(i-1, field.get(i));
       field.set(N-1, false);
      }
