@@ -163,22 +163,20 @@ class Stuck extends BitMachine implements LayoutAble                            
         shiftLeftOneByOne(source);                                              // One step down on source
        }
      };
-say("AAAA11", unary);
     unary.dec();                                                                // New number of elements on stuck
-stop("AAAA22", unary);
    }
 
   void firstElement(LayoutAble FirstElement)                                    // Get the first element
    {zero(source);                                                               // Index of first element
     setIndexFromUnary(array, source);                                           // Set index of first element
-    copy(FirstElement.asLayoutField(), element);                               // Copy of first element
+    copy(FirstElement.asLayoutField(), element);                                // Copy of first element
    }
 
   void lastElement(LayoutAble LastElement)                                      // Get the last active element
    {copy(source, unary.value);                                                  // Index top of stuck
     shiftRightOneByZero(source);                                                // Index of top most active element
     setIndexFromUnary(array, source);                                           // Set index of topmost element
-    copy(LastElement.asLayoutField(), element);                                // Copy of top most element
+    copy(LastElement.asLayoutField(), element);                                 // Copy of top most element
    }
 
 //D1 Search                                                                     // Search a stuck.
