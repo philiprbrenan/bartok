@@ -270,6 +270,7 @@ public class BitMachine extends Test implements LayoutAble                      
      }
     void action()                                                               // Perform instruction
      {final int N  = field.width;
+stop("EEEE", N);
       for (int i = 1; i < N; ++i) field.set(i-1, field.get(i));
       field.set(N-1, false);
      }
