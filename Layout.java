@@ -427,6 +427,7 @@ public class Layout extends Test implements LayoutAble                          
 
     void position(int At)                                                       // Reposition this array after an index of a containing array has been changed
      {at = At;
+say("Position array element", fullName, "index", index, "width", element.width);
       element.position(at + index * element.width);
      }
 
