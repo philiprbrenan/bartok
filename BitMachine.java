@@ -18,6 +18,7 @@ public class BitMachine extends Test implements LayoutAble                      
   Layout layout = null;                                                         // Layout of bit memory being manipulated by this bit machine
   int instructionIndex = 0;                                                     // The current instruction
   int step = 0;                                                                 // The number of the currently executing step
+  static boolean debug = false;                                                 // Debug if true
 
   public Layout.Field asLayoutField()          {return layout.top;}             // Top most field of the layout associated with this bit machine
   public Layout       asLayout     ()          {return layout;}                 // Layout associated with this bit machine
@@ -62,7 +63,7 @@ public class BitMachine extends Test implements LayoutAble                      
     step = 0;
     for(instructionIndex = 0; instructionIndex < N; ++instructionIndex)         // Instruction sequence
      {final Instruction i = instructions.elementAt(instructionIndex);
-//say("XXXX", step+1, instructionIndex, i.position, i.name);
+      if (debug) say("Debug:", step+1, instructionIndex, i.position, i.name);
       i.action();
       trace();
       if (++step > maxSteps) stop("Terminating after", maxSteps, "steps");
@@ -112,12 +113,16 @@ public class BitMachine extends Test implements LayoutAble                      
      }
     void action()                                                               // Perform instruction
      {if (source != null)                                                       // Copy from source field to target field
-       {for(int i = length-1; i >= 0; i--)                                      // Copy each bit assuming no overlap
+       {if (debug) say("Copy:", source.asInt(), "to", target.name, "at", target.at);
+        for(int i = length-1; i >= 0; i--)                                      // Copy each bit assuming no overlap
          {final Boolean b = source.get(sOff+i);
           target.set(tOff+i, b);
          }
        }
-      else target.fromInt(sourceInt);                                            // Copy from source integer
+      else
+       {if (debug) say("Copy integer:", sourceInt, "to", target.name, "at", target.at);
+        target.fromInt(sourceInt);                                            // Copy from source integer
+       }
      }
    }
   Copy copy(Layout.Field target, int source)                                    // Copy integer from source to target
@@ -697,6 +702,7 @@ public class BitMachine extends Test implements LayoutAble                      
      {final int N = index.width;
       int ones = N;                                                             // Faulte de mieux
       for (int i = 0; i < N; ++i) if (!index.get(i)) {ones = i; break;}         // First zero
+say("Set array index ", ones, array.name);
       array.setIndex(ones);                                                     // Set the array index
      }
    }
