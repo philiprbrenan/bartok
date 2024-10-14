@@ -1718,7 +1718,8 @@ V  351     4                 15             unary     tree.nodes.node.branchOrLe
     m.copy(t.branchFlag, m.isBranch);                                           // Copy its branch flag
     m.execute();                                                                // Execute the code to copy out the splitting key
     //stop(t.n);
-    t.ok("""
+    t.nodeIndex.copy().ok("""
+T   At  Wide  Index       Value   Field name
 V    0     2                  2   nodeFree     nodeFree
 """);
     //stop(t.l);                                                                // Check Leaf
@@ -2455,7 +2456,7 @@ V    2     2                  3       unary
    }
 
   static void newTests()                                                        // Tests being worked on
-   {//oldTests();
+   {oldTests();
     test_branch_get_put();
    }
 
