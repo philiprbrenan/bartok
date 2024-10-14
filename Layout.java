@@ -85,8 +85,9 @@ public class Layout extends Test implements LayoutAble                          
 
   static int unary(int binary) {return (1<<binary) - 1;}                        // Convert a binary integer to a unary integer of the same value
 
-
-  Variable dupVariable(String name) {return get(name).duplicate().asLayoutField().toVariable();} // Create a variable like the named one in the layout
+  Variable dupVariable(String name)                                             // Create a variable like the named one in the layout
+   {return get(name).duplicate().asLayoutField().toVariable();
+   }
 
 //D1 Bit Memory                                                                 // A bit is the element from which memory is constructed.
 
