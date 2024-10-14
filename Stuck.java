@@ -182,13 +182,14 @@ class Stuck extends BitMachine implements LayoutAble                            
 //D1 Search                                                                     // Search a stuck.
 
   void indexOf                                                                  // Find the index of an element in the stuck and set the found flag to true else if no such element is found the found flag is set to false
-   (LayoutAble elementToFind, Layout.Bit found, Layout.Variable index)
-   {zero(found);
-    zero(index);
+   (LayoutAble elementToFind, int length,                                       // Check whether the stuck contains the specified element  comparing the first length bits
+    Layout.Bit found,         Layout.Variable index)                            // Whether the element was found and at what index
+   {zero(found);                                                                // Assume not found
+    zero(index);                                                                // Start at index 0
     Branch[]equal = new Branch[max];
-    for (int i = 0; i < max; i++)
+    for (int i = 0; i < max; i++)                                               // Check each element in turn
      {setIndexFromUnary(array, index);
-      equals(found, elementToFind.asLayoutField(), element);                   // Test for the element to be found
+      equals(found, elementToFind.asLayoutField(), 0, element, 0, length);      // Test for the element to be found
       equal[i] = branchIfOne(found);
       shiftLeftOneByOne(index);
      }
@@ -903,15 +904,15 @@ V   40     4                  0     unary     v.unary
 
     l.layout(S);
 
-    s.indexOf(ka, fa, ia);
-    s.indexOf(k1, f1, i1);
-    s.indexOf(kb, fb, ib);
-    s.indexOf(k2, f2, i2);
-    s.indexOf(kc, fc, ic);
-    s.indexOf(k3, f3, i3);
-    s.indexOf(kd, fd, id);
-    s.indexOf(k4, f4, i4);
-    s.indexOf(ke, fe, ie);
+    s.indexOf(ka, W, fa, ia);                                                   // The key is only M wide which is not quite enough to compare all of the element value, however W is so that is what is being used
+    s.indexOf(k1, W, f1, i1);
+    s.indexOf(kb, W, fb, ib);
+    s.indexOf(k2, W, f2, i2);
+    s.indexOf(kc, W, fc, ic);
+    s.indexOf(k3, W, f3, i3);
+    s.indexOf(kd, W, fd, id);
+    s.indexOf(k4, W, f4, i4);
+    s.indexOf(ke, W, fe, ie);
     s.execute();
 
     //stop(l);
