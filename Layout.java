@@ -373,11 +373,13 @@ public class Layout extends Test implements LayoutAble                          
      {at = At; depth = Depth;
      }
 
-    Field duplicate(Layout d)                                                   // Duplicate a variable so we can modify it safely
+    Field duplicate(Layout d)                                                   // Duplicate a variable during the duplication of a layout
      {final Variable v = d.new Variable(name, width);
       v.at = at; v.depth = depth;
       return v;
      }
+
+    Variable like() {return duplicate().asLayoutField().toVariable();}          // Make a variable like this one
 
     public String toString(boolean printHeader)                                 // Print the variable
      {return print(printHeader).toString();
@@ -464,6 +466,8 @@ public class Layout extends Test implements LayoutAble                          
       e.up = a;
       return a;
      }
+
+    Array like() {return duplicate().asLayoutField().toArray();}                // Make an array like this one
    }
 
   class Structure extends Field                                                 // Layout a structure
@@ -529,6 +533,8 @@ public class Layout extends Test implements LayoutAble                          
       return s;
      }
 
+    Structure like() {return duplicate().asLayoutField().toStructure();}        // Make a structure like this one
+
     public String toString(boolean printHeader)                                 // Print the structure
      {final StringBuilder s = print(printHeader);                               // Print line describing structure
       for(Field f: subStack) s.append(f.toString(false));                       // Print each field of structure
@@ -563,18 +569,18 @@ public class Layout extends Test implements LayoutAble                          
   Structure structure(String name, LayoutAble...ml)           {return new Structure(name, ml);}
   Union     union    (String name, LayoutAble...ml)           {return new Union    (name, ml);}
 
-  static LayoutAble createBit(String name)                                      // Create a single bit
+  static Layout.Bit createBit(String name)                                      // Create a single bit
    {final Layout          l = new Layout();
     final Layout.Variable v = l.bit(name);                                      // New variable
     l.layout(v);                                                                // Layout the variable
-    return l;                                                                   // Variable
+    return l.asLayoutField().toBit();                                           // Bit
    }
 
-  static LayoutAble createVariable(String name, int width)                      // Create a single variable
+  static Layout.Variable createVariable(String name, int width)                 // Create a single variable
    {final Layout          l = new Layout();
     final Layout.Variable v = l.variable(name, width);                          // New variable
     l.layout(v);                                                                // Layout the variable
-    return l;                                                                   // Variable
+    return l.asLayoutField().toVariable();                                      // Variable
    }
 
 //D0                                                                            // Tests.
@@ -1060,9 +1066,8 @@ V   16     4                  4       d     S.t.d
    }
 
   static void test_single_bit()
-   {LayoutAble B = createBit("b");
-    Layout.Variable b = B.asLayoutField().toBit();
-    b.fromInt(1);
+   {Layout.Bit b = createBit("b");
+               b.fromInt(1);
     //stop(b);
     ok(b.toString(), """
 T   At  Wide  Index       Value   Field name
@@ -1071,8 +1076,7 @@ B    0     1                  1   b     b
    }
 
   static void test_single_variable()
-   {LayoutAble A = createVariable("a", 4);
-    Layout.Variable a = A.asLayoutField().toVariable();
+   {Layout.Variable a = createVariable("a", 4);
     a.fromInt(3);
     //stop(a);
     ok(a.toString(), """
@@ -1100,12 +1104,56 @@ V    0     4                  3   =a     a
    }
 
   static void test_classes()
-   {LayoutAble A = createVariable("a", 4);
-    Layout.Variable a = A.asLayoutField().toVariable();
+   {Layout.Variable a = createVariable("a", 4);
     a.addClasses("index node", "string");
     ok( a.checkClasses("node", "index"));
     sayThisOrStop("Class: a not contained in classes for: a with classes: [index, node, string]");
     a.checkClasses("a b");
+   }
+
+  static void test_like()
+   {Layout    l = new Layout();
+    Variable  a = l.variable ("a", 2);
+    Variable  b = l.variable ("b", 2);
+    Variable  c = l.variable ("c", 4);
+    Structure s = l.structure("s", a, b, c);
+    Array     A = l.array    ("A", s, 3);
+    Variable  d = l.variable ("d", 4);
+    Variable  e = l.variable ("e", 4);
+    Structure S = l.structure("S", d, A, e);
+    l.layout(S);
+    var al = a.like();
+    var Al = A.like();
+    var sl = s.like();
+    al.copy().ok("""
+T   At  Wide  Index       Value   Field name
+V    0     2                  0   a     a
+""");
+    Al.copy().ok("""
+T   At  Wide  Index       Value   Field name
+A    0    24      0           0   A     A
+S    0     8                  0     s     A.s
+V    0     2                  0       a     A.s.a
+V    2     2                  0       b     A.s.b
+V    4     4                  0       c     A.s.c
+A    8    24      1           0   A     A
+S    8     8                  0     s     A.s
+V    8     2                  0       a     A.s.a
+V   10     2                  0       b     A.s.b
+V   12     4                  0       c     A.s.c
+A   16    24      2           0   A     A
+S   16     8                  0     s     A.s
+V   16     2                  0       a     A.s.a
+V   18     2                  0       b     A.s.b
+V   20     4                  0       c     A.s.c
+""");
+    sl.copy().ok("""
+T   At  Wide  Index       Value   Field name
+S    0     8                  0   s     s
+V    0     2                  0     a     s.a
+V    2     2                  0     b     s.b
+V    4     4                  0     c     s.c
+""");
    }
 
   static void test_binary_to_unary()
@@ -1136,6 +1184,7 @@ V    0     4                  3   =a     a
 
   static void newTests()                                                        // Tests being worked on
    {oldTests();
+    test_like();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
