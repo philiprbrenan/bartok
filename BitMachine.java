@@ -12,11 +12,12 @@ public class BitMachine extends Test implements LayoutAble                      
  {final int maxSteps = 999;                                                     // Maximum number of steps to be executed
   final String bitMachineName;                                                  // The name of the bit machine
   final int bitMachineNumber;                                                   // The number of the bit machine
-  BitMachine bitMachine = this;                                                 // The bit machine in which to load instructions
   final StringBuilder printer = new StringBuilder();                            // Place test output here for comparison with expected values
   final Stack<BitMachine>  machines     = new Stack<>();                        // Machines that will generate instructions for this machine
   final Stack<Instruction> instructions = new Stack<>();                        // Instructions to be executed
-  Layout layout = null;                                                         // Layout of bit memory being manipulated by this bit machine
+
+  BitMachine bitMachine = this;                                                 // The bit machine in which to load instructions
+  Layout layout;                                                                // Layout of bit memory being manipulated by this bit machine
   int instructionIndex = 0;                                                     // The current instruction
   int step = 0;                                                                 // The number of the currently executing step
   static int BitMachineNumber = 0;                                              // Bit machine enumerator
@@ -52,14 +53,14 @@ public class BitMachine extends Test implements LayoutAble                      
 
   void ok(String expected) {Test.ok(toString(), expected);}                     // Check the code for this machine is as expected
 
-  Layout.Variable getVariable(Layout layout, String name)                       // Get a variable by name
-   {final Layout.Field l = layout.get(name);
+  Layout.Variable getVariable(String name)                                      // Get a variable by name
+   {final Layout.Field l = this.layout.get(name);
     if (l == null) stop("No such field as", name);
     return l.toVariable();
    }
 
-  void setVariable(Layout layout, String name, int value)                       // Set a variable by name from a specified integer
-   {final Layout.Variable v = getVariable(layout, name);                        // Address the variable
+  void setVariable(String name, int value)                                      // Set a variable by name from a specified integer
+   {final Layout.Variable v = getVariable(name);                                // Address the variable
     copy(v, value);                                                             // Set the variable
    }
 
