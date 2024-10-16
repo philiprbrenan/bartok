@@ -3,7 +3,7 @@
 // Philip R Brenan at appaapps dot com, Appa Apps Ltd Inc., 2024
 //------------------------------------------------------------------------------
 package com.AppaApps.Silicon;                                                   // Design, simulate and layout  a binary tree on a silicon chip.
-
+// use like() rather than duplicate()
 class Mjaf extends BitMachine                                                   // Btree algorithm but with data stored only in the leaves to facilitate deletion without complicating search or insertion. The branches (interior nodes) have an odd number of keys to make the size of a branch as close to that of a leaf as possible to simplify memory management.
  {final int bitsPerKey;                                                         // Number of bits in key
   final int bitsPerData;                                                        // Number of bits in data
@@ -67,9 +67,10 @@ class Mjaf extends BitMachine                                                   
     branchSplitIdx   = W.new Variable ("branchSplitIdx", N);                    // Index of branch splitting key
     workStructure    = W.new Structure("workStructure",                         // An entry in a leaf node
       leafSplitIdx, branchSplitIdx);
+
     W.layout(workStructure);                                                    // Layout of a leaf key data pair
-    leafSplitIdx.fromUnary(leafSplitPoint);                                     // Index of splitting key in leaf
-    branchSplitIdx.fromUnary(branchSplitPoint);                                 // Index of splitting key in branch
+    leafSplitIdx.fromUnary(leafSplitPoint);                                     // Index of splitting key in leaf in unary
+    branchSplitIdx.fromUnary(branchSplitPoint);                                 // Index of splitting key in branch in unary
     Layout.constants(leafSplitIdx, branchSplitIdx);                             // Mark as constants
 
     final Layout L   = layoutLeafKeyData = new Layout();                        // Layout of a leaf key data pair
@@ -341,39 +342,27 @@ class Mjaf extends BitMachine                                                   
     free(source);                                                               // Free the leaf that was joined
    }
 
-/*
-    void join(Branch Join, Key joinKeyName)                                     // Append the second branch to the first one adding the specified key
-     {final int K = nKeys(), J = Join.nKeys();                                  // Number of keys currently in branch
-      if (K + 1 + J > maxKeysPerLeaf) stop("Join of branch has too many keys",
-          K,"+1+",J, "greater than", maxKeysPerBranch);
+  void branchFindFirstGreaterOrEqual                                            // Find the 'next' for the first key in a branch that is greater than or equal to the specified key or else return the top node if no such key exists.
+   (Layout.Variable nodeIndex, Layout.Variable key, Layout.Variable result)     // Find node associated with a key
+   {new Block()
+     {void code()
+       {final LayoutAble kn = branchKeyNext.duplicate();                        // Work area for transferring key data pairs form the source code to the target node
+        final Layout.Variable index =                                           // Index the key, next pairs in the branch
+              Layout.createVariable("index", maxKeysPerBranch);
+        setIndex(nodes, nodeIndex);                                             // Index the node to search
+        zero(index);                                                            // Start with the first pair
 
-      final Node t = Join.getTop();                                             // TopNode from branch being joined
-
-      pushKey(joinKeyName);                                                     // Key to separate joined branches
-      pushNext(getTop());                                                       // Push current top node
-      topNode.set(t.index);                                                     // New top node is the one from teh branch being joined
-
-      for (int i = 0; i < J; i++)                                               // Add right hand branch
-       {final Key  k = Join.getKey (i);
-        final Node n = Join.getNext(i);
-        pushKey(k);                                                             // Push memory associated with key
-        pushNext(n);
+        for (int i = 0; i < maxKeysPerBranch; i++)                              // Check each key
+         {branchGet(nodeIndex, index, kn);                                      // Retrieve key/next pair
+          copy(result, kn.asLayout().get("branchKeyNext.branchNext"));
+          returnIfLessThan(key, kn.asLayout().get("branchKeyNext.branchKey"));
+          //new Say() {void action() {say("AAAA", result);}};
+          shiftLeftOneByOne(index);
+         }
+        copy(result, topNode);                                                  // The search key is greater than all the keys in the branch so return the top node
        }
-      Join.free();
-     }
-
-    Node findFirstGreaterOrEqual(Key keyName)                                   // Find node associated with a key
-     {final int N = nKeys();                                                    // Number of keys currently in node
-      for (int i = 0; i < N; i++)                                               // Check each key
-       {final Key     k = getKey(i);                                            // Key
-        final boolean l = keyName.compareTo(k) <= 0;                            // Compare current key with search key
-        if (l) return getNext(i);                                               // Current key is greater than or equal to the search key
-       }
-      return getTop();                                                          // Key is greater than all the keys in the branch
-     }
-
-
-
+     };
+   }
 
 //D1 Node                                                                       // A branch or a leaf
 /*
@@ -2775,7 +2764,7 @@ V    1     4                 15     result     s.result
 """);
   }
 
-  static void test_leaf_split()                                                 // Split a leaf
+  static void test_leaf_split_join()                                                 // Split a leaf
    {TestLeafTree t = new TestLeafTree();                                        // Create a test tree
     Mjaf     m = t.mjaf;                                                        // Bit machine to process the tree
 
@@ -2824,9 +2813,65 @@ V  294    12                 23                 leafKey     tree.nodes.node.bran
 V  306    12                 24                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
 V  318     4                  3             unary     tree.nodes.node.branchOrLeaf.leaf.unary
 """);
+
+    m.reset();
+    m.leafJoinable(t.targetIndex, t.sourceIndex, t.le);                         // Can the split leaves be joined
+    m.leafJoin    (t.targetIndex, t.sourceIndex);                               // Join leaves
+    m.leafJoinable(t.targetIndex, t.sourceIndex, t.lf);                         // Can the joined leaves be joined
+    m.execute();
+    //stop(m.layout);
+    t.ok("""
+S  120   100                              leaf     tree.nodes.node.branchOrLeaf.leaf
+A  120    96      0                         array     tree.nodes.node.branchOrLeaf.leaf.array
+S  120    24              73745               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  120    12                 17                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  132    12                 18                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  144    96      1                         array     tree.nodes.node.branchOrLeaf.leaf.array
+S  144    24              81939               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  144    12                 19                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  156    12                 20                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  168    96      2                         array     tree.nodes.node.branchOrLeaf.leaf.array
+S  168    24              90133               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  168    12                 21                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  180    12                 22                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  192    96      3                         array     tree.nodes.node.branchOrLeaf.leaf.array
+S  192    24              98327               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  192    12                 23                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  204    12                 24                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+V  216     4                 15             unary     tree.nodes.node.branchOrLeaf.leaf.unary
+""");
+    t.ok("""
+S  222   100                              leaf     tree.nodes.node.branchOrLeaf.leaf
+A  222    96      0                         array     tree.nodes.node.branchOrLeaf.leaf.array
+S  222    24              98327               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  222    12                 23                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  234    12                 24                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  246    96      1                         array     tree.nodes.node.branchOrLeaf.leaf.array
+S  246    24              98327               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  246    12                 23                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  258    12                 24                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  270    96      2                         array     tree.nodes.node.branchOrLeaf.leaf.array
+S  270    24              98327               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  270    12                 23                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  282    12                 24                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  294    96      3                         array     tree.nodes.node.branchOrLeaf.leaf.array
+S  294    24              98327               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  294    12                 23                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  306    12                 24                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+V  318     4                  0             unary     tree.nodes.node.branchOrLeaf.leaf.unary
+""");
+    //stop(t.lef);
+    t.lef.ok("""
+T   At  Wide  Index       Value   Field name
+S    0     4                  1   lefs     lefs
+B    0     1                  1     le     lefs.le
+B    1     1                  0     lf     lefs.lf
+B    2     1                  0     lE     lefs.lE
+B    3     1                  0     lF     lefs.lF
+""");
   }
 
-  static void test_branch_split()                                               // Split a branch
+  static void test_branch_split_join()                                          // Split a branch
    {TestBranchTree t = new TestBranchTree();                                    // Create a test tree
     Mjaf           m = t.mjaf;                                                  // Bit machine to process the tree
     final Layout.Variable key = m.branchKey.duplicate().asLayoutField().toVariable();  // Join key
@@ -2927,9 +2972,16 @@ V  262     2                  2                   branchNext     tree.nodes.node
 V  264     3                  0               unary     tree.nodes.node.branchOrLeaf.branch.branchStuck.unary
 V  267     2                  0             topNode     tree.nodes.node.branchOrLeaf.branch.topNode
 """);
-    stop(t.bef);
-
-  }
+    //stop(t.bef);
+    t.bef.ok("""
+T   At  Wide  Index       Value   Field name
+S    0     4                  1   befs     befs
+B    0     1                  1     be     befs.be
+B    1     1                  0     bf     befs.bf
+B    2     1                  0     bE     befs.bE
+B    3     1                  0     bF     befs.bF
+""");
+   }
 
   static void test_leaf_split_key()                                             // Split key for a leaf
    {TestLeafTree t = new TestLeafTree();                                        // Create a test tree
@@ -3032,8 +3084,8 @@ B    3     1                  1     lF     lefs.lF
    }
 
   static void test_branch_emptyFull()                                           // Branch empty or full
-   {TestBranchTree t = new TestBranchTree();                                        // Create a test tree
-    Mjaf           m = t.mjaf;                                                        // Bit machine to process the tree
+   {TestBranchTree t = new TestBranchTree();                                    // Create a test tree
+    Mjaf           m = t.mjaf;                                                  // Bit machine to process the tree
 
     m.branchMake   (t.nodeIndex);
     m.branchIsEmpty(t.nodeIndex, t.be);
@@ -3050,6 +3102,23 @@ B    0     1                  1     be     befs.be
 B    1     1                  0     bf     befs.bf
 B    2     1                  0     bE     befs.bE
 B    3     1                  1     bF     befs.bF
+""");
+   }
+
+  static void test_branch_greater_than_or_equal()                               // Find top node associated with  the first key greater than or equal to the search key
+   {TestBranchTree  t = new TestBranchTree();                                   // Create a test tree
+    Mjaf            m = t.mjaf;                                                 // Bit machine to process the tree
+    Layout.Variable k = m.branchKey.like();                                     // Work area for transferring key
+    Layout.Variable n = m.branchNext.like();                                    // Work area for transferring next node index
+
+    m.copy(t.nodeIndex, 2);
+    m.copy(k,           8);
+    m.branchFindFirstGreaterOrEqual(t.nodeIndex, k, n);
+    m.execute();
+    //stop(k, n);
+    n.copy().ok("""
+T   At  Wide  Index       Value   Field name
+V    0     2                  2   branchNext     branchNext
 """);
    }
 
@@ -3523,7 +3592,7 @@ V    2     2                  3       unary
     test_leaf_is_full_empty(); test_branch_is_full_empty();
     test_leaf_push_leaf();     test_branch_push_shift();
     test_leaf_indexOf();       test_branch_indexOf();
-    test_leaf_split();         test_branch_split();
+    test_leaf_split_join();    test_branch_split_join();
     test_leaf_emptyFull();     test_branch_emptyFull();
     //test_leaf();
     //test_create_branch();
@@ -3539,6 +3608,7 @@ V    2     2                  3       unary
 
   static void newTests()                                                        // Tests being worked on
    {oldTests();
+    test_branch_greater_than_or_equal();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
