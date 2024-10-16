@@ -410,11 +410,32 @@ public class BitMachine extends Test implements LayoutAble                      
      {int n = 0;
       for (int i = 0; i < N; i++) if (f1.get(i)) ++n;                           // Count bits in the first field
       for (int i = 0; i < N; i++) if (f2.get(i)) ++n;                           // Count bits in the second field
-      r.set(n == N);                                                            // Invert the field bit by bit
+      r.set(n == N);                                                            // Unary is all ones
      }
    }
   UnaryFilled unaryFilled(Layout.Field F1, Layout.Field F2, Layout.Bit R)       // Check that two unary fields fill the maximum value allowed
    {return new UnaryFilled(F1, F2, R);
+   }
+
+  class UnaryFilledMinusOne extends Instruction                                 // Check that two unary fields fill the maximum value allowed minus one
+   {final int N;                                                                // Width of fields to test
+    final Layout.Field f1, f2;                                                  // Unary fields, intermediate result
+    final Layout.Bit   r;                                                       // Result
+    UnaryFilledMinusOne(Layout.Field F1, Layout.Field F2, Layout.Bit R)         // Check that two unary fields fill the maximum value allowed
+     {F1.sameSize(F2);
+      f1 = F1; f2 = F2; r = R;
+      N = f1.width;
+     }
+    void action()                                                               // Invert fields
+     {int n = 0;
+      for (int i = 0; i < N; i++) if (f1.get(i)) ++n;                           // Count bits in the first field
+      for (int i = 0; i < N; i++) if (f2.get(i)) ++n;                           // Count bits in the second field
+      r.set(n == N-1);                                                          // Unary has just one zero
+     }
+   }
+  UnaryFilledMinusOne unaryFilledMinusOne                                       // Check that two unary fields fill the maximum value allowed
+   (Layout.Field F1, Layout.Field F2, Layout.Bit R)
+   {return new UnaryFilledMinusOne(F1, F2, R);
    }
 
   class ConvertUnaryToBinary extends Instruction                                // Convert a unary value to binary
