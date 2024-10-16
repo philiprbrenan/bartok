@@ -1857,13 +1857,25 @@ V  318     4                  0             unary     tree.nodes.node.branchOrLe
            leafFlag = t.dupVariable(node+"isLeaf"),                             // Is leaf flag
          branchFlag = t.dupVariable(node+"isBranch");                           // Is branch flag
 
+    final Layout lef = new Layout();                                            // Empty full leaf layout
+    final Layout.Bit
+      le = lef.bit("le"),
+      lf = lef.bit("lf"),
+      lE = lef.bit("lE"),
+      lF = lef.bit("lF");
+    Layout.Structure lefs = lef.structure("lefs", le, lf, lE, lF);
+
     final LayoutAble
       kd = t.get(leaf       +"array.leafKeyData")  .duplicate(),                // Key, data pair in a leaf
       kn = t.get(branchStuck+"array.branchKeyNext").duplicate();                // Key, next pair in a branch
 
+    TestLeafTree()                                                              // Layout temporary storage
+     {lef.layout(lefs);
+     }
+
     void ok(String lines)                                                       // Check that specified lines are present in the memory layout of the bit machine describing the tree
      {final String l = mjaf.layout.toString();                                  // Tree as string
-      final int    i = l.indexOf(lines);                                        // Check spcifie lines are present
+      final int    i = l.indexOf(lines);                                        // Check specified lines are present
       if (i == -1)                                                              // Lines missing
        {err("Layout does not contain the specified lines");
         ++Layout.testsFailed;
@@ -1890,13 +1902,26 @@ V  318     4                  0             unary     tree.nodes.node.branchOrLe
            leafFlag = t.dupVariable(node+"isLeaf"),                             // Is leaf flag
          branchFlag = t.dupVariable(node+"isBranch");                           // Is branch flag
 
+    final Layout bef = new Layout();                                            // Empty full branch layout
+    final Layout.Bit
+      be = bef.bit("be"),
+      bf = bef.bit("bf"),
+      bE = bef.bit("bE"),
+      bF = bef.bit("bF");
+
+    Layout.Structure befs = bef.structure("befs", be, bf, bE, bF);
+
     final LayoutAble
       kd = t.get(leaf       +"array.leafKeyData")  .duplicate(),                // Key, data pair in a leaf
       kn = t.get(branchStuck+"array.branchKeyNext").duplicate();                // Key, next pair in a branch
 
+    TestBranchTree()                                                            // Layout temporary storage
+     {bef.layout(befs);
+     }
+
     void ok(String lines)                                                       // Check that specified lines are present in the memory layout of the bit machine describing the tree
      {final String l = mjaf.layout.toString();                                  // Tree as string
-      final int    i = l.indexOf(lines);                                        // Check spcifie lines are present
+      final int    i = l.indexOf(lines);                                        // Check specified lines are present
       if (i == -1)                                                              // Lines missing
        {err("Layout does not contain the specified lines");
         ++Layout.testsFailed;
@@ -1906,7 +1931,7 @@ V  318     4                  0             unary     tree.nodes.node.branchOrLe
    }
 
   static void test_leaf_make()                                                  // Make a new leaf
-   {TestLeafTree t = new TestLeafTree();                                                // Allocate a new leaf
+   {TestLeafTree t = new TestLeafTree();                                        // Allocate a new leaf
     Mjaf     m = t.mjaf;                                                        // Bit machine to process the tree
 
     m.leafMake(t.nodeIndex);                                                    // Choose the node
@@ -2921,6 +2946,50 @@ V   12     2                  1     branchNext     branchKeyNext.branchNext
 """);
    }
 
+  static void test_leaf_emptyFull()                                             // Leaf empty or full
+   {TestLeafTree t = new TestLeafTree();                                        // Create a test tree
+    Mjaf     m = t.mjaf;                                                        // Bit machine to process the tree
+
+    m.leafMake   (t.nodeIndex);
+    m.leafIsEmpty(t.nodeIndex, t.le);
+    m.leafIsFull (t.nodeIndex, t.lf);
+    m.leaf.unary.ones();
+    m.leafIsEmpty(t.nodeIndex, t.lE);
+    m.leafIsFull (t.nodeIndex, t.lF);
+    m.execute();
+    //stop(t.lef);
+    t.lef.ok("""
+T   At  Wide  Index       Value   Field name
+S    0     4                  9   lefs     lefs
+B    0     1                  1     le     lefs.le
+B    1     1                  0     lf     lefs.lf
+B    2     1                  0     lE     lefs.lE
+B    3     1                  1     lF     lefs.lF
+""");
+   }
+
+  static void test_branch_emptyFull()                                           // Branch empty or full
+   {TestBranchTree t = new TestBranchTree();                                        // Create a test tree
+    Mjaf           m = t.mjaf;                                                        // Bit machine to process the tree
+
+    m.branchMake   (t.nodeIndex);
+    m.branchIsEmpty(t.nodeIndex, t.be);
+    m.branchIsFull (t.nodeIndex, t.bf);
+    m.branchStuck.unary.ones();
+    m.branchIsEmpty(t.nodeIndex, t.bE);
+    m.branchIsFull (t.nodeIndex, t.bF);
+    m.execute();
+    //stop(t.bef);
+    t.bef.ok("""
+T   At  Wide  Index       Value   Field name
+S    0     4                  9   befs     befs
+B    0     1                  1     be     befs.be
+B    1     1                  0     bf     befs.bf
+B    2     1                  0     bE     befs.bE
+B    3     1                  1     bF     befs.bF
+""");
+   }
+
   static void test_leaf()                                                       // Test actions on a leaf
    {final int W = 8, M = 4, N = 2;
     final String leaf = "tree.nodes.node.branchOrLeaf.leaf";
@@ -3392,6 +3461,7 @@ V    2     2                  3       unary
     test_leaf_push_leaf();     test_branch_push_shift();
     test_leaf_indexOf();       test_branch_indexOf();
     test_leaf_split();         test_branch_split();
+    test_leaf_emptyFull();     test_branch_emptyFull();
     //test_leaf();
     //test_create_branch();
     //test_join_branch();
