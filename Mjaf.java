@@ -2979,7 +2979,7 @@ T   At  Wide  Index       Value   Field name
 V    0    12                  8   branchKey     branchKey
 """);
 
-    //stop(m.layout);                                                             // Source layout
+    //stop(m.layout);                                                           // Source layout
     t.ok("""
 S  120    47                              branch     tree.nodes.node.branchOrLeaf.branch
 S  120    45                                branchStuck     tree.nodes.node.branchOrLeaf.branch.branchStuck
@@ -3111,7 +3111,7 @@ V   12    12                 20     leafData     leafKeyData.leafData
    }
 
   static void test_branch_split_key()                                           // Split key for a branch
-   {TestBranchTree t = new TestBranchTree();                                        // Create a test tree
+   {TestBranchTree t = new TestBranchTree();                                    // Create a test tree
     Mjaf     m = t.mjaf;                                                        // Bit machine to process the tree
 
     m.copy(t.nodeIndex, 0);                                                     // Choose the node
