@@ -246,7 +246,7 @@ class Mjaf extends BitMachine                                                   
    {final LayoutAble kd = leafKeyData.duplicate();                              // Work area for transferring key data pairs from the source code to the target node
 
     leafMake(target);
-    for (int i = 0; i <= leafSplitPoint; i++)                                    // Transfer keys, data pairs
+    for (int i = 0; i <= leafSplitPoint; i++)                                   // Transfer keys, data pairs
      {leafShift(source, kd);                                                    // Current key, data pair
       leafPush (target, kd);                                                    // Save key, data pair
      }
@@ -363,7 +363,8 @@ class Mjaf extends BitMachine                                                   
       branchPush (target, kn);                                                  // Save key, next pair
      }
     branchShift(source, kn);                                                    // Current key, next pair
-    branchSetTopNext(target, kn.asLayout().get("branchKeyNext.branchNext").toVariable()); // Copy in the new top node
+    branchSetTopNext(target,                                                    // Copy in the new top node
+      kn.asLayout().get("branchKeyNext.branchNext").toVariable());
    }
 
   void branchSplitRoot(Layout.Variable F1, Layout.Variable F2)                  // Split the root when it is a branch
@@ -385,7 +386,8 @@ class Mjaf extends BitMachine                                                   
      }
 // f2 top = root old top, f1 top = rkn.next, root top = f2, root left = f1
     branchSetTopNext(F2, ort);                                                  // Set top next references for each branch
-    branchSetTopNext(F1, rkn.asLayout().get("branchKeyNext.branchNext").toVariable());
+    branchSetTopNext(F1,
+      rkn.asLayout().get("branchKeyNext.branchNext").toVariable());
     branchSetTopNext(root, F2);
     copy(rkn.asLayout().get("branchKeyNext.branchNext"), F1);                   // Left next refers to new left branch
     branchPush (root,  rkn);                                                    // Save root key, next pair
@@ -2093,7 +2095,7 @@ B    0     1                  1   isBranch     isBranch
    }
 
   static void test_leaf_is_full_empty()                                         // Test whether a leaf is full or emoty
-   {TestLeafTree t = new TestLeafTree();                                                // Allocate a new leaf
+   {TestLeafTree t = new TestLeafTree();                                        // Create a tree of leaves
     Mjaf     m = t.mjaf;                                                        // Bit machine to process the tree
 
     Layout           l = new Layout();
@@ -2123,8 +2125,8 @@ B    3     1                  0     Full     s.Full
 """);
    }
 
-  static void test_branch_is_full_empty()                                         // Test whether a leaf is full or emoty
-   {TestBranchTree t = new TestBranchTree();                                                // Allocate a new leaf
+  static void test_branch_is_full_empty()                                       // Test whether a branch is full or emoty
+   {TestBranchTree t = new TestBranchTree();                                    // Create a tree of branches
     Mjaf     m = t.mjaf;                                                        // Bit machine to process the tree
 
     Layout           l = new Layout();
@@ -2271,7 +2273,7 @@ V  262     2                  2                   branchNext     tree.nodes.node
    }
 
   static void test_leaf_insert_remove()                                         // Insert some key, data pairs into a leaf and them remove them
-   {TestLeafTree t = new TestLeafTree();                                                // Create a test tree
+   {TestLeafTree t = new TestLeafTree();                                        // Create a test tree
     Mjaf     m = t.mjaf;                                                        // Bit machine to process the tree
 
     m.leafMake(t.targetIndex);                                                  // Allocate a leaf
@@ -2521,10 +2523,10 @@ V  264     3                  7               unary     tree.nodes.node.branchOr
 """);
 
     m.reset();
-    m.copy                     (t.branchIndex, Layout.unary(0));                  // Choose the key, next pair
-    m.branchGet   (t.sourceIndex, t.branchIndex, t.kn);                             // Copy the indexed key, next pair
-    m.copy                     (t.branchIndex, Layout.unary(0));                  // Insert key, next pair at start
-    m.branchInsert(t.targetIndex, t.branchIndex, t.kn);                             // Insert key, next pair
+    m.copy                     (t.branchIndex, Layout.unary(0));                // Choose the key, next pair
+    m.branchGet   (t.sourceIndex, t.branchIndex, t.kn);                         // Copy the indexed key, next pair
+    m.copy                     (t.branchIndex, Layout.unary(0));                // Insert key, next pair at start
+    m.branchInsert(t.targetIndex, t.branchIndex, t.kn);                         // Insert key, next pair
     m.execute();
 
     //stop(m.layout);
@@ -2571,8 +2573,8 @@ V  264     3                  3               unary     tree.nodes.node.branchOr
 """);
 
     m.reset();
-    m.copy                     (t.branchIndex, Layout.unary(0));                  // Choose the key, next pair
-    m.branchRemove(t.targetIndex, t.branchIndex);                                   // Remove key, next pair
+    m.copy                     (t.branchIndex, Layout.unary(0));                // Choose the key, next pair
+    m.branchRemove(t.targetIndex, t.branchIndex);                               // Remove key, next pair
     m.execute();
 
     //stop(m.layout);
@@ -2697,7 +2699,7 @@ V  318     4                  3             unary     tree.nodes.node.branchOrLe
   }
 
   static void test_branch_push_shift()                                          // Push some key, next pairs into a branch and then shift them
-   {TestBranchTree t = new TestBranchTree();                                                // Create a test tree
+   {TestBranchTree t = new TestBranchTree();                                    // Create a test tree
     Mjaf     m = t.mjaf;                                                        // Bit machine to process the tree
 
     m.branchMake(t.targetIndex);                                                // Allocate a branch
@@ -2774,7 +2776,7 @@ V  264     3                  1               unary     tree.nodes.node.branchOr
   }
 
   static void test_leaf_indexOf()                                               // Find index of a key in a leaf
-   {TestLeafTree t = new TestLeafTree();                                                // Create a test tree
+   {TestLeafTree t = new TestLeafTree();                                        // Create a test tree
     Mjaf     m = t.mjaf;                                                        // Bit machine to process the tree
 
     Layout               l = new Layout();
@@ -2798,7 +2800,7 @@ V    1     4                  3     result     s.result
 """);
 
     m.reset();
-    m.copy(t.kd.asLayout().get("leafKeyData.leafKey"), 25);                                // Modify the key so it will not be found
+    m.copy(t.kd.asLayout().get("leafKeyData.leafKey"), 25);                     // Modify the key so it will not be found
     m.leafFindIndexOf(t.sourceIndex, t.kd, found, result);
     m.execute();
 
@@ -2812,7 +2814,7 @@ V    1     4                 15     result     s.result
   }
 
   static void test_branch_indexOf()                                             // Push some key, next pairs into a branch and then shift them
-   {TestBranchTree t = new TestBranchTree();                                                // Create a test tree
+   {TestBranchTree t = new TestBranchTree();                                    // Create a test tree
     Mjaf     m = t.mjaf;                                                        // Bit machine to process the tree
 
     Layout               l = new Layout();
@@ -2849,7 +2851,7 @@ V    1     4                 15     result     s.result
 """);
   }
 
-  static void test_leaf_split_join()                                                 // Split a leaf
+  static void test_leaf_split_join()                                            // Split a leaf
    {TestLeafTree t = new TestLeafTree();                                        // Create a test tree
     Mjaf     m = t.mjaf;                                                        // Bit machine to process the tree
 
@@ -2857,7 +2859,7 @@ V    1     4                 15     result     s.result
     m.leaf.unary.ones();                                                        // Fill leaf - leafMake will have set an otherwise full leaf to empty
     m.leafSplit(t.targetIndex, t.sourceIndex);                                  // Split a leaf
     m.execute();
-    //stop(m.layout);                                                             // Source layout
+    //stop(m.layout);                                                           // Source layout
     t.ok("""
 S  120   100                              leaf     tree.nodes.node.branchOrLeaf.leaf
 A  120    96      0                         array     tree.nodes.node.branchOrLeaf.leaf.array
@@ -2964,7 +2966,8 @@ B    3     1                  0     lF     lefs.lF
     m.branchMake (t.sourceIndex);                                               // Allocate a  branch
 
     m.branchSplitKey(t.sourceIndex, t.kn);                                      // Get the splitting key
-    m.copy(key, t.kn.asLayout().get("branchKeyNext.branchKey").asLayoutField().toVariable());                   // save splitting key                                                              // An arbitrary joining key
+    m.copy(key,                                                                 // Save splitting key
+      t.kn.asLayout().get("branchKeyNext.branchKey").toVariable());
 
     m.branchStuck.unary.ones();                                                 // Fill branch - branchMake will have set an otherwise full branch to empty
     m.branchSplit(t.targetIndex, t.sourceIndex);                                // Split a branch
