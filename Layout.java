@@ -10,15 +10,16 @@ import java.util.*;
 
 public class Layout extends Test implements LayoutAble                          // A Memory layout for a chip. There might be several such layouts representing parts of the chip.
  {Field top;                                                                    // The top most field in a set of nested fields describing memory.
-  Memory                     memory = new Memory();                             // A sample memory that can be freed if not wanted by assigning null to this non final field.
-  final Map<String,Field> fullNames = new TreeMap<>();                          // Fields by full name
-  final Stack<Layout>       layouts = new Stack<>();                            // All the sub layouts added to this layout so we can unify their memory
+  Memory               memory = new Memory();                                   // A sample memory that can be freed if not wanted by assigning null to this non final field.
+  final Map<String,Layout> fullNames = new TreeMap<>();                         // Index of full names
+  final Stack<Layout> layouts = new Stack<>();                                  // All the sub layouts added to this layout so we can unify their memory
 
   void layout(Field field)                                                      // Create a new Layout loaded from a set of definitions
    {top  = field;                                                               // Record layout
     field.layout(0, 0);                                                         // Locate field positions
     memory = new Memory();                                                      // Create a matching memory.
-    indexNames(fullNames);                                                      // Index the names of the fields
+/// /// ///
+    indexNames(this);                                                           // Index the names of the fields
     unifyMemory(memory);                                                        // Unify the memory of all declared layouts with the memory of this layout
     memory = new Memory();                                                      // New memory
    }
@@ -29,7 +30,7 @@ public class Layout extends Test implements LayoutAble                          
    {final Layout d = new Layout();                                              // New layout
     if (top == null) return d;                                                  // No fields to duplicate
     d.top = top.duplicate(d);                                                   // Copy each field into this layout
-    d.indexNames(d.fullNames);                                                  // Index the names of the fields
+    d.indexNames(d.top);                                                  // Index the names of the fields
     d.memory = memory;                                                          // Share the existing memory
     return d;
    }
@@ -52,7 +53,9 @@ public class Layout extends Test implements LayoutAble                          
   public Layout.Field asLayoutField() {return top;}                             // Layout associated with this class
   public Layout       asLayout     () {return this;}                            // Layout associated with this class
 
-  void indexNames(Map<String,Field> names) {top.indexNames(names, null);}       // Index field names in each containing structure so fields can be accessed by a unique structured name
+  void indexNames(Layout layout, String prefix)                                                // Index field names in each containing structure so fields can be accessed by a unique structured name
+   {top.indexNames(layout, prefix);
+   }
 
   int size() {return top == null ? 0 : top.width;}                              // Size of memory
 
@@ -101,66 +104,6 @@ public class Layout extends Test implements LayoutAble                          
      }
    }
 
-//D1 Bits                                                                       // A collection of bits abstracted from memory layouts
-
-  class Bits extends Stack<Integer>                                             // Some bits of interest
-   {private static final long serialVersionUID = 1L;
-
-    void push(Field field)                                                      // Add the bits associated with a field
-     {for (int i = 0; i < field.width; i++) push(Integer.valueOf(field.at+i));  // Add index of the indicated bit in the field
-     }
-
-    void push(Field field, int offset) {push(Integer.valueOf(field.at+offset));}// Add the bit at the specified offset int the field
-
-    void push(Field field, int start, int length)                               // Add a substring of the bits associated with a field
-     {for (int i = 0; i < length; i++) push(Integer.valueOf(field.at+i+start)); // Add index of each referenced bit in the field
-     }
-
-    public String asString()                                                    // Part of memory corresponding to this layout as a string of bits in low endian order
-     {final StringBuilder s = new StringBuilder();
-      final int N = size();
-      for (int i = 0; i < N; ++i)                                               // Index each bit
-       {final Boolean v = Layout.this.get(elementAt(i));                        // Value of bit
-        s.append(v == null ? '.' : v ? '1' : '0');                              // Represent bit
-       }
-      return s.reverse().toString();                                            // Prints string with lowest bit rightmost because we work in little endian layout
-     }
-
-    Integer asInt()                                                             // Get an integer representing the value of the layout to the extent that is possible.  The integer is held inlittle endian format
-     {int n = 0, N = size();                                                    // Resulting integer
-      for (int i = 0; i < N; ++i)                                               // Each bit
-       {final Boolean v = Layout.this.get(elementAt(i));                        // Value of bit
-        if (v == null) return null;                                             // One of the bits is null so the overall value is no longer known
-        if (v && i > Integer.SIZE-1) return null;                               // Value is too big to be represented
-        n += v ? 1<<i : 0;
-       }
-      return n;                                                                 // Valid representation of bits as an integer
-     }
-
-    void fromString(String value)                                               // Set bits to the little endian value represented by the supplied string
-     {final int N = value.length();
-      for(int i = 0; i < N; ++i)
-       {final char c = value.charAt(i);                                         // Bit value to be set
-        final Boolean b = c == '0' ? false : c == '1' ? true : null;            // Value
-        final int     j = elementAt(i);                                         // Index
-        Layout.this.set(j, b);                                                  // Set bit
-       }
-     }
-
-    void fromInt(int value)                                                     // Set bits to match those of the supplied integer
-     {final int N = min(Integer.SIZE-1, size());                                // Maximum number of bits we can set
-      for(int i = 0; i < N; ++i)                                                // Set bits
-       {final Boolean b = (value & (1<<i)) > 0;                                 // Value
-        final int     j = elementAt(i);                                         // Index
-        Layout.this.set(j, b);                                                  // Set bit
-       }
-     }
-    void ok(int    expected) {Test.ok(asInt(),    expected);}                   // Check value of bits as an integer
-    void ok(String expected) {Test.ok(asString(), expected);}                   // Check value of a bits as a string
-   }
-
-  Bits bits() {return new Bits();}                                              // Create a set of bits
-
 //D1 Layouts                                                                    // Field memory of the chip as variables, arrays, structures, unions. Dividing the memory in this manner makes it easier to program the chip symbolically.
 
   abstract class Field implements LayoutAble                                    // Variable/Array/Structure/Union definition.
@@ -182,13 +125,13 @@ public class Layout extends Test implements LayoutAble                          
     String indexName(Map<String,Field> names, String prefix)                    // The full name of a field
      {final String n = prefix != null ? prefix+"."+name : name;                 // Full name of this field
       names.put(n, this);                                                       // Index this full name
-      if (fullName == null || fullName.length() < n.length()) fullName = n;         // Longest full anme encountered
+      if (fullName == null || fullName.length() < n.length()) fullName = n;     // Longest full anme encountered
       return n;
      }
 
-    public Layout.Field asLayoutField() {return this;}                         // Layout associated with this field
-    public Layout       asLayout     () {return null;}                         // Layout associated with this field
-    abstract void indexNames(Map<String,Field> names, String prefix);           // Set the full names of all the fields in a layout
+    public Layout.Field asLayoutField() {return this;}                          // Layout associated with this field
+    public Layout       asLayout     () {return null;}                          // Layout associated with this field
+    abstract void indexNames(Layout layout, String prefix);                     // Set the full names of all the fields in a layout
 
     Field get(String path) {return fullNames.get(path);}                        // Address a contained field by name
 
@@ -324,7 +267,7 @@ public class Layout extends Test implements LayoutAble                          
     Layout copy()                                                               // Copy a layout and share its memory so we can see and modify current values in the copy
      {final Layout d = new Layout();                                            // New layout
       d.top = duplicate(d);                                                     // Copy each field into this layout
-      d.indexNames(d.fullNames);                                                // Index the names of the fields
+      d.indexNames(d, null);                                                    // Index the names of the fields
       d.memory = memory;                                                        // Share the existing memory
       return d;
      }
@@ -365,8 +308,8 @@ public class Layout extends Test implements LayoutAble                          
      {super(name); width = Width;
      }
 
-    void indexNames(Map<String,Field> names, String prefix)                     // Index the name of this field
-     {indexName(names, prefix);
+    void indexNames(Layout layout, String prefix)                               // Index the name of this field
+     {indexName(layout, prefix);
      }
 
     void layout(int At, int Depth)                                              // Layout the variable in the structure
@@ -421,11 +364,11 @@ public class Layout extends Test implements LayoutAble                          
       width = size * element.width;                                             // The size of the array is the sie of its element times the number of elements in the array
      }
 
-    void indexNames(Map<String,Field> names, String prefix)                     // Index the name of this field and its sub fields
-     {final String n = indexName(names, prefix);
-      element.indexNames(names,                 n);                             // Full names of sub fields relative to outer most layout
-      element.indexNames(Layout.this.fullNames, n);                             // Full names of sub fields relative to this layout
-      element.indexNames(fullNames,             null);                          // Index name in this array
+    void indexNames(Layout layout, String prefix)                               // Index the name of this field and its sub fields
+     {final String n = indexName(layout, prefix);
+      element.indexNames(layout,      n);                                       // Full names of sub fields relative to outer most layout
+      element.indexNames(Layout.this, n);                                       // Full names of sub fields relative to this layout
+      element.indexNames(fullNames, null);                                      // Index name in this array
      }
 
     void position(int At)                                                       // Reposition this array after an index of a containing array has been changed
@@ -582,6 +525,66 @@ public class Layout extends Test implements LayoutAble                          
     l.layout(v);                                                                // Layout the variable
     return l.asLayoutField().toVariable();                                      // Variable
    }
+
+//D1 Bits                                                                       // A collection of bits abstracted from memory layouts
+
+  class Bits extends Stack<Integer>                                             // Some bits of interest
+   {private static final long serialVersionUID = 1L;
+
+    void push(Field field)                                                      // Add the bits associated with a field
+     {for (int i = 0; i < field.width; i++) push(Integer.valueOf(field.at+i));  // Add index of the indicated bit in the field
+     }
+
+    void push(Field field, int offset) {push(Integer.valueOf(field.at+offset));}// Add the bit at the specified offset int the field
+
+    void push(Field field, int start, int length)                               // Add a substring of the bits associated with a field
+     {for (int i = 0; i < length; i++) push(Integer.valueOf(field.at+i+start)); // Add index of each referenced bit in the field
+     }
+
+    public String asString()                                                    // Part of memory corresponding to this layout as a string of bits in low endian order
+     {final StringBuilder s = new StringBuilder();
+      final int N = size();
+      for (int i = 0; i < N; ++i)                                               // Index each bit
+       {final Boolean v = Layout.this.get(elementAt(i));                        // Value of bit
+        s.append(v == null ? '.' : v ? '1' : '0');                              // Represent bit
+       }
+      return s.reverse().toString();                                            // Prints string with lowest bit rightmost because we work in little endian layout
+     }
+
+    Integer asInt()                                                             // Get an integer representing the value of the layout to the extent that is possible.  The integer is held inlittle endian format
+     {int n = 0, N = size();                                                    // Resulting integer
+      for (int i = 0; i < N; ++i)                                               // Each bit
+       {final Boolean v = Layout.this.get(elementAt(i));                        // Value of bit
+        if (v == null) return null;                                             // One of the bits is null so the overall value is no longer known
+        if (v && i > Integer.SIZE-1) return null;                               // Value is too big to be represented
+        n += v ? 1<<i : 0;
+       }
+      return n;                                                                 // Valid representation of bits as an integer
+     }
+
+    void fromString(String value)                                               // Set bits to the little endian value represented by the supplied string
+     {final int N = value.length();
+      for(int i = 0; i < N; ++i)
+       {final char c = value.charAt(i);                                         // Bit value to be set
+        final Boolean b = c == '0' ? false : c == '1' ? true : null;            // Value
+        final int     j = elementAt(i);                                         // Index
+        Layout.this.set(j, b);                                                  // Set bit
+       }
+     }
+
+    void fromInt(int value)                                                     // Set bits to match those of the supplied integer
+     {final int N = min(Integer.SIZE-1, size());                                // Maximum number of bits we can set
+      for(int i = 0; i < N; ++i)                                                // Set bits
+       {final Boolean b = (value & (1<<i)) > 0;                                 // Value
+        final int     j = elementAt(i);                                         // Index
+        Layout.this.set(j, b);                                                  // Set bit
+       }
+     }
+    void ok(int    expected) {Test.ok(asInt(),    expected);}                   // Check value of bits as an integer
+    void ok(String expected) {Test.ok(asString(), expected);}                   // Check value of a bits as a string
+   }
+
+  Bits bits() {return new Bits();}                                              // Create a set of bits
 
 //D0                                                                            // Tests.
 
