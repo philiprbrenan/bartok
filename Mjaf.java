@@ -3,7 +3,7 @@
 // Philip R Brenan at appaapps dot com, Appa Apps Ltd Inc., 2024
 //------------------------------------------------------------------------------
 package com.AppaApps.Silicon;                                                   // Design, simulate and layout  a binary tree on a silicon chip.
-// use like() rather than duplicate()
+
 class Mjaf extends BitMachine                                                   // Btree algorithm but with data stored only in the leaves to facilitate deletion without complicating search or insertion. The branches (interior nodes) have an odd number of keys to make the size of a branch as close to that of a leaf as possible to simplify memory management.
  {final int bitsPerKey;                                                         // Number of bits in key
   final int bitsPerData;                                                        // Number of bits in data
@@ -3259,6 +3259,7 @@ V  114     4                 15             unary     tree.nodes.node.branchOrLe
 
     m.leafSplitRoot(t.sourceIndex, t.targetIndex);
     m.execute();
+
     t.sourceIndex.copy().ok("""
 T   At  Wide  Index       Value   Field name
 V    0     2                  1   nodeFree     nodeFree
@@ -3267,6 +3268,7 @@ V    0     2                  1   nodeFree     nodeFree
 T   At  Wide  Index       Value   Field name
 V    0     2                  2   nodeFree     nodeFree
 """);
+
     //stop(m.layout);
     t.ok("""
 B   16     1                  0         isLeaf     tree.nodes.node.isLeaf
@@ -3357,6 +3359,7 @@ V   63     2                  0             topNext     tree.nodes.node.branchOr
 
     m.branchSplitRoot(t.sourceIndex, t.targetIndex);
     m.execute();
+
     t.sourceIndex.copy().ok("""
 T   At  Wide  Index       Value   Field name
 V    0     2                  1   nodeFree     nodeFree
