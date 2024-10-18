@@ -3,7 +3,7 @@
 // Philip R Brenan at appaapps dot com, Appa Apps Ltd Inc., 2024
 //------------------------------------------------------------------------------
 package com.AppaApps.Silicon;                                                   // Simulate a silicon chip.
-// Add tags to fields so that we c an chjeck that we are getting a layiouyt of the right sort.
+// Add tags to fields so that we can check that we are getting a field of the right sort.
 import java.util.*;
 
 //D1 Construct                                                                  // Layout a description of the memory used by a chip
@@ -17,9 +17,7 @@ public class Layout extends Test implements LayoutAble                          
    {top  = field;                                                               // Record layout
     field.layout(0, 0);                                                         // Locate field positions
     memory = new Memory();                                                      // Create a matching memory.
-/// /// ///
     field.indexNames(field, null);                                              // Index the names of the fields
-
     unifyMemory(memory);                                                        // Unify the memory of all declared layouts with the memory of this layout
     memory = new Memory();                                                      // New memory
    }
@@ -50,12 +48,8 @@ public class Layout extends Test implements LayoutAble                          
    {return top.toString();
    }
 
-  public Layout.Field asLayoutField() {return top;}                             // Layout associated with this class
+  public Layout.Field asField()       {return top;}                             // Layout associated with this class
   public Layout       asLayout     () {return this;}                            // Layout associated with this class
-
-//  void indexNames(Layout layout)                                                // Index field names in each containing structure so fields can be accessed by a unique structured name
-//   {top.indexNames(layout, null);
-//   }
 
   int size() {return top == null ? 0 : top.width;}                              // Size of memory
 
@@ -89,7 +83,7 @@ public class Layout extends Test implements LayoutAble                          
   static int unary(int binary) {return (1<<binary) - 1;}                        // Convert a binary integer to a unary integer of the same value
 
   Variable dupVariable(String name)                                             // Create a variable like the named one in the layout
-   {return get(name).duplicate().asLayoutField().toVariable();
+   {return get(name).duplicate().asField().toVariable();
    }
 
 //D1 Bit Memory                                                                 // A bit is the element from which memory is constructed.
@@ -129,7 +123,7 @@ public class Layout extends Test implements LayoutAble                          
       return n;
      }
 
-    public Layout.Field asLayoutField() {return this;}                          // Layout associated with this field
+    public Layout.Field asField() {return this;}                          // Layout associated with this field
     public Layout       asLayout     () {return null;}                          // Layout associated with this field
     abstract void indexNames(Layout.Field field, String prefix);                // Set the full names of all the sub fields in a field
 
@@ -322,7 +316,7 @@ public class Layout extends Test implements LayoutAble                          
       return v;
      }
 
-    Variable like() {return duplicate().asLayoutField().toVariable();}          // Make a variable like this one
+    Variable like() {return duplicate().asField().toVariable();}          // Make a variable like this one
 
     public String toString(boolean printHeader)                                 // Print the variable
      {return print(printHeader).toString();
@@ -410,7 +404,7 @@ public class Layout extends Test implements LayoutAble                          
       return a;
      }
 
-    Array like() {return duplicate().asLayoutField().toArray();}                // Make an array like this one
+    Array like() {return duplicate().asField().toArray();}                // Make an array like this one
    }
 
   class Structure extends Field                                                 // Layout a structure
@@ -423,7 +417,7 @@ public class Layout extends Test implements LayoutAble                          
      }
 
     void addField(LayoutAble layout)                                            // Add additional fields
-     {final Field field = layout.asLayoutField();                              // Field associated with this layout
+     {final Field field = layout.asField();                              // Field associated with this layout
       field.up = this;                                                          // Chain up to containing structure
       if (subMap.containsKey(field.name))
        {stop("Structure:", name, "already contains field with this name:",
@@ -476,7 +470,7 @@ public class Layout extends Test implements LayoutAble                          
       return s;
      }
 
-    Structure like() {return duplicate().asLayoutField().toStructure();}        // Make a structure like this one
+    Structure like() {return duplicate().asField().toStructure();}        // Make a structure like this one
 
     public String toString(boolean printHeader)                                 // Print the structure
      {final StringBuilder s = print(printHeader);                               // Print line describing structure
@@ -516,14 +510,14 @@ public class Layout extends Test implements LayoutAble                          
    {final Layout          l = new Layout();
     final Layout.Variable v = l.bit(name);                                      // New variable
     l.layout(v);                                                                // Layout the variable
-    return l.asLayoutField().toBit();                                           // Bit
+    return l.asField().toBit();                                           // Bit
    }
 
   static Layout.Variable createVariable(String name, int width)                 // Create a single variable
    {final Layout          l = new Layout();
     final Layout.Variable v = l.variable(name, width);                          // New variable
     l.layout(v);                                                                // Layout the variable
-    return l.asLayoutField().toVariable();                                      // Variable
+    return l.asField().toVariable();                                      // Variable
    }
 
 //D1 Bits                                                                       // A collection of bits abstracted from memory layouts
@@ -1090,7 +1084,7 @@ V    0     4                  3   a     a
 
   static void test_constant()
    {LayoutAble  A = createVariable("a", 4);
-    Layout.Variable a = A.asLayoutField().toVariable();
+    Layout.Variable a = A.asField().toVariable();
     a.fromInt(3);
     //stop(a);
     ok(a.toString(), """
