@@ -283,7 +283,7 @@ public class Layout extends Test implements LayoutAble                          
      }
 
     void ok(int    expected) {Test.ok(asInt(),    expected);}                   // Check value of a field as an integer
-    void ok(String expected) {Test.ok(asString(), expected);}                   // Check value of a field as a string
+    void ok(String expected) {Test.ok(toString(), expected);}                   // Check value of a field as a string including meta data
 
     Layout copy()                                                               // Copy a layout and share its memory so we can see and modify current values in the copy
      {final Layout d = new Layout();                                            // New layout
@@ -897,7 +897,7 @@ V  160    24                  0     D     D
 
     M.get("s.a").ok(1);
 
-    M.get("s.a").copy().ok("""
+    M.get("s.a").ok("""
 T   At  Wide  Index       Value   Field name
 B   64     1                  1       a
 """);
@@ -1142,11 +1142,11 @@ V    0     4                  3   =a
     var al = a.like();
     var Al = A.like();
     var sl = s.like();
-    al.copy().ok("""
+    al.ok("""
 T   At  Wide  Index       Value   Field name
 V    0     2                  0   a
 """);
-    Al.copy().ok("""
+    Al.ok("""
 T   At  Wide  Index       Value   Field name
 A    0    24      0           0   A
 S    0     8                  0     s     s
@@ -1164,7 +1164,7 @@ V   16     2                  0       a     s.a
 V   18     2                  0       b     s.b
 V   20     4                  0       c     s.c
 """);
-    sl.copy().ok("""
+    sl.ok("""
 T   At  Wide  Index       Value   Field name
 S    0     8                  0   s
 V    0     2                  0     a     a
