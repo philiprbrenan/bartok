@@ -235,9 +235,9 @@ class Mjaf extends BitMachine                                                   
      }
 
     branchSetTopNext(root, F2);                                                 // Top of root refers to right child
-    copy(rkn.asLayout().get("branchKeyNext.branchKey"),                         // Load key
-         rkd.asLayout().get("leafKeyData.leafKey"));
-    copy(rkn.asLayout().get("branchKeyNext.branchNext"), F1);                   // First root key refers to left child
+    copy(rkn.asLayout().get("branchKey"),                                       // Load key
+         rkd.asLayout().get("leafKey"));
+    copy(rkn.asLayout().get("branchNext"), F1);                                 // First root key refers to left child
     branchPush (root,  rkn);                                                    // Save root key, next pair
     branchMark(root);                                                           // The root is now a branch
    }
@@ -364,7 +364,7 @@ class Mjaf extends BitMachine                                                   
      }
     branchShift(source, kn);                                                    // Current key, next pair
     branchSetTopNext(target,                                                    // Copy in the new top node
-      kn.asLayout().get("branchKeyNext.branchNext").toVariable());
+      kn.asLayout().get("branchNext").toVariable());
    }
 
   void branchSplitRoot(Layout.Variable F1, Layout.Variable F2)                  // Split the root when it is a branch
@@ -387,9 +387,9 @@ class Mjaf extends BitMachine                                                   
 // f2 top = root old top, f1 top = rkn.next, root top = f2, root left = f1
     branchSetTopNext(F2, ort);                                                  // Set top next references for each branch
     branchSetTopNext(F1,
-      rkn.asLayout().get("branchKeyNext.branchNext").toVariable());
+      rkn.asLayout().get("branchNext").toVariable());
     branchSetTopNext(root, F2);
-    copy(rkn.asLayout().get("branchKeyNext.branchNext"), F1);                   // Left next refers to new left branch
+    copy(rkn.asLayout().get("branchNext"), F1);                                 // Left next refers to new left branch
     branchPush (root,  rkn);                                                    // Save root key, next pair
    }
 
@@ -409,9 +409,9 @@ class Mjaf extends BitMachine                                                   
    (Layout.Variable target, Layout.Variable key, Layout.Variable source)        // Join the specified branch onto the end of this branch
    {final LayoutAble kn = branchKeyNext.duplicate();                            // Work area for transferring key data pairs from the source code to the target node
 
-    copy(kn.asLayout().get("branchKeyNext.branchKey"),  key);
+    copy(kn.asLayout().get("branchKey"),  key);
     setIndex(nodes, source);
-    copy(kn.asLayout().get("branchKeyNext.branchNext"), topNext);
+    copy(kn.asLayout().get("branchNext"), topNext);
     setIndex(nodes, target);
     branchStuck.push(kn);
 
@@ -436,8 +436,8 @@ class Mjaf extends BitMachine                                                   
 
         for (int i = 0; i < maxKeysPerBranch; i++)                              // Check each key
          {branchGet(nodeIndex, index, kn);                                      // Retrieve key/next pair
-          copy(result, kn.asLayout().get("branchKeyNext.branchNext"));
-          returnIfLessThan(key, kn.asLayout().get("branchKeyNext.branchKey"));
+          copy(result, kn.asLayout().get("branchNext"));
+          returnIfLessThan(key, kn.asLayout().get("branchKey"));
           //new Say() {void action() {say("AAAA", result);}};
           shiftLeftOneByOne(index);
          }
@@ -1599,19 +1599,18 @@ class Mjaf extends BitMachine                                                   
     int c = 1;
     for (int n = 0; n < N; n++)                                                 // Each node
      {m.setIndexFromInt(m.nodes, n);                                            // Index node
-      m.setVariable("tree.nodes.node.isLeaf",                      1);
-      m.setVariable("tree.nodes.node.isBranch",                    0);
-      m.setVariable("tree.nodes.node.branchOrLeaf.leaf.unary",    15);
+      m.setVariable("nodes.node.isLeaf",                      1);
+      m.setVariable("nodes.node.isBranch",                    0);
+      m.setVariable("nodes.node.branchOrLeaf.leaf.unary",    15);
 
       for (int s = 0; s < S; s++)                                               // Each key, data pair in leaf
-       {final Layout.Array a = m.layout.get("tree.nodes.node.branchOrLeaf.leaf.array").toArray();
-//say("AAAA", a);
-        m.setIndexFromInt(a, s);     // Not working as expected                 // Index pair
-        m.setVariable("tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey",  c++);
-        m.setVariable("tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData", c++);
+       {final Layout.Array a = m.layout.get("nodes.node.branchOrLeaf.leaf.array").toArray();
+        m.setIndexFromInt(a, s);
+        m.setVariable("nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey",  c++);
+        m.setVariable("nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData", c++);
        }
      }
-    m.copy(m.layout.get("tree.nodesFree.unary").toVariable(), Layout.unary(N)); // Tree globals
+    m.copy(m.layout.get("nodesFree.unary").toVariable(), Layout.unary(N)); // Tree globals
     m.copy(m.nodesCreated,  N);
     m.copy(m.keyDataStored, N);
     m.copy(m.root,          0);                                                 // Root is the zero node
@@ -1622,136 +1621,136 @@ class Mjaf extends BitMachine                                                   
     //stop(m.layout);
     m.layout.ok("""
 T   At  Wide  Index       Value   Field name
-S    0   322                      tree     tree
-S    0     9                484     nodesFree     tree.nodesFree
-A    0     6      0          36       array     tree.nodesFree.array
-V    0     2                  0         nodeFree     tree.nodesFree.array.nodeFree
-A    2     6      1          36       array     tree.nodesFree.array
-V    2     2                  1         nodeFree     tree.nodesFree.array.nodeFree
-A    4     6      2          36       array     tree.nodesFree.array
-V    4     2                  2         nodeFree     tree.nodesFree.array.nodeFree
-V    6     3                  7       unary     tree.nodesFree.unary
-V    9     2                  3     nodesCreated     tree.nodesCreated
-V   11     2                  3     keyDataStored     tree.keyDataStored
-V   13     2                  0     =root     tree.root
-B   15     1                  1     hasNode     tree.hasNode
-A   16   306      0                 nodes     tree.nodes
-S   16   102                  1       node     tree.nodes.node
-B   16     1                  1         isLeaf     tree.nodes.node.isLeaf
-B   17     1                  0         isBranch     tree.nodes.node.isBranch
-U   18   100                  0         branchOrLeaf     tree.nodes.node.branchOrLeaf
-S   18    47                  0           branch     tree.nodes.node.branchOrLeaf.branch
-S   18    45                                branchStuck     tree.nodes.node.branchOrLeaf.branch.branchStuck
-A   18    42      0                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S   18    14               8193                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V   18    12                  1                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V   30     2                  2                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-A   32    42      1                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S   32    14               3072                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V   32    12               3072                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V   44     2                  0                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-A   46    42      2                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S   46    14               1024                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V   46    12               1024                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V   58     2                  0                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-V   60     3                  0               unary     tree.nodes.node.branchOrLeaf.branch.branchStuck.unary
-V   63     2                  0             topNext     tree.nodes.node.branchOrLeaf.branch.topNext
-S   18   100                              leaf     tree.nodes.node.branchOrLeaf.leaf
-A   18    96      0                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S   18    24               8193               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V   18    12                  1                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V   30    12                  2                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A   42    96      1                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S   42    24              16387               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V   42    12                  3                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V   54    12                  4                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A   66    96      2                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S   66    24              24581               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V   66    12                  5                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V   78    12                  6                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A   90    96      3                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S   90    24              32775               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V   90    12                  7                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  102    12                  8                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-V  114     4                 15             unary     tree.nodes.node.branchOrLeaf.leaf.unary
-A  118   306      1                 nodes     tree.nodes
-S  118   102                  1       node     tree.nodes.node
-B  118     1                  1         isLeaf     tree.nodes.node.isLeaf
-B  119     1                  0         isBranch     tree.nodes.node.isBranch
-U  120   100                  0         branchOrLeaf     tree.nodes.node.branchOrLeaf
-S  120    47                  0           branch     tree.nodes.node.branchOrLeaf.branch
-S  120    45                                branchStuck     tree.nodes.node.branchOrLeaf.branch.branchStuck
-A  120    42      0                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  120    14               8201                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  120    12                  9                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  132     2                  2                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-A  134    42      1                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  134    14              11266                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  134    12               3074                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  146     2                  2                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-A  148    42      2                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  148    14               3072                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  148    12               3072                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  160     2                  0                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-V  162     3                  0               unary     tree.nodes.node.branchOrLeaf.branch.branchStuck.unary
-V  165     2                  0             topNext     tree.nodes.node.branchOrLeaf.branch.topNext
-S  120   100                              leaf     tree.nodes.node.branchOrLeaf.leaf
-A  120    96      0                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  120    24              40969               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  120    12                  9                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  132    12                 10                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  144    96      1                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  144    24              49163               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  144    12                 11                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  156    12                 12                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  168    96      2                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  168    24              57357               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  168    12                 13                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  180    12                 14                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  192    96      3                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  192    24              65551               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  192    12                 15                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  204    12                 16                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-V  216     4                 15             unary     tree.nodes.node.branchOrLeaf.leaf.unary
-A  220   306      2                 nodes     tree.nodes
-S  220   102                  1       node     tree.nodes.node
-B  220     1                  1         isLeaf     tree.nodes.node.isLeaf
-B  221     1                  0         isBranch     tree.nodes.node.isBranch
-U  222   100                  0         branchOrLeaf     tree.nodes.node.branchOrLeaf
-S  222    47                  0           branch     tree.nodes.node.branchOrLeaf.branch
-S  222    45                                branchStuck     tree.nodes.node.branchOrLeaf.branch.branchStuck
-A  222    42      0                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  222    14               8209                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  222    12                 17                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  234     2                  2                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-A  236    42      1                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  236    14               3076                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  236    12               3076                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  248     2                  0                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-A  250    42      2                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  250    14               5121                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  250    12               1025                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  262     2                  1                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-V  264     3                  0               unary     tree.nodes.node.branchOrLeaf.branch.branchStuck.unary
-V  267     2                  0             topNext     tree.nodes.node.branchOrLeaf.branch.topNext
-S  222   100                              leaf     tree.nodes.node.branchOrLeaf.leaf
-A  222    96      0                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  222    24              73745               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  222    12                 17                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  234    12                 18                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  246    96      1                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  246    24              81939               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  246    12                 19                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  258    12                 20                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  270    96      2                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  270    24              90133               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  270    12                 21                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  282    12                 22                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  294    96      3                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  294    24              98327               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  294    12                 23                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  306    12                 24                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-V  318     4                 15             unary     tree.nodes.node.branchOrLeaf.leaf.unary
+S    0   322                      tree
+S    0     9                484     nodesFree     nodesFree
+A    0     6      0          36       array     nodesFree.array
+V    0     2                  0         nodeFree     nodesFree.array.nodeFree
+A    2     6      1          36       array     nodesFree.array
+V    2     2                  1         nodeFree     nodesFree.array.nodeFree
+A    4     6      2          36       array     nodesFree.array
+V    4     2                  2         nodeFree     nodesFree.array.nodeFree
+V    6     3                  7       unary     nodesFree.unary
+V    9     2                  3     nodesCreated     nodesCreated
+V   11     2                  3     keyDataStored     keyDataStored
+V   13     2                  0     =root     root
+B   15     1                  1     hasNode     hasNode
+A   16   306      0                 nodes     nodes
+S   16   102                  1       node     nodes.node
+B   16     1                  1         isLeaf     nodes.node.isLeaf
+B   17     1                  0         isBranch     nodes.node.isBranch
+U   18   100                  0         branchOrLeaf     nodes.node.branchOrLeaf
+S   18    47                  0           branch     nodes.node.branchOrLeaf.branch
+S   18    45                                branchStuck     nodes.node.branchOrLeaf.branch.branchStuck
+A   18    42      0                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S   18    14               8193                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V   18    12                  1                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V   30     2                  2                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A   32    42      1                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S   32    14               3072                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V   32    12               3072                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V   44     2                  0                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A   46    42      2                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S   46    14               1024                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V   46    12               1024                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V   58     2                  0                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+V   60     3                  0               unary     nodes.node.branchOrLeaf.branch.branchStuck.unary
+V   63     2                  0             topNext     nodes.node.branchOrLeaf.branch.topNext
+S   18   100                              leaf     nodes.node.branchOrLeaf.leaf
+A   18    96      0                         array     nodes.node.branchOrLeaf.leaf.array
+S   18    24               8193               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V   18    12                  1                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V   30    12                  2                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A   42    96      1                         array     nodes.node.branchOrLeaf.leaf.array
+S   42    24              16387               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V   42    12                  3                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V   54    12                  4                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A   66    96      2                         array     nodes.node.branchOrLeaf.leaf.array
+S   66    24              24581               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V   66    12                  5                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V   78    12                  6                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A   90    96      3                         array     nodes.node.branchOrLeaf.leaf.array
+S   90    24              32775               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V   90    12                  7                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  102    12                  8                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+V  114     4                 15             unary     nodes.node.branchOrLeaf.leaf.unary
+A  118   306      1                 nodes     nodes
+S  118   102                  1       node     nodes.node
+B  118     1                  1         isLeaf     nodes.node.isLeaf
+B  119     1                  0         isBranch     nodes.node.isBranch
+U  120   100                  0         branchOrLeaf     nodes.node.branchOrLeaf
+S  120    47                  0           branch     nodes.node.branchOrLeaf.branch
+S  120    45                                branchStuck     nodes.node.branchOrLeaf.branch.branchStuck
+A  120    42      0                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  120    14               8201                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  120    12                  9                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  132     2                  2                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A  134    42      1                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  134    14              11266                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  134    12               3074                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  146     2                  2                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A  148    42      2                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  148    14               3072                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  148    12               3072                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  160     2                  0                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+V  162     3                  0               unary     nodes.node.branchOrLeaf.branch.branchStuck.unary
+V  165     2                  0             topNext     nodes.node.branchOrLeaf.branch.topNext
+S  120   100                              leaf     nodes.node.branchOrLeaf.leaf
+A  120    96      0                         array     nodes.node.branchOrLeaf.leaf.array
+S  120    24              40969               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  120    12                  9                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  132    12                 10                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  144    96      1                         array     nodes.node.branchOrLeaf.leaf.array
+S  144    24              49163               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  144    12                 11                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  156    12                 12                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  168    96      2                         array     nodes.node.branchOrLeaf.leaf.array
+S  168    24              57357               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  168    12                 13                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  180    12                 14                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  192    96      3                         array     nodes.node.branchOrLeaf.leaf.array
+S  192    24              65551               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  192    12                 15                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  204    12                 16                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+V  216     4                 15             unary     nodes.node.branchOrLeaf.leaf.unary
+A  220   306      2                 nodes     nodes
+S  220   102                  1       node     nodes.node
+B  220     1                  1         isLeaf     nodes.node.isLeaf
+B  221     1                  0         isBranch     nodes.node.isBranch
+U  222   100                  0         branchOrLeaf     nodes.node.branchOrLeaf
+S  222    47                  0           branch     nodes.node.branchOrLeaf.branch
+S  222    45                                branchStuck     nodes.node.branchOrLeaf.branch.branchStuck
+A  222    42      0                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  222    14               8209                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  222    12                 17                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  234     2                  2                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A  236    42      1                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  236    14               3076                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  236    12               3076                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  248     2                  0                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A  250    42      2                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  250    14               5121                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  250    12               1025                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  262     2                  1                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+V  264     3                  0               unary     nodes.node.branchOrLeaf.branch.branchStuck.unary
+V  267     2                  0             topNext     nodes.node.branchOrLeaf.branch.topNext
+S  222   100                              leaf     nodes.node.branchOrLeaf.leaf
+A  222    96      0                         array     nodes.node.branchOrLeaf.leaf.array
+S  222    24              73745               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  222    12                 17                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  234    12                 18                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  246    96      1                         array     nodes.node.branchOrLeaf.leaf.array
+S  246    24              81939               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  246    12                 19                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  258    12                 20                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  270    96      2                         array     nodes.node.branchOrLeaf.leaf.array
+S  270    24              90133               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  270    12                 21                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  282    12                 22                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  294    96      3                         array     nodes.node.branchOrLeaf.leaf.array
+S  294    24              98327               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  294    12                 23                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  306    12                 24                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+V  318     4                 15             unary     nodes.node.branchOrLeaf.leaf.unary
 """);
     m.reset();
     return m;
@@ -1764,18 +1763,18 @@ V  318     4                 15             unary     tree.nodes.node.branchOrLe
     int c = 1;
     for (int n = 0; n < N; n++)                                                 // Each node
      {m.setIndexFromInt(m.nodes, n);                                            // Index node
-      m.setVariable("tree.nodes.node.isLeaf",                      0);
-      m.setVariable("tree.nodes.node.isBranch",                    1);
-      m.setVariable("tree.nodes.node.branchOrLeaf.branch.topNext", n);
-      m.setVariable("tree.nodes.node.branchOrLeaf.branch.branchStuck.unary", Layout.unary(N));
+      m.setVariable("nodes.node.isLeaf",                      0);
+      m.setVariable("nodes.node.isBranch",                    1);
+      m.setVariable("nodes.node.branchOrLeaf.branch.topNext", n);
+      m.setVariable("nodes.node.branchOrLeaf.branch.branchStuck.unary", Layout.unary(N));
       for (int s = 0; s < m.maxKeysPerBranch; s++)                              // Each key, data pair in leaf
-       {final Layout.Array a = m.layout.get("tree.nodes.node.branchOrLeaf.branch.branchStuck.array").toArray();
+       {final Layout.Array a = m.layout.get("nodes.node.branchOrLeaf.branch.branchStuck.array").toArray();
         m.setIndexFromInt(a, s);                                                // Index pair
-        m.setVariable("tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey", c++);
-        m.setVariable("tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext", s);
+        m.setVariable("nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey", c++);
+        m.setVariable("nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext", s);
        }
      }
-    m.copy(m.layout.get("tree.nodesFree.unary").toVariable(), Layout.unary(N)); // Tree globals
+    m.copy(m.layout.get("nodesFree.unary").toVariable(), Layout.unary(N)); // Tree globals
     m.copy(m.nodesCreated,  N);
     m.copy(m.keyDataStored, N);
     m.copy(m.root,          0);                                                 // The root is node zero
@@ -1786,136 +1785,136 @@ V  318     4                 15             unary     tree.nodes.node.branchOrLe
     //stop(m.layout);
     m.layout.ok("""
 T   At  Wide  Index       Value   Field name
-S    0   322                      tree     tree
-S    0     9                484     nodesFree     tree.nodesFree
-A    0     6      0          36       array     tree.nodesFree.array
-V    0     2                  0         nodeFree     tree.nodesFree.array.nodeFree
-A    2     6      1          36       array     tree.nodesFree.array
-V    2     2                  1         nodeFree     tree.nodesFree.array.nodeFree
-A    4     6      2          36       array     tree.nodesFree.array
-V    4     2                  2         nodeFree     tree.nodesFree.array.nodeFree
-V    6     3                  7       unary     tree.nodesFree.unary
-V    9     2                  3     nodesCreated     tree.nodesCreated
-V   11     2                  3     keyDataStored     tree.keyDataStored
-V   13     2                  0     =root     tree.root
-B   15     1                  1     hasNode     tree.hasNode
-A   16   306      0                 nodes     tree.nodes
-S   16   102                  2       node     tree.nodes.node
-B   16     1                  0         isLeaf     tree.nodes.node.isLeaf
-B   17     1                  1         isBranch     tree.nodes.node.isBranch
-U   18   100                  0         branchOrLeaf     tree.nodes.node.branchOrLeaf
-S   18    47                  0           branch     tree.nodes.node.branchOrLeaf.branch
-S   18    45                                branchStuck     tree.nodes.node.branchOrLeaf.branch.branchStuck
-A   18    42      0                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S   18    14                  1                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V   18    12                  1                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V   30     2                  0                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-A   32    42      1                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S   32    14               4098                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V   32    12                  2                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V   44     2                  1                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-A   46    42      2                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S   46    14               8195                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V   46    12                  3                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V   58     2                  2                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-V   60     3                  7               unary     tree.nodes.node.branchOrLeaf.branch.branchStuck.unary
-V   63     2                  0             topNext     tree.nodes.node.branchOrLeaf.branch.topNext
-S   18   100                              leaf     tree.nodes.node.branchOrLeaf.leaf
-A   18    96      0                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S   18    24              32769               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V   18    12                  1                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V   30    12                  8                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A   42    96      1                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S   42    24            1966132               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V   42    12                 52                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V   54    12                480                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A   66    96      2                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S   66    24                  0               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V   66    12                  0                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V   78    12                  0                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A   90    96      3                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S   90    24                  0               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V   90    12                  0                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  102    12                  0                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-V  114     4                  0             unary     tree.nodes.node.branchOrLeaf.leaf.unary
-A  118   306      1                 nodes     tree.nodes
-S  118   102                          node     tree.nodes.node
-B  118     1                  0         isLeaf     tree.nodes.node.isLeaf
-B  119     1                  1         isBranch     tree.nodes.node.isBranch
-U  120   100                            branchOrLeaf     tree.nodes.node.branchOrLeaf
-S  120    47                              branch     tree.nodes.node.branchOrLeaf.branch
-S  120    45                                branchStuck     tree.nodes.node.branchOrLeaf.branch.branchStuck
-A  120    42      0                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  120    14                  4                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  120    12                  4                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  132     2                  0                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-A  134    42      1                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  134    14               4101                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  134    12                  5                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  146     2                  1                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-A  148    42      2                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  148    14               8198                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  148    12                  6                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  160     2                  2                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-V  162     3                  7               unary     tree.nodes.node.branchOrLeaf.branch.branchStuck.unary
-V  165     2                  1             topNext     tree.nodes.node.branchOrLeaf.branch.topNext
-S  120   100                              leaf     tree.nodes.node.branchOrLeaf.leaf
-A  120    96      0                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  120    24              81924               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  120    12                  4                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  132    12                 20                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  144    96      1                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  144    24            1966180               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  144    12                100                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  156    12                480                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  168    96      2                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  168    24                  0               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  168    12                  0                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  180    12                  0                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  192    96      3                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  192    24                  0               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  192    12                  0                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  204    12                  0                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-V  216     4                  0             unary     tree.nodes.node.branchOrLeaf.leaf.unary
-A  220   306      2                 nodes     tree.nodes
-S  220   102                          node     tree.nodes.node
-B  220     1                  0         isLeaf     tree.nodes.node.isLeaf
-B  221     1                  1         isBranch     tree.nodes.node.isBranch
-U  222   100                            branchOrLeaf     tree.nodes.node.branchOrLeaf
-S  222    47                              branch     tree.nodes.node.branchOrLeaf.branch
-S  222    45                                branchStuck     tree.nodes.node.branchOrLeaf.branch.branchStuck
-A  222    42      0                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  222    14                  7                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  222    12                  7                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  234     2                  0                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-A  236    42      1                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  236    14               4104                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  236    12                  8                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  248     2                  1                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-A  250    42      2                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  250    14               8201                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  250    12                  9                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  262     2                  2                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-V  264     3                  7               unary     tree.nodes.node.branchOrLeaf.branch.branchStuck.unary
-V  267     2                  2             topNext     tree.nodes.node.branchOrLeaf.branch.topNext
-S  222   100                              leaf     tree.nodes.node.branchOrLeaf.leaf
-A  222    96      0                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  222    24             131079               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  222    12                  7                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  234    12                 32                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  246    96      1                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  246    24            1966228               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  246    12                148                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  258    12                480                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  270    96      2                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  270    24                  0               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  270    12                  0                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  282    12                  0                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  294    96      3                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  294    24                  0               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  294    12                  0                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  306    12                  0                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-V  318     4                  0             unary     tree.nodes.node.branchOrLeaf.leaf.unary
+S    0   322                      tree
+S    0     9                484     nodesFree     nodesFree
+A    0     6      0          36       array     nodesFree.array
+V    0     2                  0         nodeFree     nodesFree.array.nodeFree
+A    2     6      1          36       array     nodesFree.array
+V    2     2                  1         nodeFree     nodesFree.array.nodeFree
+A    4     6      2          36       array     nodesFree.array
+V    4     2                  2         nodeFree     nodesFree.array.nodeFree
+V    6     3                  7       unary     nodesFree.unary
+V    9     2                  3     nodesCreated     nodesCreated
+V   11     2                  3     keyDataStored     keyDataStored
+V   13     2                  0     =root     root
+B   15     1                  1     hasNode     hasNode
+A   16   306      0                 nodes     nodes
+S   16   102                  2       node     nodes.node
+B   16     1                  0         isLeaf     nodes.node.isLeaf
+B   17     1                  1         isBranch     nodes.node.isBranch
+U   18   100                  0         branchOrLeaf     nodes.node.branchOrLeaf
+S   18    47                  0           branch     nodes.node.branchOrLeaf.branch
+S   18    45                                branchStuck     nodes.node.branchOrLeaf.branch.branchStuck
+A   18    42      0                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S   18    14                  1                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V   18    12                  1                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V   30     2                  0                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A   32    42      1                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S   32    14               4098                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V   32    12                  2                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V   44     2                  1                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A   46    42      2                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S   46    14               8195                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V   46    12                  3                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V   58     2                  2                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+V   60     3                  7               unary     nodes.node.branchOrLeaf.branch.branchStuck.unary
+V   63     2                  0             topNext     nodes.node.branchOrLeaf.branch.topNext
+S   18   100                              leaf     nodes.node.branchOrLeaf.leaf
+A   18    96      0                         array     nodes.node.branchOrLeaf.leaf.array
+S   18    24              32769               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V   18    12                  1                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V   30    12                  8                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A   42    96      1                         array     nodes.node.branchOrLeaf.leaf.array
+S   42    24            1966132               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V   42    12                 52                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V   54    12                480                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A   66    96      2                         array     nodes.node.branchOrLeaf.leaf.array
+S   66    24                  0               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V   66    12                  0                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V   78    12                  0                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A   90    96      3                         array     nodes.node.branchOrLeaf.leaf.array
+S   90    24                  0               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V   90    12                  0                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  102    12                  0                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+V  114     4                  0             unary     nodes.node.branchOrLeaf.leaf.unary
+A  118   306      1                 nodes     nodes
+S  118   102                          node     nodes.node
+B  118     1                  0         isLeaf     nodes.node.isLeaf
+B  119     1                  1         isBranch     nodes.node.isBranch
+U  120   100                            branchOrLeaf     nodes.node.branchOrLeaf
+S  120    47                              branch     nodes.node.branchOrLeaf.branch
+S  120    45                                branchStuck     nodes.node.branchOrLeaf.branch.branchStuck
+A  120    42      0                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  120    14                  4                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  120    12                  4                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  132     2                  0                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A  134    42      1                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  134    14               4101                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  134    12                  5                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  146     2                  1                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A  148    42      2                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  148    14               8198                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  148    12                  6                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  160     2                  2                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+V  162     3                  7               unary     nodes.node.branchOrLeaf.branch.branchStuck.unary
+V  165     2                  1             topNext     nodes.node.branchOrLeaf.branch.topNext
+S  120   100                              leaf     nodes.node.branchOrLeaf.leaf
+A  120    96      0                         array     nodes.node.branchOrLeaf.leaf.array
+S  120    24              81924               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  120    12                  4                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  132    12                 20                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  144    96      1                         array     nodes.node.branchOrLeaf.leaf.array
+S  144    24            1966180               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  144    12                100                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  156    12                480                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  168    96      2                         array     nodes.node.branchOrLeaf.leaf.array
+S  168    24                  0               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  168    12                  0                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  180    12                  0                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  192    96      3                         array     nodes.node.branchOrLeaf.leaf.array
+S  192    24                  0               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  192    12                  0                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  204    12                  0                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+V  216     4                  0             unary     nodes.node.branchOrLeaf.leaf.unary
+A  220   306      2                 nodes     nodes
+S  220   102                          node     nodes.node
+B  220     1                  0         isLeaf     nodes.node.isLeaf
+B  221     1                  1         isBranch     nodes.node.isBranch
+U  222   100                            branchOrLeaf     nodes.node.branchOrLeaf
+S  222    47                              branch     nodes.node.branchOrLeaf.branch
+S  222    45                                branchStuck     nodes.node.branchOrLeaf.branch.branchStuck
+A  222    42      0                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  222    14                  7                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  222    12                  7                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  234     2                  0                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A  236    42      1                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  236    14               4104                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  236    12                  8                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  248     2                  1                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A  250    42      2                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  250    14               8201                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  250    12                  9                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  262     2                  2                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+V  264     3                  7               unary     nodes.node.branchOrLeaf.branch.branchStuck.unary
+V  267     2                  2             topNext     nodes.node.branchOrLeaf.branch.topNext
+S  222   100                              leaf     nodes.node.branchOrLeaf.leaf
+A  222    96      0                         array     nodes.node.branchOrLeaf.leaf.array
+S  222    24             131079               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  222    12                  7                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  234    12                 32                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  246    96      1                         array     nodes.node.branchOrLeaf.leaf.array
+S  246    24            1966228               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  246    12                148                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  258    12                480                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  270    96      2                         array     nodes.node.branchOrLeaf.leaf.array
+S  270    24                  0               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  270    12                  0                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  282    12                  0                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  294    96      3                         array     nodes.node.branchOrLeaf.leaf.array
+S  294    24                  0               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  294    12                  0                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  306    12                  0                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+V  318     4                  0             unary     nodes.node.branchOrLeaf.leaf.unary
 """);
     m.reset();
     return m;
@@ -1925,13 +1924,13 @@ V  318     4                  0             unary     tree.nodes.node.branchOrLe
    {final Mjaf mjaf = create_leaf_tree();                                       // Create a sample tree
     final Layout  t = mjaf.layout;                                              // Tree layout
     final String
-              node  = "tree.nodes.node.",                                       // Name prefix for a node in the tree
+              node  = "nodes.node.",                                       // Name prefix for a node in the tree
               leaf  = node+"branchOrLeaf.leaf.",                                // Name prefix for leaf stuck
             branch  = node+"branchOrLeaf.branch.",                              // Name prefix for branch
       branchStuck   = branch+"branchStuck.";                                    // Name prefix for branch stuck
 
     final Layout.Variable
-          nodeIndex = t.dupVariable("tree.nodesFree.array.nodeFree"),           // Node index variable
+          nodeIndex = t.dupVariable("nodesFree.array.nodeFree"),           // Node index variable
         sourceIndex = nodeIndex.like(),                                         // Source node index variable
         targetIndex = nodeIndex.like(),                                         // Target node index variable
           leafIndex = t.dupVariable(leaf       +"unary"),                       // Index a key/data pair in a leaf
@@ -1970,15 +1969,15 @@ V  318     4                  0             unary     tree.nodes.node.branchOrLe
    {final Mjaf mjaf = create_branch_tree();                                     // Create a sample tree
     final Layout  t = mjaf.layout;                                              // Tree layout
     final String
-              node  = "tree.nodes.node.",                                       // Name prefix for a node in the tree
+              node  = "nodes.node.",                                       // Name prefix for a node in the tree
               leaf  = node+"branchOrLeaf.leaf.",                                // Name prefix for leaf stuck
             branch  = node+"branchOrLeaf.branch.",                              // Name prefix for branch
       branchStuck   = branch+"branchStuck.";                                    // Name prefix for branch stuck
 
     final Layout.Variable
-          nodeIndex = t.dupVariable("tree.nodesFree.array.nodeFree"),           // Node index variable
-        sourceIndex = t.dupVariable("tree.nodesFree.array.nodeFree"),           // Source node index variable
-        targetIndex = t.dupVariable("tree.nodesFree.array.nodeFree"),           // Target node index variable
+          nodeIndex = t.dupVariable("nodesFree.array.nodeFree"),           // Node index variable
+        sourceIndex = t.dupVariable("nodesFree.array.nodeFree"),           // Source node index variable
+        targetIndex = t.dupVariable("nodesFree.array.nodeFree"),           // Target node index variable
           leafIndex = t.dupVariable(leaf       +"unary"),                       // Index a key/data pair in a leaf
         branchIndex = t.dupVariable(branchStuck+"unary"),                       // Index a key/next pair in a branch
            leafFlag = t.dupVariable(node+"isLeaf"),                             // Is leaf flag
@@ -2023,17 +2022,17 @@ V  318     4                  0             unary     tree.nodes.node.branchOrLe
     //stop(t.n);
     t.nodeIndex.copy().ok("""
 T   At  Wide  Index       Value   Field name
-V    0     2                  2   nodeFree     nodeFree
+V    0     2                  2   nodeFree
 """);
     //stop(t.l);                                                                // Check Leaf
     t.leafFlag.copy().ok("""
 T   At  Wide  Index       Value   Field name
-B    0     1                  1   isLeaf     isLeaf
+B    0     1                  1   isLeaf
 """);
     //stop(t.b);                                                                // Check not branch
     t.branchFlag.copy().ok("""
 T   At  Wide  Index       Value   Field name
-B    0     1                  0   isBranch     isBranch
+B    0     1                  0   isBranch
 """);
 
     m.reset();                                                                  // Next leaf from a leaf
@@ -2042,7 +2041,7 @@ B    0     1                  0   isBranch     isBranch
     //stop(t.n);
     t.nodeIndex.copy().ok("""
 T   At  Wide  Index       Value   Field name
-V    0     2                  1   nodeFree     nodeFree
+V    0     2                  1   nodeFree
 """);
 
     m.reset();                                                                  // Next leaf from a branch
@@ -2053,17 +2052,17 @@ V    0     2                  1   nodeFree     nodeFree
     //stop(n);
     t.nodeIndex.copy().ok("""
 T   At  Wide  Index       Value   Field name
-V    0     2                  0   nodeFree     nodeFree
+V    0     2                  0   nodeFree
 """);
     //stop(l);                                                                  // Check Leaf
     t.leafFlag.copy().ok("""
 T   At  Wide  Index       Value   Field name
-B    0     1                  1   isLeaf     isLeaf
+B    0     1                  1   isLeaf
 """);
     //stop(b);                                                                  // Check not branch
     t.branchFlag.copy().ok("""
 T   At  Wide  Index       Value   Field name
-B    0     1                  0   isBranch     isBranch
+B    0     1                  0   isBranch
 """);
     m.reset();
    }
@@ -2080,17 +2079,17 @@ B    0     1                  0   isBranch     isBranch
     //stop(t.nodeIndex);
     t.nodeIndex.copy().ok("""
 T   At  Wide  Index       Value   Field name
-V    0     2                  2   nodeFree     nodeFree
+V    0     2                  2   nodeFree
 """);
     //stop(t.leafFlag);
     t.leafFlag.copy().ok("""
 T   At  Wide  Index       Value   Field name
-B    0     1                  0   isLeaf     isLeaf
+B    0     1                  0   isLeaf
 """);
     //stop(t.branchFlag);
     t.branchFlag.copy().ok("""
 T   At  Wide  Index       Value   Field name
-B    0     1                  1   isBranch     isBranch
+B    0     1                  1   isBranch
 """);
    }
 
@@ -2117,11 +2116,11 @@ B    0     1                  1   isBranch     isBranch
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0     4                  6   s     s
-B    0     1                  0     empty     s.empty
-B    1     1                  1     full     s.full
-B    2     1                  1     Empty     s.Empty
-B    3     1                  0     Full     s.Full
+S    0     4                  6   s
+B    0     1                  0     empty     empty
+B    1     1                  1     full     full
+B    2     1                  1     Empty     Empty
+B    3     1                  0     Full     Full
 """);
    }
 
@@ -2148,11 +2147,11 @@ B    3     1                  0     Full     s.Full
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0     4                  6   s     s
-B    0     1                  0     empty     s.empty
-B    1     1                  1     full     s.full
-B    2     1                  1     Empty     s.Empty
-B    3     1                  0     Full     s.Full
+S    0     4                  6   s
+B    0     1                  0     empty     empty
+B    1     1                  1     full     full
+B    2     1                  1     Empty     Empty
+B    3     1                  0     Full     Full
 """);
    }
 
@@ -2167,24 +2166,24 @@ B    3     1                  0     Full     s.Full
 
     //stop(m.layout);                                                           // State before changes
     t.ok("""
-S  222   100                              leaf     tree.nodes.node.branchOrLeaf.leaf
-A  222    96      0                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  222    24              73745               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  222    12                 17                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  234    12                 18                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  246    96      1                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  246    24              81939               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  246    12                 19                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  258    12                 20                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  270    96      2                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  270    24              90133               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  270    12                 21                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  282    12                 22                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  294    96      3                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  294    24              98327               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  294    12                 23                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  306    12                 24                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-V  318     4                  0             unary     tree.nodes.node.branchOrLeaf.leaf.unary
+S  222   100                              leaf     nodes.node.branchOrLeaf.leaf
+A  222    96      0                         array     nodes.node.branchOrLeaf.leaf.array
+S  222    24              73745               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  222    12                 17                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  234    12                 18                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  246    96      1                         array     nodes.node.branchOrLeaf.leaf.array
+S  246    24              81939               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  246    12                 19                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  258    12                 20                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  270    96      2                         array     nodes.node.branchOrLeaf.leaf.array
+S  270    24              90133               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  270    12                 21                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  282    12                 22                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  294    96      3                         array     nodes.node.branchOrLeaf.leaf.array
+S  294    24              98327               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  294    12                 23                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  306    12                 24                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+V  318     4                  0             unary     nodes.node.branchOrLeaf.leaf.unary
 """);
 
     m.reset();
@@ -2193,24 +2192,24 @@ V  318     4                  0             unary     tree.nodes.node.branchOrLe
     m.execute();
     //stop(m.layout);
     t.ok("""
-S  222   100                              leaf     tree.nodes.node.branchOrLeaf.leaf
-A  222    96      0                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  222    24              81939               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  222    12                 19                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  234    12                 20                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  246    96      1                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  246    24              81939               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  246    12                 19                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  258    12                 20                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  270    96      2                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  270    24              90133               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  270    12                 21                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  282    12                 22                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  294    96      3                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  294    24              98327               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  294    12                 23                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  306    12                 24                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-V  318     4                  0             unary     tree.nodes.node.branchOrLeaf.leaf.unary
+S  222   100                              leaf     nodes.node.branchOrLeaf.leaf
+A  222    96      0                         array     nodes.node.branchOrLeaf.leaf.array
+S  222    24              81939               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  222    12                 19                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  234    12                 20                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  246    96      1                         array     nodes.node.branchOrLeaf.leaf.array
+S  246    24              81939               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  246    12                 19                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  258    12                 20                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  270    96      2                         array     nodes.node.branchOrLeaf.leaf.array
+S  270    24              90133               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  270    12                 21                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  282    12                 22                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  294    96      3                         array     nodes.node.branchOrLeaf.leaf.array
+S  294    24              98327               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  294    12                 23                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  306    12                 24                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+V  318     4                  0             unary     nodes.node.branchOrLeaf.leaf.unary
 """);
    }
 
@@ -2226,27 +2225,27 @@ V  318     4                  0             unary     tree.nodes.node.branchOrLe
     //stop(t.kn);
     t.kn.asLayout().ok("""
 T   At  Wide  Index       Value   Field name
-S    0    14               4104   branchKeyNext     branchKeyNext
-V    0    12                  8     branchKey     branchKeyNext.branchKey
-V   12     2                  1     branchNext     branchKeyNext.branchNext
+S    0    14               4104   branchKeyNext
+V    0    12                  8     branchKey     branchKey
+V   12     2                  1     branchNext     branchNext
 """);
 
     //stop(m.layout);
     t.ok("""
-S  222    47                              branch     tree.nodes.node.branchOrLeaf.branch
-S  222    45                                branchStuck     tree.nodes.node.branchOrLeaf.branch.branchStuck
-A  222    42      0                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  222    14                  7                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  222    12                  7                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  234     2                  0                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-A  236    42      1                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  236    14               4104                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  236    12                  8                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  248     2                  1                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-A  250    42      2                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  250    14               8201                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  250    12                  9                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  262     2                  2                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+S  222    47                              branch     nodes.node.branchOrLeaf.branch
+S  222    45                                branchStuck     nodes.node.branchOrLeaf.branch.branchStuck
+A  222    42      0                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  222    14                  7                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  222    12                  7                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  234     2                  0                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A  236    42      1                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  236    14               4104                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  236    12                  8                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  248     2                  1                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A  250    42      2                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  250    14               8201                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  250    12                  9                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  262     2                  2                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
 """);
 
     m.reset();
@@ -2255,20 +2254,20 @@ V  262     2                  2                   branchNext     tree.nodes.node
     m.execute();
     //stop(m.layout);
     t.ok("""
-S  222    47                              branch     tree.nodes.node.branchOrLeaf.branch
-S  222    45                                branchStuck     tree.nodes.node.branchOrLeaf.branch.branchStuck
-A  222    42      0                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  222    14               4104                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  222    12                  8                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  234     2                  1                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-A  236    42      1                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  236    14               4104                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  236    12                  8                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  248     2                  1                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-A  250    42      2                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  250    14               8201                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  250    12                  9                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  262     2                  2                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+S  222    47                              branch     nodes.node.branchOrLeaf.branch
+S  222    45                                branchStuck     nodes.node.branchOrLeaf.branch.branchStuck
+A  222    42      0                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  222    14               4104                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  222    12                  8                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  234     2                  1                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A  236    42      1                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  236    14               4104                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  236    12                  8                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  248     2                  1                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A  250    42      2                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  250    14               8201                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  250    12                  9                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  262     2                  2                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
 """);
    }
 
@@ -2287,30 +2286,30 @@ V  262     2                  2                   branchNext     tree.nodes.node
     //stop(t.kn);
     t.kd.asLayout().ok("""
 T   At  Wide  Index       Value   Field name
-S    0    24              57357   leafKeyData     leafKeyData
-V    0    12                 13     leafKey     leafKeyData.leafKey
-V   12    12                 14     leafData     leafKeyData.leafData
+S    0    24              57357   leafKeyData
+V    0    12                 13     leafKey     leafKey
+V   12    12                 14     leafData     leafData
 """);
 
     //stop(m.layout);
     t.ok("""
-S  222   100                              leaf     tree.nodes.node.branchOrLeaf.leaf
-A  222    96      0                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  222    24              57357               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  222    12                 13                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  234    12                 14                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  246    96      1                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  246    24              73745               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  246    12                 17                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  258    12                 18                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  270    96      2                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  270    24              81939               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  270    12                 19                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  282    12                 20                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  294    96      3                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  294    24              90133               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  294    12                 21                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  306    12                 22                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+S  222   100                              leaf     nodes.node.branchOrLeaf.leaf
+A  222    96      0                         array     nodes.node.branchOrLeaf.leaf.array
+S  222    24              57357               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  222    12                 13                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  234    12                 14                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  246    96      1                         array     nodes.node.branchOrLeaf.leaf.array
+S  246    24              73745               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  246    12                 17                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  258    12                 18                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  270    96      2                         array     nodes.node.branchOrLeaf.leaf.array
+S  270    24              81939               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  270    12                 19                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  282    12                 20                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  294    96      3                         array     nodes.node.branchOrLeaf.leaf.array
+S  294    24              90133               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  294    12                 21                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  306    12                 22                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
 """);
 
     m.reset();
@@ -2322,24 +2321,24 @@ V  306    12                 22                 leafData     tree.nodes.node.bra
 
     //stop(m.layout);
     t.ok("""
-S  222   100                              leaf     tree.nodes.node.branchOrLeaf.leaf
-A  222    96      0                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  222    24              49163               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  222    12                 11                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  234    12                 12                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  246    96      1                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  246    24              57357               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  246    12                 13                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  258    12                 14                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  270    96      2                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  270    24              73745               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  270    12                 17                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  282    12                 18                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  294    96      3                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  294    24              81939               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  294    12                 19                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  306    12                 20                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-V  318     4                  3             unary     tree.nodes.node.branchOrLeaf.leaf.unary
+S  222   100                              leaf     nodes.node.branchOrLeaf.leaf
+A  222    96      0                         array     nodes.node.branchOrLeaf.leaf.array
+S  222    24              49163               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  222    12                 11                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  234    12                 12                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  246    96      1                         array     nodes.node.branchOrLeaf.leaf.array
+S  246    24              57357               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  246    12                 13                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  258    12                 14                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  270    96      2                         array     nodes.node.branchOrLeaf.leaf.array
+S  270    24              73745               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  270    12                 17                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  282    12                 18                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  294    96      3                         array     nodes.node.branchOrLeaf.leaf.array
+S  294    24              81939               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  294    12                 19                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  306    12                 20                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+V  318     4                  3             unary     nodes.node.branchOrLeaf.leaf.unary
 """);
 
     m.reset();
@@ -2351,24 +2350,24 @@ V  318     4                  3             unary     tree.nodes.node.branchOrLe
 
     //stop(m.layout);
     t.ok("""
-S  222   100                              leaf     tree.nodes.node.branchOrLeaf.leaf
-A  222    96      0                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  222    24              40969               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  222    12                  9                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  234    12                 10                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  246    96      1                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  246    24              49163               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  246    12                 11                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  258    12                 12                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  270    96      2                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  270    24              57357               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  270    12                 13                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  282    12                 14                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  294    96      3                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  294    24              73745               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  294    12                 17                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  306    12                 18                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-V  318     4                  7             unary     tree.nodes.node.branchOrLeaf.leaf.unary
+S  222   100                              leaf     nodes.node.branchOrLeaf.leaf
+A  222    96      0                         array     nodes.node.branchOrLeaf.leaf.array
+S  222    24              40969               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  222    12                  9                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  234    12                 10                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  246    96      1                         array     nodes.node.branchOrLeaf.leaf.array
+S  246    24              49163               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  246    12                 11                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  258    12                 12                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  270    96      2                         array     nodes.node.branchOrLeaf.leaf.array
+S  270    24              57357               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  270    12                 13                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  282    12                 14                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  294    96      3                         array     nodes.node.branchOrLeaf.leaf.array
+S  294    24              73745               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  294    12                 17                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  306    12                 18                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+V  318     4                  7             unary     nodes.node.branchOrLeaf.leaf.unary
 """);
 
     m.reset();
@@ -2380,24 +2379,24 @@ V  318     4                  7             unary     tree.nodes.node.branchOrLe
 
     //stop(m.layout);
     t.ok("""
-S  222   100                              leaf     tree.nodes.node.branchOrLeaf.leaf
-A  222    96      0                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  222    24              40969               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  222    12                  9                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  234    12                 10                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  246    96      1                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  246    24              49163               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  246    12                 11                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  258    12                 12                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  270    96      2                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  270    24              65551               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  270    12                 15                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  282    12                 16                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  294    96      3                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  294    24              57357               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  294    12                 13                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  306    12                 14                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-V  318     4                 15             unary     tree.nodes.node.branchOrLeaf.leaf.unary
+S  222   100                              leaf     nodes.node.branchOrLeaf.leaf
+A  222    96      0                         array     nodes.node.branchOrLeaf.leaf.array
+S  222    24              40969               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  222    12                  9                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  234    12                 10                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  246    96      1                         array     nodes.node.branchOrLeaf.leaf.array
+S  246    24              49163               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  246    12                 11                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  258    12                 12                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  270    96      2                         array     nodes.node.branchOrLeaf.leaf.array
+S  270    24              65551               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  270    12                 15                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  282    12                 16                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  294    96      3                         array     nodes.node.branchOrLeaf.leaf.array
+S  294    24              57357               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  294    12                 13                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  306    12                 14                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+V  318     4                 15             unary     nodes.node.branchOrLeaf.leaf.unary
 """);
 
     m.reset();
@@ -2407,24 +2406,24 @@ V  318     4                 15             unary     tree.nodes.node.branchOrLe
 
     //stop(m.layout);
     t.ok("""
-S  222   100                              leaf     tree.nodes.node.branchOrLeaf.leaf
-A  222    96      0                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  222    24              40969               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  222    12                  9                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  234    12                 10                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  246    96      1                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  246    24              65551               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  246    12                 15                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  258    12                 16                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  270    96      2                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  270    24              57357               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  270    12                 13                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  282    12                 14                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  294    96      3                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  294    24              57357               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  294    12                 13                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  306    12                 14                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-V  318     4                  7             unary     tree.nodes.node.branchOrLeaf.leaf.unary
+S  222   100                              leaf     nodes.node.branchOrLeaf.leaf
+A  222    96      0                         array     nodes.node.branchOrLeaf.leaf.array
+S  222    24              40969               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  222    12                  9                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  234    12                 10                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  246    96      1                         array     nodes.node.branchOrLeaf.leaf.array
+S  246    24              65551               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  246    12                 15                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  258    12                 16                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  270    96      2                         array     nodes.node.branchOrLeaf.leaf.array
+S  270    24              57357               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  270    12                 13                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  282    12                 14                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  294    96      3                         array     nodes.node.branchOrLeaf.leaf.array
+S  294    24              57357               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  294    12                 13                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  306    12                 14                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+V  318     4                  7             unary     nodes.node.branchOrLeaf.leaf.unary
 """);
 
     m.reset();
@@ -2434,24 +2433,24 @@ V  318     4                  7             unary     tree.nodes.node.branchOrLe
 
     //stop(m.layout);
     t.ok("""
-S  222   100                              leaf     tree.nodes.node.branchOrLeaf.leaf
-A  222    96      0                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  222    24              65551               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  222    12                 15                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  234    12                 16                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  246    96      1                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  246    24              57357               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  246    12                 13                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  258    12                 14                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  270    96      2                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  270    24              57357               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  270    12                 13                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  282    12                 14                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  294    96      3                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  294    24              57357               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  294    12                 13                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  306    12                 14                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-V  318     4                  3             unary     tree.nodes.node.branchOrLeaf.leaf.unary
+S  222   100                              leaf     nodes.node.branchOrLeaf.leaf
+A  222    96      0                         array     nodes.node.branchOrLeaf.leaf.array
+S  222    24              65551               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  222    12                 15                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  234    12                 16                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  246    96      1                         array     nodes.node.branchOrLeaf.leaf.array
+S  246    24              57357               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  246    12                 13                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  258    12                 14                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  270    96      2                         array     nodes.node.branchOrLeaf.leaf.array
+S  270    24              57357               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  270    12                 13                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  282    12                 14                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  294    96      3                         array     nodes.node.branchOrLeaf.leaf.array
+S  294    24              57357               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  294    12                 13                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  306    12                 14                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+V  318     4                  3             unary     nodes.node.branchOrLeaf.leaf.unary
 """);
    }
 
@@ -2472,28 +2471,28 @@ V  318     4                  3             unary     tree.nodes.node.branchOrLe
     //stop(t.kn);
     t.kn.asLayout().ok("""
 T   At  Wide  Index       Value   Field name
-S    0    14               4101   branchKeyNext     branchKeyNext
-V    0    12                  5     branchKey     branchKeyNext.branchKey
-V   12     2                  1     branchNext     branchKeyNext.branchNext
+S    0    14               4101   branchKeyNext
+V    0    12                  5     branchKey     branchKey
+V   12     2                  1     branchNext     branchNext
 """);
 
     //stop(m.layout);
     t.ok("""
-S  222    47                              branch     tree.nodes.node.branchOrLeaf.branch
-S  222    45                                branchStuck     tree.nodes.node.branchOrLeaf.branch.branchStuck
-A  222    42      0                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  222    14               4101                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  222    12                  5                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  234     2                  1                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-A  236    42      1                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  236    14                  7                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  236    12                  7                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  248     2                  0                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-A  250    42      2                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  250    14               4104                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  250    12                  8                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  262     2                  1                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-V  264     3                  7               unary     tree.nodes.node.branchOrLeaf.branch.branchStuck.unary
+S  222    47                              branch     nodes.node.branchOrLeaf.branch
+S  222    45                                branchStuck     nodes.node.branchOrLeaf.branch.branchStuck
+A  222    42      0                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  222    14               4101                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  222    12                  5                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  234     2                  1                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A  236    42      1                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  236    14                  7                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  236    12                  7                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  248     2                  0                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A  250    42      2                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  250    14               4104                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  250    12                  8                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  262     2                  1                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+V  264     3                  7               unary     nodes.node.branchOrLeaf.branch.branchStuck.unary
 """);
 
     m.reset();
@@ -2505,21 +2504,21 @@ V  264     3                  7               unary     tree.nodes.node.branchOr
 
     //stop(m.layout);
     t.ok("""
-S  222    47                              branch     tree.nodes.node.branchOrLeaf.branch
-S  222    45                                branchStuck     tree.nodes.node.branchOrLeaf.branch.branchStuck
-A  222    42      0  1946247174               array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  222    14               8198                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  222    12                  6                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  234     2                  2                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-A  236    42      1  1946247174               array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  236    14               4101                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  236    12                  5                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  248     2                  1                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-A  250    42      2  1946247174               array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  250    14                  7                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  250    12                  7                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  262     2                  0                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-V  264     3                  7               unary     tree.nodes.node.branchOrLeaf.branch.branchStuck.unary
+S  222    47                              branch     nodes.node.branchOrLeaf.branch
+S  222    45                                branchStuck     nodes.node.branchOrLeaf.branch.branchStuck
+A  222    42      0  1946247174               array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  222    14               8198                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  222    12                  6                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  234     2                  2                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A  236    42      1  1946247174               array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  236    14               4101                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  236    12                  5                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  248     2                  1                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A  250    42      2  1946247174               array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  250    14                  7                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  250    12                  7                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  262     2                  0                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+V  264     3                  7               unary     nodes.node.branchOrLeaf.branch.branchStuck.unary
 """);
 
     m.reset();
@@ -2531,21 +2530,21 @@ V  264     3                  7               unary     tree.nodes.node.branchOr
 
     //stop(m.layout);
     t.ok("""
-S  222    47                              branch     tree.nodes.node.branchOrLeaf.branch
-S  222    45                                branchStuck     tree.nodes.node.branchOrLeaf.branch.branchStuck
-A  222    42      0                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  222    14                  4                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  222    12                  4                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  234     2                  0                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-A  236    42      1                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  236    14               8198                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  236    12                  6                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  248     2                  2                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-A  250    42      2                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  250    14               4101                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  250    12                  5                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  262     2                  1                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-V  264     3                  7               unary     tree.nodes.node.branchOrLeaf.branch.branchStuck.unary
+S  222    47                              branch     nodes.node.branchOrLeaf.branch
+S  222    45                                branchStuck     nodes.node.branchOrLeaf.branch.branchStuck
+A  222    42      0                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  222    14                  4                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  222    12                  4                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  234     2                  0                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A  236    42      1                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  236    14               8198                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  236    12                  6                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  248     2                  2                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A  250    42      2                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  250    14               4101                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  250    12                  5                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  262     2                  1                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+V  264     3                  7               unary     nodes.node.branchOrLeaf.branch.branchStuck.unary
 """);
 
     m.reset();
@@ -2555,21 +2554,21 @@ V  264     3                  7               unary     tree.nodes.node.branchOr
 
     //stop(m.layout);
     t.ok("""
-S  222    47                              branch     tree.nodes.node.branchOrLeaf.branch
-S  222    45                                branchStuck     tree.nodes.node.branchOrLeaf.branch.branchStuck
-A  222    42      0                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  222    14                  4                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  222    12                  4                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  234     2                  0                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-A  236    42      1                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  236    14               4101                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  236    12                  5                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  248     2                  1                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-A  250    42      2                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  250    14               4101                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  250    12                  5                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  262     2                  1                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-V  264     3                  3               unary     tree.nodes.node.branchOrLeaf.branch.branchStuck.unary
+S  222    47                              branch     nodes.node.branchOrLeaf.branch
+S  222    45                                branchStuck     nodes.node.branchOrLeaf.branch.branchStuck
+A  222    42      0                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  222    14                  4                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  222    12                  4                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  234     2                  0                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A  236    42      1                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  236    14               4101                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  236    12                  5                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  248     2                  1                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A  250    42      2                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  250    14               4101                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  250    12                  5                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  262     2                  1                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+V  264     3                  3               unary     nodes.node.branchOrLeaf.branch.branchStuck.unary
 """);
 
     m.reset();
@@ -2579,21 +2578,21 @@ V  264     3                  3               unary     tree.nodes.node.branchOr
 
     //stop(m.layout);
     t.ok("""
-S  222    47                              branch     tree.nodes.node.branchOrLeaf.branch
-S  222    45                                branchStuck     tree.nodes.node.branchOrLeaf.branch.branchStuck
-A  222    42      0                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  222    14               4101                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  222    12                  5                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  234     2                  1                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-A  236    42      1                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  236    14               4101                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  236    12                  5                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  248     2                  1                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-A  250    42      2                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  250    14               4101                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  250    12                  5                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  262     2                  1                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-V  264     3                  1               unary     tree.nodes.node.branchOrLeaf.branch.branchStuck.unary
+S  222    47                              branch     nodes.node.branchOrLeaf.branch
+S  222    45                                branchStuck     nodes.node.branchOrLeaf.branch.branchStuck
+A  222    42      0                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  222    14               4101                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  222    12                  5                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  234     2                  1                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A  236    42      1                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  236    14               4101                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  236    12                  5                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  248     2                  1                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A  250    42      2                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  250    14               4101                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  250    12                  5                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  262     2                  1                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+V  264     3                  1               unary     nodes.node.branchOrLeaf.branch.branchStuck.unary
 """);
    }
 
@@ -2612,44 +2611,44 @@ V  264     3                  1               unary     tree.nodes.node.branchOr
 
     //stop(m.layout);                                                           // Source layout
     t.ok("""
-S  120   100                              leaf     tree.nodes.node.branchOrLeaf.leaf
-A  120    96      0                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  120    24              40969               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  120    12                  9                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  132    12                 10                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  144    96      1                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  144    24              49163               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  144    12                 11                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  156    12                 12                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  168    96      2                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  168    24              57357               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  168    12                 13                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  180    12                 14                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  192    96      3                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  192    24              65551               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  192    12                 15                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  204    12                 16                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+S  120   100                              leaf     nodes.node.branchOrLeaf.leaf
+A  120    96      0                         array     nodes.node.branchOrLeaf.leaf.array
+S  120    24              40969               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  120    12                  9                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  132    12                 10                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  144    96      1                         array     nodes.node.branchOrLeaf.leaf.array
+S  144    24              49163               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  144    12                 11                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  156    12                 12                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  168    96      2                         array     nodes.node.branchOrLeaf.leaf.array
+S  168    24              57357               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  168    12                 13                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  180    12                 14                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  192    96      3                         array     nodes.node.branchOrLeaf.leaf.array
+S  192    24              65551               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  192    12                 15                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  204    12                 16                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
 """);
                                                                                 // Target layout
     t.ok("""
-S  222   100                              leaf     tree.nodes.node.branchOrLeaf.leaf
-A  222    96      0                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  222    24              40969               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  222    12                  9                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  234    12                 10                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  246    96      1                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  246    24              49163               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  246    12                 11                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  258    12                 12                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  270    96      2                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  270    24              57357               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  270    12                 13                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  282    12                 14                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  294    96      3                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  294    24              65551               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  294    12                 15                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  306    12                 16                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-V  318     4                 15             unary     tree.nodes.node.branchOrLeaf.leaf.unary
+S  222   100                              leaf     nodes.node.branchOrLeaf.leaf
+A  222    96      0                         array     nodes.node.branchOrLeaf.leaf.array
+S  222    24              40969               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  222    12                  9                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  234    12                 10                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  246    96      1                         array     nodes.node.branchOrLeaf.leaf.array
+S  246    24              49163               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  246    12                 11                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  258    12                 12                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  270    96      2                         array     nodes.node.branchOrLeaf.leaf.array
+S  270    24              57357               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  270    12                 13                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  282    12                 14                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  294    96      3                         array     nodes.node.branchOrLeaf.leaf.array
+S  294    24              65551               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  294    12                 15                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  306    12                 16                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+V  318     4                 15             unary     nodes.node.branchOrLeaf.leaf.unary
 """);
 
     m.reset();
@@ -2659,9 +2658,9 @@ V  318     4                 15             unary     tree.nodes.node.branchOrLe
     //stop(t.kd);
     t.kd.asLayout().ok("""
 T   At  Wide  Index       Value   Field name
-S    0    24              40969   leafKeyData     leafKeyData
-V    0    12                  9     leafKey     leafKeyData.leafKey
-V   12    12                 10     leafData     leafKeyData.leafData
+S    0    24              40969   leafKeyData
+V    0    12                  9     leafKey     leafKey
+V   12    12                 10     leafData     leafData
 """);
 
     m.reset();
@@ -2671,30 +2670,30 @@ V   12    12                 10     leafData     leafKeyData.leafData
     //stop(t.kd);
     t.kd.asLayout().ok("""
 T   At  Wide  Index       Value   Field name
-S    0    24              49163   leafKeyData     leafKeyData
-V    0    12                 11     leafKey     leafKeyData.leafKey
-V   12    12                 12     leafData     leafKeyData.leafData
+S    0    24              49163   leafKeyData
+V    0    12                 11     leafKey     leafKey
+V   12    12                 12     leafData     leafData
 """);
    //stop(m.layout);
    t.ok("""
-S  222   100                              leaf     tree.nodes.node.branchOrLeaf.leaf
-A  222    96      0                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  222    24              57357               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  222    12                 13                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  234    12                 14                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  246    96      1                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  246    24              65551               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  246    12                 15                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  258    12                 16                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  270    96      2                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  270    24              65551               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  270    12                 15                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  282    12                 16                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  294    96      3                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  294    24              65551               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  294    12                 15                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  306    12                 16                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-V  318     4                  3             unary     tree.nodes.node.branchOrLeaf.leaf.unary
+S  222   100                              leaf     nodes.node.branchOrLeaf.leaf
+A  222    96      0                         array     nodes.node.branchOrLeaf.leaf.array
+S  222    24              57357               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  222    12                 13                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  234    12                 14                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  246    96      1                         array     nodes.node.branchOrLeaf.leaf.array
+S  246    24              65551               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  246    12                 15                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  258    12                 16                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  270    96      2                         array     nodes.node.branchOrLeaf.leaf.array
+S  270    24              65551               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  270    12                 15                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  282    12                 16                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  294    96      3                         array     nodes.node.branchOrLeaf.leaf.array
+S  294    24              65551               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  294    12                 15                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  306    12                 16                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+V  318     4                  3             unary     nodes.node.branchOrLeaf.leaf.unary
 """);
   }
 
@@ -2714,21 +2713,21 @@ V  318     4                  3             unary     tree.nodes.node.branchOrLe
 
     //stop(m.layout);                                                           // Source layout
     t.ok("""
-S  222    47                              branch     tree.nodes.node.branchOrLeaf.branch
-S  222    45                                branchStuck     tree.nodes.node.branchOrLeaf.branch.branchStuck
-A  222    42      0                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  222    14                  4                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  222    12                  4                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  234     2                  0                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-A  236    42      1                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  236    14               4101                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  236    12                  5                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  248     2                  1                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-A  250    42      2                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  250    14               8198                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  250    12                  6                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  262     2                  2                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-V  264     3                  7               unary     tree.nodes.node.branchOrLeaf.branch.branchStuck.unary
+S  222    47                              branch     nodes.node.branchOrLeaf.branch
+S  222    45                                branchStuck     nodes.node.branchOrLeaf.branch.branchStuck
+A  222    42      0                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  222    14                  4                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  222    12                  4                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  234     2                  0                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A  236    42      1                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  236    14               4101                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  236    12                  5                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  248     2                  1                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A  250    42      2                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  250    14               8198                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  250    12                  6                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  262     2                  2                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+V  264     3                  7               unary     nodes.node.branchOrLeaf.branch.branchStuck.unary
 """);
 
     m.reset();
@@ -2738,9 +2737,9 @@ V  264     3                  7               unary     tree.nodes.node.branchOr
     //stop(t.kn);
     t.kn.asLayout().ok("""
 T   At  Wide  Index       Value   Field name
-S    0    14                  4   branchKeyNext     branchKeyNext
-V    0    12                  4     branchKey     branchKeyNext.branchKey
-V   12     2                  0     branchNext     branchKeyNext.branchNext
+S    0    14                  4   branchKeyNext
+V    0    12                  4     branchKey     branchKey
+V   12     2                  0     branchNext     branchNext
 """);
 
     m.reset();
@@ -2750,28 +2749,28 @@ V   12     2                  0     branchNext     branchKeyNext.branchNext
     //stop(t.kn);
     t.kn.asLayout().ok("""
 T   At  Wide  Index       Value   Field name
-S    0    14               4101   branchKeyNext     branchKeyNext
-V    0    12                  5     branchKey     branchKeyNext.branchKey
-V   12     2                  1     branchNext     branchKeyNext.branchNext
+S    0    14               4101   branchKeyNext
+V    0    12                  5     branchKey     branchKey
+V   12     2                  1     branchNext     branchNext
 """);
 
    //stop(m.layout);
    t.ok("""
-S  222    47                              branch     tree.nodes.node.branchOrLeaf.branch
-S  222    45                                branchStuck     tree.nodes.node.branchOrLeaf.branch.branchStuck
-A  222    42      0                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  222    14               8198                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  222    12                  6                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  234     2                  2                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-A  236    42      1                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  236    14               8198                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  236    12                  6                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  248     2                  2                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-A  250    42      2                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  250    14               8198                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  250    12                  6                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  262     2                  2                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-V  264     3                  1               unary     tree.nodes.node.branchOrLeaf.branch.branchStuck.unary
+S  222    47                              branch     nodes.node.branchOrLeaf.branch
+S  222    45                                branchStuck     nodes.node.branchOrLeaf.branch.branchStuck
+A  222    42      0                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  222    14               8198                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  222    12                  6                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  234     2                  2                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A  236    42      1                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  236    14               8198                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  236    12                  6                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  248     2                  2                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A  250    42      2                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  250    14               8198                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  250    12                  6                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  262     2                  2                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+V  264     3                  1               unary     nodes.node.branchOrLeaf.branch.branchStuck.unary
 """);
   }
 
@@ -2794,22 +2793,22 @@ V  264     3                  1               unary     tree.nodes.node.branchOr
     //stop(l);                                                                  // Unary "11" printed as "3" is binary "2"
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0     5                  7   s     s
-B    0     1                  1     found     s.found
-V    1     4                  3     result     s.result
+S    0     5                  7   s
+B    0     1                  1     found     found
+V    1     4                  3     result     result
 """);
 
     m.reset();
-    m.copy(t.kd.asLayout().get("leafKeyData.leafKey"), 25);                     // Modify the key so it will not be found
+    m.copy(t.kd.asLayout().get("leafKey"), 25);                                 // Modify the key so it will not be found
     m.leafFindIndexOf(t.sourceIndex, t.kd, found, result);
     m.execute();
 
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0     5                 30   s     s
-B    0     1                  0     found     s.found
-V    1     4                 15     result     s.result
+S    0     5                 30   s
+B    0     1                  0     found     found
+V    1     4                 15     result     result
 """);
   }
 
@@ -2832,22 +2831,22 @@ V    1     4                 15     result     s.result
     //stop(l);                                                                  // Unary "11" printed as "3" is binary "2"
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0     5                  7   s     s
-B    0     1                  1     found     s.found
-V    1     4                  3     result     s.result
+S    0     5                  7   s
+B    0     1                  1     found     found
+V    1     4                  3     result     result
 """);
 
     m.reset();
-    m.copy(t.kd.asLayout().get("leafKeyData.leafKey"), 25);                     // Modify the key so it will not be found
+    m.copy(t.kd.asLayout().get("leafKey"), 25);                                 // Modify the key so it will not be found
     m.leafFindIndexOf(t.sourceIndex, t.kd, found, result);
     m.execute();
 
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0     5                 30   s     s
-B    0     1                  0     found     s.found
-V    1     4                 15     result     s.result
+S    0     5                 30   s
+B    0     1                  0     found     found
+V    1     4                 15     result     result
 """);
   }
 
@@ -2861,44 +2860,44 @@ V    1     4                 15     result     s.result
     m.execute();
     //stop(m.layout);                                                           // Source layout
     t.ok("""
-S  120   100                              leaf     tree.nodes.node.branchOrLeaf.leaf
-A  120    96      0                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  120    24              73745               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  120    12                 17                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  132    12                 18                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  144    96      1                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  144    24              81939               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  144    12                 19                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  156    12                 20                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  168    96      2                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  168    24              57357               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  168    12                 13                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  180    12                 14                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  192    96      3                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  192    24              65551               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  192    12                 15                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  204    12                 16                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-V  216     4                  3             unary     tree.nodes.node.branchOrLeaf.leaf.unary
+S  120   100                              leaf     nodes.node.branchOrLeaf.leaf
+A  120    96      0                         array     nodes.node.branchOrLeaf.leaf.array
+S  120    24              73745               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  120    12                 17                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  132    12                 18                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  144    96      1                         array     nodes.node.branchOrLeaf.leaf.array
+S  144    24              81939               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  144    12                 19                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  156    12                 20                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  168    96      2                         array     nodes.node.branchOrLeaf.leaf.array
+S  168    24              57357               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  168    12                 13                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  180    12                 14                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  192    96      3                         array     nodes.node.branchOrLeaf.leaf.array
+S  192    24              65551               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  192    12                 15                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  204    12                 16                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+V  216     4                  3             unary     nodes.node.branchOrLeaf.leaf.unary
 """);
     t.ok("""
-S  222   100                              leaf     tree.nodes.node.branchOrLeaf.leaf
-A  222    96      0                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  222    24              90133               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  222    12                 21                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  234    12                 22                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  246    96      1                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  246    24              98327               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  246    12                 23                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  258    12                 24                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  270    96      2                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  270    24              98327               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  270    12                 23                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  282    12                 24                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  294    96      3                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  294    24              98327               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  294    12                 23                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  306    12                 24                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-V  318     4                  3             unary     tree.nodes.node.branchOrLeaf.leaf.unary
+S  222   100                              leaf     nodes.node.branchOrLeaf.leaf
+A  222    96      0                         array     nodes.node.branchOrLeaf.leaf.array
+S  222    24              90133               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  222    12                 21                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  234    12                 22                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  246    96      1                         array     nodes.node.branchOrLeaf.leaf.array
+S  246    24              98327               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  246    12                 23                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  258    12                 24                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  270    96      2                         array     nodes.node.branchOrLeaf.leaf.array
+S  270    24              98327               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  270    12                 23                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  282    12                 24                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  294    96      3                         array     nodes.node.branchOrLeaf.leaf.array
+S  294    24              98327               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  294    12                 23                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  306    12                 24                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+V  318     4                  3             unary     nodes.node.branchOrLeaf.leaf.unary
 """);
 
     m.reset();
@@ -2908,53 +2907,53 @@ V  318     4                  3             unary     tree.nodes.node.branchOrLe
     m.execute();
     //stop(m.layout);
     t.ok("""
-S  120   100                              leaf     tree.nodes.node.branchOrLeaf.leaf
-A  120    96      0                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  120    24              73745               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  120    12                 17                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  132    12                 18                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  144    96      1                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  144    24              81939               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  144    12                 19                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  156    12                 20                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  168    96      2                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  168    24              90133               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  168    12                 21                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  180    12                 22                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  192    96      3                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  192    24              98327               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  192    12                 23                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  204    12                 24                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-V  216     4                 15             unary     tree.nodes.node.branchOrLeaf.leaf.unary
+S  120   100                              leaf     nodes.node.branchOrLeaf.leaf
+A  120    96      0                         array     nodes.node.branchOrLeaf.leaf.array
+S  120    24              73745               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  120    12                 17                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  132    12                 18                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  144    96      1                         array     nodes.node.branchOrLeaf.leaf.array
+S  144    24              81939               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  144    12                 19                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  156    12                 20                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  168    96      2                         array     nodes.node.branchOrLeaf.leaf.array
+S  168    24              90133               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  168    12                 21                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  180    12                 22                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  192    96      3                         array     nodes.node.branchOrLeaf.leaf.array
+S  192    24              98327               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  192    12                 23                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  204    12                 24                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+V  216     4                 15             unary     nodes.node.branchOrLeaf.leaf.unary
 """);
     t.ok("""
-S  222   100                              leaf     tree.nodes.node.branchOrLeaf.leaf
-A  222    96      0                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  222    24              98327               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  222    12                 23                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  234    12                 24                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  246    96      1                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  246    24              98327               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  246    12                 23                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  258    12                 24                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  270    96      2                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  270    24              98327               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  270    12                 23                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  282    12                 24                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  294    96      3                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  294    24              98327               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  294    12                 23                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  306    12                 24                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-V  318     4                  0             unary     tree.nodes.node.branchOrLeaf.leaf.unary
+S  222   100                              leaf     nodes.node.branchOrLeaf.leaf
+A  222    96      0                         array     nodes.node.branchOrLeaf.leaf.array
+S  222    24              98327               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  222    12                 23                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  234    12                 24                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  246    96      1                         array     nodes.node.branchOrLeaf.leaf.array
+S  246    24              98327               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  246    12                 23                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  258    12                 24                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  270    96      2                         array     nodes.node.branchOrLeaf.leaf.array
+S  270    24              98327               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  270    12                 23                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  282    12                 24                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  294    96      3                         array     nodes.node.branchOrLeaf.leaf.array
+S  294    24              98327               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  294    12                 23                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  306    12                 24                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+V  318     4                  0             unary     nodes.node.branchOrLeaf.leaf.unary
 """);
     //stop(t.lef);
     t.lef.ok("""
 T   At  Wide  Index       Value   Field name
-S    0     4                  1   lefs     lefs
-B    0     1                  1     le     lefs.le
-B    1     1                  0     lf     lefs.lf
-B    2     1                  0     lE     lefs.lE
-B    3     1                  0     lF     lefs.lF
+S    0     4                  1   lefs
+B    0     1                  1     le     le
+B    1     1                  0     lf     lf
+B    2     1                  0     lE     lE
+B    3     1                  0     lF     lF
 """);
   }
 
@@ -2967,7 +2966,7 @@ B    3     1                  0     lF     lefs.lF
 
     m.branchSplitKey(t.sourceIndex, t.kn);                                      // Get the splitting key
     m.copy(key,                                                                 // Save splitting key
-      t.kn.asLayout().get("branchKeyNext.branchKey").toVariable());
+      t.kn.asLayout().get("branchKey").toVariable());
 
     m.branchStuck.unary.ones();                                                 // Fill branch - branchMake will have set an otherwise full branch to empty
     m.branchSplit(t.targetIndex, t.sourceIndex);                                // Split a branch
@@ -2976,46 +2975,46 @@ B    3     1                  0     lF     lefs.lF
     //stop(key);
     key.copy().ok("""
 T   At  Wide  Index       Value   Field name
-V    0    12                  8   branchKey     branchKey
+V    0    12                  8   branchKey
 """);
 
     //stop(m.layout);                                                           // Source layout
     t.ok("""
-S  120    47                              branch     tree.nodes.node.branchOrLeaf.branch
-S  120    45                                branchStuck     tree.nodes.node.branchOrLeaf.branch.branchStuck
-A  120    42      0                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  120    14                  7                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  120    12                  7                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  132     2                  0                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-A  134    42      1                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  134    14               4101                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  134    12                  5                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  146     2                  1                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-A  148    42      2                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  148    14               8198                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  148    12                  6                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  160     2                  2                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-V  162     3                  1               unary     tree.nodes.node.branchOrLeaf.branch.branchStuck.unary
-V  165     2                  1             topNext     tree.nodes.node.branchOrLeaf.branch.topNext
+S  120    47                              branch     nodes.node.branchOrLeaf.branch
+S  120    45                                branchStuck     nodes.node.branchOrLeaf.branch.branchStuck
+A  120    42      0                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  120    14                  7                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  120    12                  7                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  132     2                  0                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A  134    42      1                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  134    14               4101                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  134    12                  5                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  146     2                  1                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A  148    42      2                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  148    14               8198                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  148    12                  6                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  160     2                  2                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+V  162     3                  1               unary     nodes.node.branchOrLeaf.branch.branchStuck.unary
+V  165     2                  1             topNext     nodes.node.branchOrLeaf.branch.topNext
 """);
 
   t.ok("""
-S  222    47                              branch     tree.nodes.node.branchOrLeaf.branch
-S  222    45                                branchStuck     tree.nodes.node.branchOrLeaf.branch.branchStuck
-A  222    42      0                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  222    14               8201                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  222    12                  9                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  234     2                  2                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-A  236    42      1                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  236    14               8201                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  236    12                  9                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  248     2                  2                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-A  250    42      2                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  250    14               8201                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  250    12                  9                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  262     2                  2                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-V  264     3                  1               unary     tree.nodes.node.branchOrLeaf.branch.branchStuck.unary
-V  267     2                  2             topNext     tree.nodes.node.branchOrLeaf.branch.topNext
+S  222    47                              branch     nodes.node.branchOrLeaf.branch
+S  222    45                                branchStuck     nodes.node.branchOrLeaf.branch.branchStuck
+A  222    42      0                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  222    14               8201                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  222    12                  9                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  234     2                  2                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A  236    42      1                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  236    14               8201                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  236    12                  9                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  248     2                  2                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A  250    42      2                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  250    14               8201                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  250    12                  9                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  262     2                  2                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+V  264     3                  1               unary     nodes.node.branchOrLeaf.branch.branchStuck.unary
+V  267     2                  2             topNext     nodes.node.branchOrLeaf.branch.topNext
 """);
 
 
@@ -3026,48 +3025,48 @@ V  267     2                  2             topNext     tree.nodes.node.branchOr
     m.execute();
     //stop(m.layout);
     t.ok("""
-S  120    47                              branch     tree.nodes.node.branchOrLeaf.branch
-S  120    45                                branchStuck     tree.nodes.node.branchOrLeaf.branch.branchStuck
-A  120    42      0                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  120    14                  7                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  120    12                  7                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  132     2                  0                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-A  134    42      1                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  134    14               8200                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  134    12                  8                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  146     2                  2                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-A  148    42      2                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  148    14               8201                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  148    12                  9                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  160     2                  2                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-V  162     3                  7               unary     tree.nodes.node.branchOrLeaf.branch.branchStuck.unary
-V  165     2                  1             topNext     tree.nodes.node.branchOrLeaf.branch.topNext
+S  120    47                              branch     nodes.node.branchOrLeaf.branch
+S  120    45                                branchStuck     nodes.node.branchOrLeaf.branch.branchStuck
+A  120    42      0                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  120    14                  7                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  120    12                  7                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  132     2                  0                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A  134    42      1                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  134    14               8200                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  134    12                  8                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  146     2                  2                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A  148    42      2                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  148    14               8201                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  148    12                  9                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  160     2                  2                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+V  162     3                  7               unary     nodes.node.branchOrLeaf.branch.branchStuck.unary
+V  165     2                  1             topNext     nodes.node.branchOrLeaf.branch.topNext
 """);
     t.ok("""
-S  222    45                                branchStuck     tree.nodes.node.branchOrLeaf.branch.branchStuck
-A  222    42      0                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  222    14               8201                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  222    12                  9                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  234     2                  2                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-A  236    42      1                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  236    14               8201                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  236    12                  9                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  248     2                  2                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-A  250    42      2                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  250    14               8201                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  250    12                  9                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  262     2                  2                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-V  264     3                  0               unary     tree.nodes.node.branchOrLeaf.branch.branchStuck.unary
-V  267     2                  0             topNext     tree.nodes.node.branchOrLeaf.branch.topNext
+S  222    45                                branchStuck     nodes.node.branchOrLeaf.branch.branchStuck
+A  222    42      0                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  222    14               8201                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  222    12                  9                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  234     2                  2                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A  236    42      1                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  236    14               8201                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  236    12                  9                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  248     2                  2                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A  250    42      2                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  250    14               8201                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  250    12                  9                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  262     2                  2                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+V  264     3                  0               unary     nodes.node.branchOrLeaf.branch.branchStuck.unary
+V  267     2                  0             topNext     nodes.node.branchOrLeaf.branch.topNext
 """);
     //stop(t.bef);
     t.bef.ok("""
 T   At  Wide  Index       Value   Field name
-S    0     4                  1   befs     befs
-B    0     1                  1     be     befs.be
-B    1     1                  0     bf     befs.bf
-B    2     1                  0     bE     befs.bE
-B    3     1                  0     bF     befs.bF
+S    0     4                  1   befs
+B    0     1                  1     be     be
+B    1     1                  0     bf     bf
+B    2     1                  0     bE     bE
+B    3     1                  0     bF     bF
 """);
    }
 
@@ -3081,9 +3080,9 @@ B    3     1                  0     bF     befs.bF
     //stop(t.kd);
     t.kd.asLayout().ok("""
 T   At  Wide  Index       Value   Field name
-S    0    24              16387   leafKeyData     leafKeyData
-V    0    12                  3     leafKey     leafKeyData.leafKey
-V   12    12                  4     leafData     leafKeyData.leafData
+S    0    24              16387   leafKeyData
+V    0    12                  3     leafKey     leafKey
+V   12    12                  4     leafData     leafData
 """);
 
     m.copy(t.nodeIndex, 1);                                                     // Choose the node
@@ -3092,9 +3091,9 @@ V   12    12                  4     leafData     leafKeyData.leafData
     //stop(t.kd);
     t.kd.asLayout().ok("""
 T   At  Wide  Index       Value   Field name
-S    0    24              49163   leafKeyData     leafKeyData
-V    0    12                 11     leafKey     leafKeyData.leafKey
-V   12    12                 12     leafData     leafKeyData.leafData
+S    0    24              49163   leafKeyData
+V    0    12                 11     leafKey     leafKey
+V   12    12                 12     leafData     leafData
 """);
 
     m.reset();
@@ -3104,9 +3103,9 @@ V   12    12                 12     leafData     leafKeyData.leafData
     //stop(t.kd);
     t.kd.asLayout().ok("""
 T   At  Wide  Index       Value   Field name
-S    0    24              81939   leafKeyData     leafKeyData
-V    0    12                 19     leafKey     leafKeyData.leafKey
-V   12    12                 20     leafData     leafKeyData.leafData
+S    0    24              81939   leafKeyData
+V    0    12                 19     leafKey     leafKey
+V   12    12                 20     leafData     leafData
 """);
    }
 
@@ -3120,9 +3119,9 @@ V   12    12                 20     leafData     leafKeyData.leafData
     //stop(t.kn.asLayout());
     t.kn.asLayout().ok("""
 T   At  Wide  Index       Value   Field name
-S    0    14               4098   branchKeyNext     branchKeyNext
-V    0    12                  2     branchKey     branchKeyNext.branchKey
-V   12     2                  1     branchNext     branchKeyNext.branchNext
+S    0    14               4098   branchKeyNext
+V    0    12                  2     branchKey     branchKey
+V   12     2                  1     branchNext     branchNext
 """);
 
     m.copy(t.nodeIndex, 1);                                                     // Choose the node
@@ -3131,9 +3130,9 @@ V   12     2                  1     branchNext     branchKeyNext.branchNext
     //stop(t.kn);
     t.kn.asLayout().ok("""
 T   At  Wide  Index       Value   Field name
-S    0    14               4101   branchKeyNext     branchKeyNext
-V    0    12                  5     branchKey     branchKeyNext.branchKey
-V   12     2                  1     branchNext     branchKeyNext.branchNext
+S    0    14               4101   branchKeyNext
+V    0    12                  5     branchKey     branchKey
+V   12     2                  1     branchNext     branchNext
 """);
 
     m.reset();
@@ -3143,9 +3142,9 @@ V   12     2                  1     branchNext     branchKeyNext.branchNext
     //stop(t.kn);
     t.kn.asLayout().ok("""
 T   At  Wide  Index       Value   Field name
-S    0    14               4104   branchKeyNext     branchKeyNext
-V    0    12                  8     branchKey     branchKeyNext.branchKey
-V   12     2                  1     branchNext     branchKeyNext.branchNext
+S    0    14               4104   branchKeyNext
+V    0    12                  8     branchKey     branchKey
+V   12     2                  1     branchNext     branchNext
 """);
    }
 
@@ -3163,11 +3162,11 @@ V   12     2                  1     branchNext     branchKeyNext.branchNext
     //stop(t.lef);
     t.lef.ok("""
 T   At  Wide  Index       Value   Field name
-S    0     4                  9   lefs     lefs
-B    0     1                  1     le     lefs.le
-B    1     1                  0     lf     lefs.lf
-B    2     1                  0     lE     lefs.lE
-B    3     1                  1     lF     lefs.lF
+S    0     4                  9   lefs
+B    0     1                  1     le     le
+B    1     1                  0     lf     lf
+B    2     1                  0     lE     lE
+B    3     1                  1     lF     lF
 """);
    }
 
@@ -3185,11 +3184,11 @@ B    3     1                  1     lF     lefs.lF
     //stop(t.bef);
     t.bef.ok("""
 T   At  Wide  Index       Value   Field name
-S    0     4                  9   befs     befs
-B    0     1                  1     be     befs.be
-B    1     1                  0     bf     befs.bf
-B    2     1                  0     bE     befs.bE
-B    3     1                  1     bF     befs.bF
+S    0     4                  9   befs
+B    0     1                  1     be     be
+B    1     1                  0     bf     bf
+B    2     1                  0     bE     bE
+B    3     1                  1     bF     bF
 """);
    }
 
@@ -3206,7 +3205,7 @@ B    3     1                  1     bF     befs.bF
     //stop(k, n);
     n.copy().ok("""
 T   At  Wide  Index       Value   Field name
-V    0     2                  2   branchNext     branchNext
+V    0     2                  2   branchNext
 """);
    }
 
@@ -3221,7 +3220,7 @@ V    0     2                  2   branchNext     branchNext
     //stop(n);
     n.copy().ok("""
 T   At  Wide  Index       Value   Field name
-V    0     2                  2   branchNext     branchNext
+V    0     2                  2   branchNext
 """);
 
     m.reset();
@@ -3230,7 +3229,7 @@ V    0     2                  2   branchNext     branchNext
     m.execute();
     //stop(m.layout);
     t.ok("""
-V  267     2                  1             topNext     tree.nodes.node.branchOrLeaf.branch.topNext
+V  267     2                  1             topNext     nodes.node.branchOrLeaf.branch.topNext
 """);
    }
 
@@ -3240,24 +3239,24 @@ V  267     2                  1             topNext     tree.nodes.node.branchOr
 
     //stop(m.layout);
     t.ok("""
-S   18   100                              leaf     tree.nodes.node.branchOrLeaf.leaf
-A   18    96      0                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S   18    24               8193               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V   18    12                  1                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V   30    12                  2                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A   42    96      1                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S   42    24              16387               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V   42    12                  3                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V   54    12                  4                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A   66    96      2                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S   66    24              24581               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V   66    12                  5                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V   78    12                  6                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A   90    96      3                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S   90    24              32775               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V   90    12                  7                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  102    12                  8                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-V  114     4                 15             unary     tree.nodes.node.branchOrLeaf.leaf.unary
+S   18   100                              leaf     nodes.node.branchOrLeaf.leaf
+A   18    96      0                         array     nodes.node.branchOrLeaf.leaf.array
+S   18    24               8193               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V   18    12                  1                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V   30    12                  2                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A   42    96      1                         array     nodes.node.branchOrLeaf.leaf.array
+S   42    24              16387               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V   42    12                  3                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V   54    12                  4                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A   66    96      2                         array     nodes.node.branchOrLeaf.leaf.array
+S   66    24              24581               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V   66    12                  5                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V   78    12                  6                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A   90    96      3                         array     nodes.node.branchOrLeaf.leaf.array
+S   90    24              32775               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V   90    12                  7                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  102    12                  8                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+V  114     4                 15             unary     nodes.node.branchOrLeaf.leaf.unary
 """);
 
     m.leafSplitRoot(t.sourceIndex, t.targetIndex);
@@ -3265,74 +3264,74 @@ V  114     4                 15             unary     tree.nodes.node.branchOrLe
 
     t.sourceIndex.copy().ok("""
 T   At  Wide  Index       Value   Field name
-V    0     2                  1   nodeFree     nodeFree
+V    0     2                  1   nodeFree
 """);
     t.targetIndex.copy().ok("""
 T   At  Wide  Index       Value   Field name
-V    0     2                  2   nodeFree     nodeFree
+V    0     2                  2   nodeFree
 """);
 
     //stop(m.layout);
     t.ok("""
-B   16     1                  0         isLeaf     tree.nodes.node.isLeaf
-B   17     1                  1         isBranch     tree.nodes.node.isBranch
-U   18   100                            branchOrLeaf     tree.nodes.node.branchOrLeaf
-S   18    47                              branch     tree.nodes.node.branchOrLeaf.branch
-S   18    45                                branchStuck     tree.nodes.node.branchOrLeaf.branch.branchStuck
-A   18    42      0                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S   18    14               4101                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V   18    12                  5                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V   30     2                  1                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-A   32    42      1                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S   32    14               7170                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V   32    12               3074                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V   44     2                  1                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-A   46    42      2                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S   46    14               2048                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V   46    12               2048                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V   58     2                  0                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-V   60     3                  1               unary     tree.nodes.node.branchOrLeaf.branch.branchStuck.unary
-V   63     2                  2             topNext     tree.nodes.node.branchOrLeaf.branch.topNext
+B   16     1                  0         isLeaf     nodes.node.isLeaf
+B   17     1                  1         isBranch     nodes.node.isBranch
+U   18   100                            branchOrLeaf     nodes.node.branchOrLeaf
+S   18    47                              branch     nodes.node.branchOrLeaf.branch
+S   18    45                                branchStuck     nodes.node.branchOrLeaf.branch.branchStuck
+A   18    42      0                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S   18    14               4101                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V   18    12                  5                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V   30     2                  1                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A   32    42      1                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S   32    14               7170                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V   32    12               3074                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V   44     2                  1                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A   46    42      2                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S   46    14               2048                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V   46    12               2048                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V   58     2                  0                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+V   60     3                  1               unary     nodes.node.branchOrLeaf.branch.branchStuck.unary
+V   63     2                  2             topNext     nodes.node.branchOrLeaf.branch.topNext
 """);
     t.ok("""
-S  120   100                              leaf     tree.nodes.node.branchOrLeaf.leaf
-A  120    96      0                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  120    24               8193               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  120    12                  1                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  132    12                  2                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  144    96      1                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  144    24              16387               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  144    12                  3                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  156    12                  4                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  168    96      2                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  168    24              57357               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  168    12                 13                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  180    12                 14                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  192    96      3                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  192    24              65551               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  192    12                 15                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  204    12                 16                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-V  216     4                  3             unary     tree.nodes.node.branchOrLeaf.leaf.unary
+S  120   100                              leaf     nodes.node.branchOrLeaf.leaf
+A  120    96      0                         array     nodes.node.branchOrLeaf.leaf.array
+S  120    24               8193               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  120    12                  1                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  132    12                  2                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  144    96      1                         array     nodes.node.branchOrLeaf.leaf.array
+S  144    24              16387               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  144    12                  3                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  156    12                  4                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  168    96      2                         array     nodes.node.branchOrLeaf.leaf.array
+S  168    24              57357               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  168    12                 13                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  180    12                 14                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  192    96      3                         array     nodes.node.branchOrLeaf.leaf.array
+S  192    24              65551               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  192    12                 15                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  204    12                 16                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+V  216     4                  3             unary     nodes.node.branchOrLeaf.leaf.unary
 """);
     t.ok("""
-S  222   100                              leaf     tree.nodes.node.branchOrLeaf.leaf
-A  222    96      0                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  222    24              24581               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  222    12                  5                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  234    12                  6                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  246    96      1                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  246    24              32775               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  246    12                  7                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  258    12                  8                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  270    96      2                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  270    24              90133               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  270    12                 21                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  282    12                 22                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  294    96      3                         array     tree.nodes.node.branchOrLeaf.leaf.array
-S  294    24              98327               leafKeyData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  294    12                 23                 leafKey     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  306    12                 24                 leafData     tree.nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-V  318     4                  3             unary     tree.nodes.node.branchOrLeaf.leaf.unary
+S  222   100                              leaf     nodes.node.branchOrLeaf.leaf
+A  222    96      0                         array     nodes.node.branchOrLeaf.leaf.array
+S  222    24              24581               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  222    12                  5                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  234    12                  6                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  246    96      1                         array     nodes.node.branchOrLeaf.leaf.array
+S  246    24              32775               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  246    12                  7                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  258    12                  8                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  270    96      2                         array     nodes.node.branchOrLeaf.leaf.array
+S  270    24              90133               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  270    12                 21                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  282    12                 22                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  294    96      3                         array     nodes.node.branchOrLeaf.leaf.array
+S  294    24              98327               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  294    12                 23                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  306    12                 24                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+V  318     4                  3             unary     nodes.node.branchOrLeaf.leaf.unary
 """);
    }
 
@@ -3342,22 +3341,22 @@ V  318     4                  3             unary     tree.nodes.node.branchOrLe
 
     //stop(m.layout);
     t.ok("""
-S   18    47                  0           branch     tree.nodes.node.branchOrLeaf.branch
-S   18    45                                branchStuck     tree.nodes.node.branchOrLeaf.branch.branchStuck
-A   18    42      0                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S   18    14                  1                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V   18    12                  1                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V   30     2                  0                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-A   32    42      1                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S   32    14               4098                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V   32    12                  2                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V   44     2                  1                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-A   46    42      2                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S   46    14               8195                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V   46    12                  3                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V   58     2                  2                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-V   60     3                  7               unary     tree.nodes.node.branchOrLeaf.branch.branchStuck.unary
-V   63     2                  0             topNext     tree.nodes.node.branchOrLeaf.branch.topNext
+S   18    47                  0           branch     nodes.node.branchOrLeaf.branch
+S   18    45                                branchStuck     nodes.node.branchOrLeaf.branch.branchStuck
+A   18    42      0                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S   18    14                  1                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V   18    12                  1                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V   30     2                  0                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A   32    42      1                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S   32    14               4098                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V   32    12                  2                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V   44     2                  1                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A   46    42      2                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S   46    14               8195                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V   46    12                  3                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V   58     2                  2                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+V   60     3                  7               unary     nodes.node.branchOrLeaf.branch.branchStuck.unary
+V   63     2                  0             topNext     nodes.node.branchOrLeaf.branch.topNext
 """);
 
     m.branchSplitRoot(t.sourceIndex, t.targetIndex);
@@ -3365,66 +3364,66 @@ V   63     2                  0             topNext     tree.nodes.node.branchOr
 
     t.sourceIndex.copy().ok("""
 T   At  Wide  Index       Value   Field name
-V    0     2                  1   nodeFree     nodeFree
+V    0     2                  1   nodeFree
 """);
     t.targetIndex.copy().ok("""
 T   At  Wide  Index       Value   Field name
-V    0     2                  2   nodeFree     nodeFree
+V    0     2                  2   nodeFree
 """);
     //stop(m.layout);
     t.ok("""
-S   18    47                              branch     tree.nodes.node.branchOrLeaf.branch
-S   18    45                                branchStuck     tree.nodes.node.branchOrLeaf.branch.branchStuck
-A   18    42      0                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S   18    14               4098                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V   18    12                  2                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V   30     2                  1                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-A   32    42      1                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S   32    14               8195                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V   32    12                  3                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V   44     2                  2                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-A   46    42      2                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S   46    14               8195                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V   46    12                  3                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V   58     2                  2                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-V   60     3                  1               unary     tree.nodes.node.branchOrLeaf.branch.branchStuck.unary
-V   63     2                  2             topNext     tree.nodes.node.branchOrLeaf.branch.topNext
+S   18    47                              branch     nodes.node.branchOrLeaf.branch
+S   18    45                                branchStuck     nodes.node.branchOrLeaf.branch.branchStuck
+A   18    42      0                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S   18    14               4098                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V   18    12                  2                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V   30     2                  1                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A   32    42      1                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S   32    14               8195                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V   32    12                  3                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V   44     2                  2                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A   46    42      2                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S   46    14               8195                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V   46    12                  3                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V   58     2                  2                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+V   60     3                  1               unary     nodes.node.branchOrLeaf.branch.branchStuck.unary
+V   63     2                  2             topNext     nodes.node.branchOrLeaf.branch.topNext
 """);
     t.ok("""
-S  120    47                              branch     tree.nodes.node.branchOrLeaf.branch
-S  120    45                                branchStuck     tree.nodes.node.branchOrLeaf.branch.branchStuck
-A  120    42      0                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  120    14                  1                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  120    12                  1                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  132     2                  0                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-A  134    42      1                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  134    14               4101                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  134    12                  5                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  146     2                  1                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-A  148    42      2                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  148    14               8198                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  148    12                  6                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  160     2                  2                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-V  162     3                  1               unary     tree.nodes.node.branchOrLeaf.branch.branchStuck.unary
-V  165     2                  1             topNext     tree.nodes.node.branchOrLeaf.branch.topNext
+S  120    47                              branch     nodes.node.branchOrLeaf.branch
+S  120    45                                branchStuck     nodes.node.branchOrLeaf.branch.branchStuck
+A  120    42      0                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  120    14                  1                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  120    12                  1                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  132     2                  0                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A  134    42      1                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  134    14               4101                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  134    12                  5                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  146     2                  1                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A  148    42      2                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  148    14               8198                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  148    12                  6                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  160     2                  2                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+V  162     3                  1               unary     nodes.node.branchOrLeaf.branch.branchStuck.unary
+V  165     2                  1             topNext     nodes.node.branchOrLeaf.branch.topNext
 """);
     t.ok("""
-S  222    47                  0           branch     tree.nodes.node.branchOrLeaf.branch
-S  222    45                                branchStuck     tree.nodes.node.branchOrLeaf.branch.branchStuck
-A  222    42      0                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  222    14               8195                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  222    12                  3                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  234     2                  2                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-A  236    42      1                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  236    14               4104                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  236    12                  8                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  248     2                  1                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-A  250    42      2                           array     tree.nodes.node.branchOrLeaf.branch.branchStuck.array
-S  250    14               8201                 branchKeyNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
-V  250    12                  9                   branchKey     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
-V  262     2                  2                   branchNext     tree.nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
-V  264     3                  1               unary     tree.nodes.node.branchOrLeaf.branch.branchStuck.unary
-V  267     2                  0             topNext     tree.nodes.node.branchOrLeaf.branch.topNext
+S  222    47                  0           branch     nodes.node.branchOrLeaf.branch
+S  222    45                                branchStuck     nodes.node.branchOrLeaf.branch.branchStuck
+A  222    42      0                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  222    14               8195                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  222    12                  3                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  234     2                  2                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A  236    42      1                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  236    14               4104                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  236    12                  8                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  248     2                  1                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A  250    42      2                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  250    14               8201                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  250    12                  9                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  262     2                  2                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+V  264     3                  1               unary     nodes.node.branchOrLeaf.branch.branchStuck.unary
+V  267     2                  0             topNext     nodes.node.branchOrLeaf.branch.topNext
 """);
    }
 
