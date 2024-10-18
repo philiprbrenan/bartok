@@ -23,8 +23,8 @@ public class BitMachine extends Test implements LayoutAble                      
   static int BitMachineNumber = 0;                                              // Bit machine enumerator
   static boolean debug = false;                                                 // Debug if true
 
-  public Layout.Field asLayoutField()          {return layout.top;}             // Top most field of the layout associated with this bit machine
-  public Layout       asLayout     ()          {return layout;}                 // Layout associated with this bit machine
+  public Layout.Field asField () {return layout.top;}                           // Top most field of the layout associated with this bit machine
+  public Layout       asLayout() {return layout;}                               // Layout associated with this bit machine
   void                setLayout(Layout Layout) {layout = Layout;}               // Set the layout associated with this bit machine
 
   BitMachine(String Name)                                                       // Assign a name and number to the bit machine to assist debugging
@@ -1632,7 +1632,7 @@ V   80     4                 15     ge10     s.ge10
      AllZero____f01, NotAllZero_f01, AllOnes____f01, NotAllOnes_f01,
      AllZero____f11, NotAllZero_f11, AllOnes____f11, NotAllOnes_f11);
 
-    l.layout(s); l.asLayoutField().ones();
+    l.layout(s); l.asField().ones();
 
     a  .zero();
     f00.fromInt(0);
