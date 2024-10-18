@@ -1086,7 +1086,7 @@ V   16     4                  4       d     t.d
    {Layout.Bit b = createBit("b");
                b.fromInt(1);
     //stop(b);
-    ok(b.toString(), """
+    b.ok( """
 T   At  Wide  Index       Value   Field name
 B    0     1                  1   b
 """);
@@ -1096,7 +1096,7 @@ B    0     1                  1   b
    {Layout.Variable a = createVariable("a", 4);
     a.fromInt(3);
     //stop(a);
-    ok(a.toString(), """
+    a.ok( """
 T   At  Wide  Index       Value   Field name
 V    0     4                  3   a
 """);
@@ -1107,12 +1107,12 @@ V    0     4                  3   a
     Layout.Variable a = A.asField().toVariable();
     a.fromInt(3);
     //stop(a);
-    ok(a.toString(), """
+    a.ok("""
 T   At  Wide  Index       Value   Field name
 V    0     4                  3   a
 """);
     Layout.constants(a);
-    ok(a.toString(), """
+    a.ok("""
 T   At  Wide  Index       Value   Field name
 V    0     4                  3   =a
 """);
