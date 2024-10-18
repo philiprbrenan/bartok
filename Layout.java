@@ -17,18 +17,20 @@ public class Layout extends Test implements LayoutAble                          
    {top  = field;                                                               // Record layout
     field.layout(0, 0);                                                         // Locate field positions
     memory = new Memory();                                                      // Create a matching memory.
-    field.indexNames(field, null);                                              // Index the names of the fields
+    field.indexNames();                                                         // Index the names of the fields
     unifyMemory(memory);                                                        // Unify the memory of all declared layouts with the memory of this layout
     memory = new Memory();                                                      // New memory
    }
 
-  Field get(String path) {return top.fullNames.get(path);}                      // Locate a field from its full name path which must include the top most field
+  Field get(String path)                                                        // Locate a field from its full name path which must include the top most field
+   {return top.fullNames.get(path);
+   }
 
   LayoutAble copy()                                                             // Copy a layout and share its memory
    {final Layout d = new Layout();                                              // New layout
     if (top == null) return d;                                                  // No fields to duplicate
     d.top = top.duplicate(d);                                                   // Copy each field into this layout
-    d.top.indexNames(d.top, null);                                              // Index the names of the fields
+    d.top.indexNames();                                                         // Index the names of the fields
     d.memory = memory;                                                          // Share the existing memory
     return d;
    }
@@ -65,7 +67,7 @@ public class Layout extends Test implements LayoutAble                          
   void unifyMemory(Memory memory)                                               // Unify the memory of all declared layouts with the memory of this layout
    {for (Layout l : layouts)                                                    // Unify the memory of each layout
      {l.memory = memory;
-      l.unifyMemory(memory);
+      if (l != this) l.unifyMemory(memory);
      }
    }
 
@@ -74,7 +76,7 @@ public class Layout extends Test implements LayoutAble                          
     for (int i = 0; i < N; i++) set(i, false);
    }
 
-  void ok(String expected) {Test.ok(toString(), expected);}                     // Confirm layout is as expected
+  void ok(String expected) {Test.ok(asLayout().top.toString(), expected);}      // Confirm layout is as expected
 
   static void constants(Field...fields)                                         // Mark the specified fields as constants
    {for (Field f : fields) f.constant = true;
@@ -101,9 +103,11 @@ public class Layout extends Test implements LayoutAble                          
 //D1 Layouts                                                                    // Field memory of the chip as variables, arrays, structures, unions. Dividing the memory in this manner makes it easier to program the chip symbolically.
 
   abstract class Field implements LayoutAble                                    // Variable/Array/Structure/Union definition.
-   {final String name;                                                          // Name of field
-    String fullName;                                                            // Full name of this field
-    boolean  constant = false;                                                  // Whether the field can be modified
+   {final String  name;                                                         // Name of field
+    final  int  number;                                                         // Number of field
+    static int numbers = 0;                                                     // Numbers of fields
+    String    fullName;                                                         // Full name of this field
+    boolean   constant = false;                                                 // Whether the field can be modified
     int at;                                                                     // Offset of field from start of memory
     int width;                                                                  // Number of bits in a field
     int depth;                                                                  // Depth of field - the number of containing arrays/structures/unions above
@@ -111,23 +115,42 @@ public class Layout extends Test implements LayoutAble                          
     final Map<String,Field> fullNames = new TreeMap<>();                        // Fields by name
     final Set<String>  classification = new TreeSet<>();                        // Names that identify the type of the field to aid debugging
 
-    Field(String Name) {name = Name;}                                           // Create a new named field
+    Field(String Name) {name = Name; number = ++numbers;}                       // Create a new named field with a unique number
 
     int at   () {return at;}                                                    // Position of field in memory
     int width() {return width;}                                                 // Size of the memory in bits occupied by this field
 
-    String indexName(Layout.Field field, String prefix)                         // The full name of a field
-     {final String n = prefix != null ? prefix+"."+name : name;                 // Full name of this field
-      field.fullNames.put(n, this);                                             // Index this full name
-      if (fullName == null || fullName.length() < n.length()) fullName = n;     // Longest full anme encountered
-      return n;
+    void fullName(Layout.Field top, StringBuilder s)                            // The full name of a field relative to the indicated top
+     {if (top == this) return;
+      final Stack<String> names = new Stack<>();                                // Full name path
+      for(Layout.Field f = this; f.up != null; f = f.up)                        // Go up structure
+       {names.insertElementAt(f.name, 0);
+        if (f.up == top) break;
+       }
+      if (names.size() == 0) return;                                            // Zero length path to element
+      final String        t = names.pop();
+      s.append("     ");
+      for(String n : names) s.append(n+".");
+      s.append(t);
      }
 
-    public Layout.Field asField() {return this;}                          // Layout associated with this field
-    public Layout       asLayout     () {return null;}                          // Layout associated with this field
-    abstract void indexNames(Layout.Field field, String prefix);                // Set the full names of all the sub fields in a field
+    void indexName()                                                            // Index all the full names of a field
+     {final Stack<String> names = new Stack<>();                                // Full name path
+      for(Layout.Field f = this; f.up != null; f = f.up)                        // Go up structure
+       {names.insertElementAt(f.name, 0);
+        final StringBuilder s = new StringBuilder();
+        final String top = names.pop();
+        for(String n : names) s.append(n+".");
+        s.append(top); names.push(top);
+        f.up.fullNames.put(s.toString(), this);
+       }
+     }
 
     Field get(String path) {return fullNames.get(path);}                        // Address a contained field by name
+    abstract void indexNames();                                                 // Set the full names of all the sub fields in a field
+
+    public Layout.Field asField () {return this;}                               // Layout associated with this field
+    public Layout       asLayout() {return Layout.this;}                        // Layout associated with this field
 
     int sameSize(Field b)                                                       // Check the specified field is the same size as this field
      {final int A = width, B = b.width;
@@ -148,14 +171,15 @@ public class Layout extends Test implements LayoutAble                          
     String  indent() {return "  ".repeat(depth);}                               // Indentation during printing
     char fieldType() {return getClass().getName().split("\\$")[1].charAt(0);}   // First letter of inner most class name to identify type of field
 
-    StringBuilder header(boolean printHeader)                                   // Create a string builder with a header loaded if requested
+    StringBuilder header()                                                      // Create a string builder with a header preloaded
      {final StringBuilder s = new StringBuilder();
-      if (printHeader) s.append(printHeader());                                 // Header requested
+      s.append(printHeader());                                                  // Header requested
       return s;
      }
 
-    String printName()                                                          // Print the name of a field showing whether it is a constant and its classification
+    String printName(Layout.Field top)                                          // Print the name of a field showing whether it is a constant and its classification
      {final StringBuilder s = new StringBuilder();
+      s.append(indent());
       if (constant) s.append("=");                                              // Header requested
       s.append(name);
       if (!classification.isEmpty())                                            // Add any classification
@@ -164,23 +188,26 @@ public class Layout extends Test implements LayoutAble                          
         s.setLength(s.length()-2);
         s.append(")");
        }
-      if (fullName != null) s.append("     "+fullName);                         // Add longest full name encountered
+      fullName(top, s);                                                         // Full name for this field
+      //s.append(" N="+number);
+      //if (up != null) s.append(" U="+up.number);
       return s.toString();
      }
 
-    StringBuilder print(boolean printHeader)                                    // Print the field
+    void print(Layout.Field top, StringBuilder s)                               // Print the field
      {final String  i = printInt();                                             // Format value of field if available
-      final String  n = indent()+printName();                                   // Name using indentation to show depth
+      final String  n = printName(top);                                         // Name using indentation to show depth
       final char    c = fieldType();                                            // First letter of inner most class name to identify type of field
 
-      final StringBuilder s = header(printHeader);                              // Print header if requested
       s.append(String.format("%c %4d  %4d         %10s   %s\n",                 // Variable
                              c,  at,  width,      i,     n));
-      return s;                                                                 // Printed field
      }
 
-    public   String toString() {return toString(true);}                         // Print the field with a header
-    abstract String toString(boolean printHeader);                              // Print the field with or without a header
+    public String toString()                                                    // Print the field and its sub structure
+     {final StringBuilder s = header();
+      print(this, s);
+      return s.toString();
+     }
 
     abstract Field duplicate(Layout d);                                         // Duplicate this field and place it in the specified layout so we can modify it safely
 
@@ -261,12 +288,12 @@ public class Layout extends Test implements LayoutAble                          
     Layout copy()                                                               // Copy a layout and share its memory so we can see and modify current values in the copy
      {final Layout d = new Layout();                                            // New layout
       d.top = duplicate(d);                                                     // Copy each field into this layout
-      d.top.indexNames(d.top, null);                                            // Index the names of the fields
+      d.top.indexNames();                                                       // Index the names of the fields
       d.memory = memory;                                                        // Share the existing memory
       return d;
      }
 
-    Layout duplicate()                                                          // Duplicate a layout and create a new memory ethatis entirely separate.
+    Layout duplicate()                                                          // Duplicate a layout and create a new memory that is entirely separate.
      {final Layout d = copy();                                                  // New layout
       d.top.layout(0, 0);                                                       // Locate field positions relative to new top
       d.memory = d.new Memory();                                                // New memory
@@ -302,8 +329,8 @@ public class Layout extends Test implements LayoutAble                          
      {super(name); width = Width;
      }
 
-    void indexNames(Layout.Field layout, String prefix)                         // Index the name of this field
-     {indexName(layout, prefix);
+    void indexNames()                                                           // Index the name of this field
+     {indexName();
      }
 
     void layout(int At, int Depth)                                              // Layout the variable in the structure
@@ -316,11 +343,7 @@ public class Layout extends Test implements LayoutAble                          
       return v;
      }
 
-    Variable like() {return duplicate().asField().toVariable();}          // Make a variable like this one
-
-    public String toString(boolean printHeader)                                 // Print the variable
-     {return print(printHeader).toString();
-     }
+    Variable like() {return duplicate().asField().toVariable();}                // Make a variable like this one
    }
 
   class Bit extends Variable                                                    // A variable of unit width is a boolean. could have called it a boolean but decied to callit abool instead becuase it was shorter and more like
@@ -358,10 +381,9 @@ public class Layout extends Test implements LayoutAble                          
       width = size * element.width;                                             // The size of the array is the sie of its element times the number of elements in the array
      }
 
-    void indexNames(Layout.Field field, String prefix)                          // Index the name of this field and its sub fields
-     {final String n = indexName(field, prefix);
-      element.indexNames(field, n);                                             // Full names of sub fields relative to outer most layout
-      element.indexNames(this,   n);                                            // Full names of sub fields relative to this layout
+    void indexNames()                                                           // Index the name of this field and its sub fields
+     {indexName();
+      element.indexNames();                                                     // Full names of sub fields relative to outer most layout
       //element.indexNames(fullNames, null);                                    // Index name in this array
      }
 
@@ -370,10 +392,9 @@ public class Layout extends Test implements LayoutAble                          
       element.position(at + index * element.width);
      }
 
-    public String toString(boolean printHeader)                                 // Print the array
-     {final String  n = indent()+printName();                                   // Name using indentation to show depth
+    void print(Layout.Field top, StringBuilder s)                               // Print the array
+     {final String  n = printName(top);                                         // Name using indentation to show depth
       final char    c = fieldType();                                            // First letter of inner most class name to identify type of field
-      final StringBuilder s = header(printHeader);                              // Print header if requested
 
       final int indexSave = index;                                              // Save the array index
       for (int j = 0; j < size; j++)                                            // Each array element
@@ -383,17 +404,13 @@ public class Layout extends Test implements LayoutAble                          
         final int    p = at + element.width * j;                                // Position of the array element
         s.append(String.format("%c %4d  %4d  %5d  %10s   %s\n",                 // Index of the array
                                c,  p,   w,   j,   i,     n));
-        s.append(element.toString(false));                                      // Print the array element without headers
+        element.print(top, s);                                                  // Print the array element without headers
        }
       index = indexSave;                                                        // Restore the original array index
-
-      return s.toString();                                                      // Array as a string
      }
 
     void setIndex(int Index)                                                    // Sets the index for the current array field allowing us to set and get this field and all its sub elements.
-     {//if (index != Index)                                                     // Suppose we had two arrays one inside the other and we reposition the outer without repositioning the inner?
-       {index = Index; position(at);
-       }
+     {index = Index; position(at);
      }
 
     Field duplicate(Layout d)                                                   // Duplicate an array so we can modify it safely
@@ -404,7 +421,7 @@ public class Layout extends Test implements LayoutAble                          
       return a;
      }
 
-    Array like() {return duplicate().asField().toArray();}                // Make an array like this one
+    Array like() {return duplicate().asField().toArray();}                      // Make an array like this one
    }
 
   class Structure extends Field                                                 // Layout a structure
@@ -417,7 +434,7 @@ public class Layout extends Test implements LayoutAble                          
      }
 
     void addField(LayoutAble layout)                                            // Add additional fields
-     {final Field field = layout.asField();                              // Field associated with this layout
+     {final Field field = layout.asField();                                     // Field associated with this layout
       field.up = this;                                                          // Chain up to containing structure
       if (subMap.containsKey(field.name))
        {stop("Structure:", name, "already contains field with this name:",
@@ -440,12 +457,10 @@ public class Layout extends Test implements LayoutAble                          
        }
      }
 
-    void indexNames(Layout.Field field, String prefix)                          // Index the name of this structure and its sub fields
-     {final String n = indexName(field, prefix);                                // Index the name of this structure
-      for (Field f : subStack)                                                  // Each fierld in the structure
-       {f.indexNames(field, n);                                                 // Index name in outermost layout
-        //f.indexNames(Layout.this.fullNames, n);                               // Index name in this layout
-        f.indexNames(field, null);                                              // Index name in this structure
+    void indexNames()                                                           // Index the name of this structure and its sub fields
+     {indexName();
+      for (Field f : subStack)                                                  // Each field in the structure
+       {f.indexNames();                                                         // Index name in outermost layout
        }
      }
 
@@ -465,17 +480,16 @@ public class Layout extends Test implements LayoutAble                          
        {final Field l = L.duplicate(d);
         s.subMap.put(l.name, l);
         s.subStack.push(l);
-        l.up = this;
+        l.up = s;
        }
       return s;
      }
 
-    Structure like() {return duplicate().asField().toStructure();}        // Make a structure like this one
+    Structure like() {return duplicate().asField().toStructure();}              // Make a structure like this one
 
-    public String toString(boolean printHeader)                                 // Print the structure
-     {final StringBuilder s = print(printHeader);                               // Print line describing structure
-      for(Field f: subStack) s.append(f.toString(false));                       // Print each field of structure
-      return s.toString();                                                      // Structure converted to string
+    void print(Layout.Field top, StringBuilder s)                               // Print the structure
+     {super.print(top, s);
+      for(Field f: subStack) f.print(top, s);                                   // Print each field of structure
      }
    }
 
@@ -596,141 +610,141 @@ public class Layout extends Test implements LayoutAble                          
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    32                  0   S     S
-V    0     4                  0     d     S.d
-A    4    24      0           0     A     S.A
-S    4     8                  0       s     S.A.s
-V    4     2                  0         a     S.A.s.a
-V    6     2                  0         b     S.A.s.b
-V    8     4                  0         c     S.A.s.c
-A   12    24      1           0     A     S.A
-S   12     8                  0       s     S.A.s
-V   12     2                  0         a     S.A.s.a
-V   14     2                  0         b     S.A.s.b
-V   16     4                  0         c     S.A.s.c
-A   20    24      2           0     A     S.A
-S   20     8                  0       s     S.A.s
-V   20     2                  0         a     S.A.s.a
-V   22     2                  0         b     S.A.s.b
-V   24     4                  0         c     S.A.s.c
-V   28     4                  0     e     S.e
+S    0    32                  0   S
+V    0     4                  0     d     d
+A    4    24      0           0     A     A
+S    4     8                  0       s     A.s
+V    4     2                  0         a     A.s.a
+V    6     2                  0         b     A.s.b
+V    8     4                  0         c     A.s.c
+A   12    24      1           0     A     A
+S   12     8                  0       s     A.s
+V   12     2                  0         a     A.s.a
+V   14     2                  0         b     A.s.b
+V   16     4                  0         c     A.s.c
+A   20    24      2           0     A     A
+S   20     8                  0       s     A.s
+V   20     2                  0         a     A.s.a
+V   22     2                  0         b     A.s.b
+V   24     4                  0         c     A.s.c
+V   28     4                  0     e     e
 """);
 
-    l.get("S.A").toArray().setIndex(1);
+    l.get("A").toArray().setIndex(1);
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    32                  0   S     S
-V    0     4                  0     d     S.d
-A    4    24      0           0     A     S.A
-S    4     8                  0       s     S.A.s
-V    4     2                  0         a     S.A.s.a
-V    6     2                  0         b     S.A.s.b
-V    8     4                  0         c     S.A.s.c
-A   12    24      1           0     A     S.A
-S   12     8                  0       s     S.A.s
-V   12     2                  0         a     S.A.s.a
-V   14     2                  0         b     S.A.s.b
-V   16     4                  0         c     S.A.s.c
-A   20    24      2           0     A     S.A
-S   20     8                  0       s     S.A.s
-V   20     2                  0         a     S.A.s.a
-V   22     2                  0         b     S.A.s.b
-V   24     4                  0         c     S.A.s.c
-V   28     4                  0     e     S.e
+S    0    32                  0   S
+V    0     4                  0     d     d
+A    4    24      0           0     A     A
+S    4     8                  0       s     A.s
+V    4     2                  0         a     A.s.a
+V    6     2                  0         b     A.s.b
+V    8     4                  0         c     A.s.c
+A   12    24      1           0     A     A
+S   12     8                  0       s     A.s
+V   12     2                  0         a     A.s.a
+V   14     2                  0         b     A.s.b
+V   16     4                  0         c     A.s.c
+A   20    24      2           0     A     A
+S   20     8                  0       s     A.s
+V   20     2                  0         a     A.s.a
+V   22     2                  0         b     A.s.b
+V   24     4                  0         c     A.s.c
+V   28     4                  0     e     e
 """);
 
     Layout m = l.duplicate().asLayout();
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    32                  0   S     S
-V    0     4                  0     d     S.d
-A    4    24      0           0     A     S.A
-S    4     8                  0       s     S.A.s
-V    4     2                  0         a     S.A.s.a
-V    6     2                  0         b     S.A.s.b
-V    8     4                  0         c     S.A.s.c
-A   12    24      1           0     A     S.A
-S   12     8                  0       s     S.A.s
-V   12     2                  0         a     S.A.s.a
-V   14     2                  0         b     S.A.s.b
-V   16     4                  0         c     S.A.s.c
-A   20    24      2           0     A     S.A
-S   20     8                  0       s     S.A.s
-V   20     2                  0         a     S.A.s.a
-V   22     2                  0         b     S.A.s.b
-V   24     4                  0         c     S.A.s.c
-V   28     4                  0     e     S.e
+S    0    32                  0   S
+V    0     4                  0     d     d
+A    4    24      0           0     A     A
+S    4     8                  0       s     A.s
+V    4     2                  0         a     A.s.a
+V    6     2                  0         b     A.s.b
+V    8     4                  0         c     A.s.c
+A   12    24      1           0     A     A
+S   12     8                  0       s     A.s
+V   12     2                  0         a     A.s.a
+V   14     2                  0         b     A.s.b
+V   16     4                  0         c     A.s.c
+A   20    24      2           0     A     A
+S   20     8                  0       s     A.s
+V   20     2                  0         a     A.s.a
+V   22     2                  0         b     A.s.b
+V   24     4                  0         c     A.s.c
+V   28     4                  0     e     e
 """);
 
     //stop(m);
     m.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    32                  0   S     S
-V    0     4                  0     d     S.d
-A    4    24      0           0     A     S.A
-S    4     8                  0       s     S.A.s
-V    4     2                  0         a     S.A.s.a
-V    6     2                  0         b     S.A.s.b
-V    8     4                  0         c     S.A.s.c
-A   12    24      1           0     A     S.A
-S   12     8                  0       s     S.A.s
-V   12     2                  0         a     S.A.s.a
-V   14     2                  0         b     S.A.s.b
-V   16     4                  0         c     S.A.s.c
-A   20    24      2           0     A     S.A
-S   20     8                  0       s     S.A.s
-V   20     2                  0         a     S.A.s.a
-V   22     2                  0         b     S.A.s.b
-V   24     4                  0         c     S.A.s.c
-V   28     4                  0     e     S.e
+S    0    32                  0   S
+V    0     4                  0     d     d
+A    4    24      0           0     A     A
+S    4     8                  0       s     A.s
+V    4     2                  0         a     A.s.a
+V    6     2                  0         b     A.s.b
+V    8     4                  0         c     A.s.c
+A   12    24      1           0     A     A
+S   12     8                  0       s     A.s
+V   12     2                  0         a     A.s.a
+V   14     2                  0         b     A.s.b
+V   16     4                  0         c     A.s.c
+A   20    24      2           0     A     A
+S   20     8                  0       s     A.s
+V   20     2                  0         a     A.s.a
+V   22     2                  0         b     A.s.b
+V   24     4                  0         c     A.s.c
+V   28     4                  0     e     e
 """);
-    m.get("S.A").toArray().setIndex(2);
+    m.get("A").toArray().setIndex(2);
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    32                  0   S     S
-V    0     4                  0     d     S.d
-A    4    24      0           0     A     S.A
-S    4     8                  0       s     S.A.s
-V    4     2                  0         a     S.A.s.a
-V    6     2                  0         b     S.A.s.b
-V    8     4                  0         c     S.A.s.c
-A   12    24      1           0     A     S.A
-S   12     8                  0       s     S.A.s
-V   12     2                  0         a     S.A.s.a
-V   14     2                  0         b     S.A.s.b
-V   16     4                  0         c     S.A.s.c
-A   20    24      2           0     A     S.A
-S   20     8                  0       s     S.A.s
-V   20     2                  0         a     S.A.s.a
-V   22     2                  0         b     S.A.s.b
-V   24     4                  0         c     S.A.s.c
-V   28     4                  0     e     S.e
+S    0    32                  0   S
+V    0     4                  0     d     d
+A    4    24      0           0     A     A
+S    4     8                  0       s     A.s
+V    4     2                  0         a     A.s.a
+V    6     2                  0         b     A.s.b
+V    8     4                  0         c     A.s.c
+A   12    24      1           0     A     A
+S   12     8                  0       s     A.s
+V   12     2                  0         a     A.s.a
+V   14     2                  0         b     A.s.b
+V   16     4                  0         c     A.s.c
+A   20    24      2           0     A     A
+S   20     8                  0       s     A.s
+V   20     2                  0         a     A.s.a
+V   22     2                  0         b     A.s.b
+V   24     4                  0         c     A.s.c
+V   28     4                  0     e     e
 """);
 
     //stop(m);
     m.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    32                  0   S     S
-V    0     4                  0     d     S.d
-A    4    24      0           0     A     S.A
-S    4     8                  0       s     S.A.s
-V    4     2                  0         a     S.A.s.a
-V    6     2                  0         b     S.A.s.b
-V    8     4                  0         c     S.A.s.c
-A   12    24      1           0     A     S.A
-S   12     8                  0       s     S.A.s
-V   12     2                  0         a     S.A.s.a
-V   14     2                  0         b     S.A.s.b
-V   16     4                  0         c     S.A.s.c
-A   20    24      2           0     A     S.A
-S   20     8                  0       s     S.A.s
-V   20     2                  0         a     S.A.s.a
-V   22     2                  0         b     S.A.s.b
-V   24     4                  0         c     S.A.s.c
-V   28     4                  0     e     S.e
+S    0    32                  0   S
+V    0     4                  0     d     d
+A    4    24      0           0     A     A
+S    4     8                  0       s     A.s
+V    4     2                  0         a     A.s.a
+V    6     2                  0         b     A.s.b
+V    8     4                  0         c     A.s.c
+A   12    24      1           0     A     A
+S   12     8                  0       s     A.s
+V   12     2                  0         a     A.s.a
+V   14     2                  0         b     A.s.b
+V   16     4                  0         c     A.s.c
+A   20    24      2           0     A     A
+S   20     8                  0       s     A.s
+V   20     2                  0         a     A.s.a
+V   22     2                  0         b     A.s.b
+V   24     4                  0         c     A.s.c
+V   28     4                  0     e     e
 """);
    }
 
@@ -752,47 +766,47 @@ V   28     4                  0     e     S.e
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    80                      S     S
-V    0     4                  0     d     S.d
-A    4    72      0                 A     S.A
-S    4    24             920587       s     S.A.s
-V    4     8                 11         a     S.A.s.a
-V   12     8                 12         b     S.A.s.b
-V   20     8                 14         c     S.A.s.c
-A   28    72      1                 A     S.A
-S   28    24             197121       s     S.A.s
-V   28     8                  1         a     S.A.s.a
-V   36     8                  2         b     S.A.s.b
-V   44     8                  3         c     S.A.s.c
-A   52    72      2                 A     S.A
-S   52    24            2236447       s     S.A.s
-V   52     8                 31         a     S.A.s.a
-V   60     8                 32         b     S.A.s.b
-V   68     8                 34         c     S.A.s.c
-V   76     4                  0     e     S.e
+S    0    80                      S
+V    0     4                  0     d     d
+A    4    72      0                 A     A
+S    4    24             920587       s     A.s
+V    4     8                 11         a     A.s.a
+V   12     8                 12         b     A.s.b
+V   20     8                 14         c     A.s.c
+A   28    72      1                 A     A
+S   28    24             197121       s     A.s
+V   28     8                  1         a     A.s.a
+V   36     8                  2         b     A.s.b
+V   44     8                  3         c     A.s.c
+A   52    72      2                 A     A
+S   52    24            2236447       s     A.s
+V   52     8                 31         a     A.s.a
+V   60     8                 32         b     A.s.b
+V   68     8                 34         c     A.s.c
+V   76     4                  0     e     e
 """);
     l.clear();
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    80                  0   S     S
-V    0     4                  0     d     S.d
-A    4    72      0           0     A     S.A
-S    4    24                  0       s     S.A.s
-V    4     8                  0         a     S.A.s.a
-V   12     8                  0         b     S.A.s.b
-V   20     8                  0         c     S.A.s.c
-A   28    72      1           0     A     S.A
-S   28    24                  0       s     S.A.s
-V   28     8                  0         a     S.A.s.a
-V   36     8                  0         b     S.A.s.b
-V   44     8                  0         c     S.A.s.c
-A   52    72      2           0     A     S.A
-S   52    24                  0       s     S.A.s
-V   52     8                  0         a     S.A.s.a
-V   60     8                  0         b     S.A.s.b
-V   68     8                  0         c     S.A.s.c
-V   76     4                  0     e     S.e
+S    0    80                  0   S
+V    0     4                  0     d     d
+A    4    72      0           0     A     A
+S    4    24                  0       s     A.s
+V    4     8                  0         a     A.s.a
+V   12     8                  0         b     A.s.b
+V   20     8                  0         c     A.s.c
+A   28    72      1           0     A     A
+S   28    24                  0       s     A.s
+V   28     8                  0         a     A.s.a
+V   36     8                  0         b     A.s.b
+V   44     8                  0         c     A.s.c
+A   52    72      2           0     A     A
+S   52    24                  0       s     A.s
+V   52     8                  0         a     A.s.a
+V   60     8                  0         b     A.s.b
+V   68     8                  0         c     A.s.c
+V   76     4                  0     e     e
 """);
    }
 
@@ -803,13 +817,13 @@ V   76     4                  0     e     S.e
     var s = l.structure("s", a, b);
     l.layout(s);
 
-    l.get("s").toStructure().fromInt(3);
+    l.asField().toStructure().fromInt(3);
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0     8                  3   s     s
-B    0     1                  1     a     s.a
-V    1     7                  1     b     s.b
+S    0     8                  3   s
+B    0     1                  1     a     a
+V    1     7                  1     b     b
 """);
     s.get("a").toBit()     .ok(1);
     s.get("b").toVariable().ok(1);
@@ -829,15 +843,15 @@ V    1     7                  1     b     s.b
     var s = l.structure("s", a, b, c, d);
     l.layout(s);
 
-    l.get("s").toStructure().fromInt(27);
+    l.asField().toStructure().fromInt(27);
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0     6                 27   s     s
-B    0     1                  1     a     s.a
-V    1     2                  1     b     s.b
-B    3     1                  1     c     s.c
-V    4     2                  1     d     s.d
+S    0     6                 27   s
+B    0     1                  1     a     a
+V    1     2                  1     b     b
+B    3     1                  1     c     c
+V    4     2                  1     d     d
 """);
     Bits A = l.bits(); A.push(a);       A.push(c);    A.ok(3);
     Bits B = l.bits(); B.push(b, 1, 1); B.push(c, 0); B.ok(2);
@@ -868,25 +882,31 @@ V    4     2                  1     d     s.d
     //stop(M);
     M.ok("""
 T   At  Wide  Index       Value   Field name
-S    0   184                  0   E     E
-V    0    64                  0     C     E.C
-S   64     8                  1     s     E.s
-B   64     1                  1       a     E.s.a
-V   65     7                  0       b     E.s.b
-S   72    88                  0     S     E.S
-V   72    64                  0       A     E.S.A
-V  136    24                  0       B     E.S.B
-V  160    24                  0     D     E.D
+S    0   184                  0   E
+V    0    64                  0     C     C
+S   64     8                  1     s     s
+B   64     1                  1       a     s.a
+V   65     7                  0       b     s.b
+S   72    88                  0     S     S
+V   72    64                  0       A     S.A
+V  136    24                  0       B     S.B
+V  160    24                  0     D     D
 """);
 
-    M.get("E.s.a").toBit().fromInt(0);
+    M.get("s.a").toBit().fromInt(1);
 
-    //stop(l);
-    l.ok("""
+    M.get("s.a").ok(1);
+
+    M.get("s.a").copy().ok("""
 T   At  Wide  Index       Value   Field name
-S   64     8                  0     s     E.s
-B   64     1                  0       a     E.s.a
-V   65     7                  0       b     E.s.b
+B   64     1                  1       a
+""");
+
+    M.get("s.a").asLayout().ok("""
+T   At  Wide  Index       Value   Field name
+S   64     8                  1     s
+B   64     1                  1       a     a
+V   65     7                  0       b     b
 """);
    }
 
@@ -912,16 +932,16 @@ V   65     7                  0       b     E.s.b
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    16                  0   E     E
-V    0     4                  0     C     E.C
-V    4     4                  0     D     E.D
-U    8     8                  0     u     E.u
-S    8     8                  0       S     E.u.S
-V    8     4                  0         A     E.u.S.A
-V   12     4                  0         B     E.u.S.B
-S    8     8                  0       s     E.u.s
-B    8     1                  0         a     E.u.s.a
-V    9     7                  0         b     E.u.s.b
+S    0    16                  0   E
+V    0     4                  0     C     C
+V    4     4                  0     D     D
+U    8     8                  0     u     u
+S    8     8                  0       S     u.S
+V    8     4                  0         A     u.S.A
+V   12     4                  0         B     u.S.B
+S    8     8                  0       s     u.s
+B    8     1                  0         a     u.s.a
+V    9     7                  0         b     u.s.b
 """);
    }
 
@@ -950,12 +970,12 @@ V    9     7                  0         b     E.u.s.b
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    20            1012496   s     s
-V    0     4                  0     a     s.a
-V    4     4                  1     b     s.b
-V    8     4                  3     c     s.c
-V   12     4                  7     d     s.d
-V   16     4                 15     e     s.e
+S    0    20            1012496   s
+V    0     4                  0     a     a
+V    4     4                  1     b     b
+V    8     4                  3     c     c
+V   12     4                  7     d     d
+V   16     4                 15     e     e
 """);
    }
 
@@ -977,21 +997,21 @@ V   16     4                 15     e     s.e
     d.fromUnary(3);
     e.fromUnary(4);
 
-    D.get("s.a").ok(0);
-    D.get("s.b").ok(1);
-    D.get("s.c").ok(3);
-    D.get("s.d").ok(7);
-    D.get("s.e").ok(15);
+    D.get("a").ok(0);
+    D.get("b").ok(1);
+    D.get("c").ok(3);
+    D.get("d").ok(7);
+    D.get("e").ok(15);
 
     //stop(D.top);
     D.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    20            1012496   s     s
-V    0     4                  0     a     s.a
-V    4     4                  1     b     s.b
-V    8     4                  3     c     s.c
-V   12     4                  7     d     s.d
-V   16     4                 15     e     s.e
+S    0    20            1012496   s
+V    0     4                  0     a     a
+V    4     4                  1     b     b
+V    8     4                  3     c     c
+V   12     4                  7     d     d
+V   16     4                 15     e     e
 """);
    }
 
@@ -1015,50 +1035,50 @@ V   16     4                 15     e     s.e
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    20             274965   S     S
-V    0     4                  5     e     S.e
-S    4     8                 33     s     S.s
-V    4     4                  1       a     S.s.a
-V    8     4                  2       b     S.s.b
-S   12     8                 67     t     S.t
-V   12     4                  3       c     S.t.c
-V   16     4                  4       d     S.t.d
-""");
-
-    final Layout j = t.duplicate();
-    j.get("t.c").ok(0);
-    j.get("t.d").ok(0);
-    //stop(j);
-    j.ok("""
-T   At  Wide  Index       Value   Field name
-S    0     8                  0   t     t
-V    0     4                  0     c     t.c
-V    4     4                  0     d     t.d
-""");
-
-    final Layout k = t.copy();
-    k.get("t.c").ok(3);
-    k.get("t.d").ok(4);
-    //stop(k);
-    k.ok("""
-T   At  Wide  Index       Value   Field name
+S    0    20             274965   S
+V    0     4                  5     e     e
+S    4     8                 33     s     s
+V    4     4                  1       a     s.a
+V    8     4                  2       b     s.b
 S   12     8                 67     t     t
 V   12     4                  3       c     t.c
 V   16     4                  4       d     t.d
 """);
 
-    k.get("t.c").fromInt(6);
+    final Layout j = t.duplicate();
+    j.get("c").ok(0);
+    j.get("d").ok(0);
+    //stop(j);
+    j.ok("""
+T   At  Wide  Index       Value   Field name
+S    0     8                  0   t
+V    0     4                  0     c     c
+V    4     4                  0     d     d
+""");
+
+    final Layout k = t.copy();
+    k.get("c").ok(3);
+    k.get("d").ok(4);
+    //stop(k);
+    k.ok("""
+T   At  Wide  Index       Value   Field name
+S   12     8                 67     t
+V   12     4                  3       c     c
+V   16     4                  4       d     d
+""");
+
+    k.get("c").fromInt(6);
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    20             287253   S     S
-V    0     4                  5     e     S.e
-S    4     8                 33     s     S.s
-V    4     4                  1       a     S.s.a
-V    8     4                  2       b     S.s.b
-S   12     8                 70     t     S.t
-V   12     4                  6       c     S.t.c
-V   16     4                  4       d     S.t.d
+S    0    20             287253   S
+V    0     4                  5     e     e
+S    4     8                 33     s     s
+V    4     4                  1       a     s.a
+V    8     4                  2       b     s.b
+S   12     8                 70     t     t
+V   12     4                  6       c     t.c
+V   16     4                  4       d     t.d
 """);
    }
 
@@ -1068,7 +1088,7 @@ V   16     4                  4       d     S.t.d
     //stop(b);
     ok(b.toString(), """
 T   At  Wide  Index       Value   Field name
-B    0     1                  1   b     b
+B    0     1                  1   b
 """);
    }
 
@@ -1078,7 +1098,7 @@ B    0     1                  1   b     b
     //stop(a);
     ok(a.toString(), """
 T   At  Wide  Index       Value   Field name
-V    0     4                  3   a     a
+V    0     4                  3   a
 """);
    }
 
@@ -1089,12 +1109,12 @@ V    0     4                  3   a     a
     //stop(a);
     ok(a.toString(), """
 T   At  Wide  Index       Value   Field name
-V    0     4                  3   a     a
+V    0     4                  3   a
 """);
     Layout.constants(a);
     ok(a.toString(), """
 T   At  Wide  Index       Value   Field name
-V    0     4                  3   =a     a
+V    0     4                  3   =a
 """);
     sayThisOrStop("cannot modify constant: a with value: 3 ");
     a.fromInt(4);
@@ -1124,32 +1144,32 @@ V    0     4                  3   =a     a
     var sl = s.like();
     al.copy().ok("""
 T   At  Wide  Index       Value   Field name
-V    0     2                  0   a     a
+V    0     2                  0   a
 """);
     Al.copy().ok("""
 T   At  Wide  Index       Value   Field name
-A    0    24      0           0   A     A
-S    0     8                  0     s     A.s
-V    0     2                  0       a     A.s.a
-V    2     2                  0       b     A.s.b
-V    4     4                  0       c     A.s.c
-A    8    24      1           0   A     A
-S    8     8                  0     s     A.s
-V    8     2                  0       a     A.s.a
-V   10     2                  0       b     A.s.b
-V   12     4                  0       c     A.s.c
-A   16    24      2           0   A     A
-S   16     8                  0     s     A.s
-V   16     2                  0       a     A.s.a
-V   18     2                  0       b     A.s.b
-V   20     4                  0       c     A.s.c
+A    0    24      0           0   A
+S    0     8                  0     s     s
+V    0     2                  0       a     s.a
+V    2     2                  0       b     s.b
+V    4     4                  0       c     s.c
+A    8    24      1           0   A
+S    8     8                  0     s     s
+V    8     2                  0       a     s.a
+V   10     2                  0       b     s.b
+V   12     4                  0       c     s.c
+A   16    24      2           0   A
+S   16     8                  0     s     s
+V   16     2                  0       a     s.a
+V   18     2                  0       b     s.b
+V   20     4                  0       c     s.c
 """);
     sl.copy().ok("""
 T   At  Wide  Index       Value   Field name
-S    0     8                  0   s     s
-V    0     2                  0     a     s.a
-V    2     2                  0     b     s.b
-V    4     4                  0     c     s.c
+S    0     8                  0   s
+V    0     2                  0     a     a
+V    2     2                  0     b     b
+V    4     4                  0     c     c
 """);
    }
 
@@ -1177,11 +1197,11 @@ V    4     4                  0     c     s.c
     test_constant();
     test_classes();
     test_binary_to_unary();
+    test_like();
    }
 
   static void newTests()                                                        // Tests being worked on
    {oldTests();
-    test_like();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
