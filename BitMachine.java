@@ -1,35 +1,35 @@
 //------------------------------------------------------------------------------
-// Implement a BTree in assembler on a bit machine
+// Implement just enough assembler code on a bit machine to manipulate a BTree.
 // Philip R Brenan at appaapps dot com, Appa Apps Ltd Inc., 2024
 //------------------------------------------------------------------------------
 package com.AppaApps.Silicon;                                                   // Simulate a silicon chip.
 
 import java.util.*;
 
-//D1 Construct                                                                  // Construct a silicon chip comprised of memory, intermediate bits and logic gates.
+//D1 Construct                                                                  // Construct a bit machine capable of manipulating a BTree
 
 public class BitMachine extends Test implements LayoutAble                      // A machine whose assembler code is just capable enough to manipulate a b-tree
  {final int maxSteps = 999;                                                     // Maximum number of steps to be executed
   final String bitMachineName;                                                  // The name of the bit machine
   final int bitMachineNumber;                                                   // The number of the bit machine
-  final StringBuilder printer = new StringBuilder();                            // Place test output here for comparison with expected values
-  final Stack<BitMachine>  machines     = new Stack<>();                        // Machines that will generate instructions for this machine
+  final StringBuilder           printer = new StringBuilder();                  // Place test output here for comparison with expected values
+  final Stack<BitMachine>      machines = new Stack<>();                        // Machines that will generate instructions for this machine
   final Stack<Instruction> instructions = new Stack<>();                        // Instructions to be executed
 
-  BitMachine bitMachine = this;                                                 // The bit machine in which to load instructions
-  Layout layout;                                                                // Layout of bit memory being manipulated by this bit machine
-  int instructionIndex = 0;                                                     // The current instruction
-  int step = 0;                                                                 // The number of the currently executing step
+  BitMachine       bitMachine = this;                                           // The bit machine in which to load instructions
+  Layout               layout;                                                  // Layout of bit memory being manipulated by this bit machine
+  int        instructionIndex = 0;                                              // The current instruction
+  int                    step = 0;                                              // The number of the currently executing step
   static int BitMachineNumber = 0;                                              // Bit machine enumerator
-  static boolean debug = false;                                                 // Debug if true
+  static boolean        debug = false;                                          // Debug if true
 
   public Layout.Field asField () {return layout.top;}                           // Top most field of the layout associated with this bit machine
   public Layout       asLayout() {return layout;}                               // Layout associated with this bit machine
   void                setLayout(Layout Layout) {layout = Layout;}               // Set the layout associated with this bit machine
 
   BitMachine(String Name)                                                       // Assign a name and number to the bit machine to assist debugging
-   {bitMachineName = Name;
-    bitMachineNumber = ++BitMachineNumber;
+   {bitMachineName   = Name;                                                    // Name of bit machine
+    bitMachineNumber = ++BitMachineNumber;                                      // Number of bit machine
    }
 
   BitMachine()            {this("BitMachine");}                                 // Default name for bit machine
@@ -1089,7 +1089,7 @@ V    4     4                 15     b     b
 
     BitMachine m = new BitMachine();
     m.not(a);
-    a.ok("1010");
+    a.ok(10);
    }
 
   static void test_shift_left_oneByOne()
