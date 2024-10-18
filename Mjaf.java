@@ -254,11 +254,8 @@ class Mjaf extends BitMachine                                                   
 
   void leafJoinable                                                             // Check that we can join two leaves
    (Layout.Variable target, Layout.Variable source, Layout.Bit result)
-   {setIndex(nodes, target);                                                    // Index the target leaf
-    Layout.Variable t = leaf.unary.value.copy().asField().toVariable();
-    setIndex(nodes, source);
-    Layout.Variable s = leaf.unary.value.copy().asField().toVariable();
-
+   {setIndex(nodes, target); Layout.Variable t = leaf.unary.value;
+    setIndex(nodes, source); Layout.Variable s = leaf.unary.value;
     unaryFilled(s, t, result);
    }
 
@@ -595,7 +592,7 @@ class Mjaf extends BitMachine                                                   
     void put(Key keyName, Node node)                                            // Put a key / next node index value pair into a branch
      {final int K = nKeys();                                                    // Number of keys currently in node
       for (int i = 0; i < K; i++)                                               // Search existing keys for a greater key
-       {if (keyName.lessThanOrEqual(getKey(i)))                                                                  // Insert new key in order
+       {if (keyName.lessThanOrEqual(getKey(i)))                                 // Insert new key in order
          {insertKey (keyName, i);                                               // Insert key
           insertNext(node,    i);                                               // Insert data
           return;
@@ -1969,15 +1966,15 @@ V  318     4                  0             unary     nodes.node.branchOrLeaf.le
    {final Mjaf mjaf = create_branch_tree();                                     // Create a sample tree
     final Layout  t = mjaf.layout;                                              // Tree layout
     final String
-              node  = "nodes.node.",                                       // Name prefix for a node in the tree
+              node  = "nodes.node.",                                            // Name prefix for a node in the tree
               leaf  = node+"branchOrLeaf.leaf.",                                // Name prefix for leaf stuck
             branch  = node+"branchOrLeaf.branch.",                              // Name prefix for branch
       branchStuck   = branch+"branchStuck.";                                    // Name prefix for branch stuck
 
     final Layout.Variable
-          nodeIndex = t.dupVariable("nodesFree.array.nodeFree"),           // Node index variable
-        sourceIndex = t.dupVariable("nodesFree.array.nodeFree"),           // Source node index variable
-        targetIndex = t.dupVariable("nodesFree.array.nodeFree"),           // Target node index variable
+          nodeIndex = t.dupVariable("nodesFree.array.nodeFree"),                // Node index variable
+        sourceIndex = t.dupVariable("nodesFree.array.nodeFree"),                // Source node index variable
+        targetIndex = t.dupVariable("nodesFree.array.nodeFree"),                // Target node index variable
           leafIndex = t.dupVariable(leaf       +"unary"),                       // Index a key/data pair in a leaf
         branchIndex = t.dupVariable(branchStuck+"unary"),                       // Index a key/next pair in a branch
            leafFlag = t.dupVariable(node+"isLeaf"),                             // Is leaf flag
@@ -2020,17 +2017,17 @@ V  318     4                  0             unary     nodes.node.branchOrLeaf.le
     m.isBranch(t.nodeIndex, t.branchFlag);                                      // Copy its branch flag
     m.execute();                                                                // Execute the code to copy out the splitting key
     //stop(t.n);
-    t.nodeIndex.copy().ok("""
+    t.nodeIndex.ok("""
 T   At  Wide  Index       Value   Field name
 V    0     2                  2   nodeFree
 """);
     //stop(t.l);                                                                // Check Leaf
-    t.leafFlag.copy().ok("""
+    t.leafFlag.ok("""
 T   At  Wide  Index       Value   Field name
 B    0     1                  1   isLeaf
 """);
     //stop(t.b);                                                                // Check not branch
-    t.branchFlag.copy().ok("""
+    t.branchFlag.ok("""
 T   At  Wide  Index       Value   Field name
 B    0     1                  0   isBranch
 """);
@@ -2039,7 +2036,7 @@ B    0     1                  0   isBranch
     m.leafMake(t.nodeIndex);                                                    // Choose the node
     m.execute();                                                                // Execute the code to copy out the splitting key
     //stop(t.n);
-    t.nodeIndex.copy().ok("""
+    t.nodeIndex.ok("""
 T   At  Wide  Index       Value   Field name
 V    0     2                  1   nodeFree
 """);
@@ -2050,17 +2047,17 @@ V    0     2                  1   nodeFree
     m.copy(t.branchFlag, m.isBranch);                                           // Copy its branch flag
     m.execute();                                                                // Execute the code to copy out the splitting key
     //stop(n);
-    t.nodeIndex.copy().ok("""
+    t.nodeIndex.ok("""
 T   At  Wide  Index       Value   Field name
 V    0     2                  0   nodeFree
 """);
     //stop(l);                                                                  // Check Leaf
-    t.leafFlag.copy().ok("""
+    t.leafFlag.ok("""
 T   At  Wide  Index       Value   Field name
 B    0     1                  1   isLeaf
 """);
     //stop(b);                                                                  // Check not branch
-    t.branchFlag.copy().ok("""
+    t.branchFlag.ok("""
 T   At  Wide  Index       Value   Field name
 B    0     1                  0   isBranch
 """);
@@ -2077,17 +2074,17 @@ B    0     1                  0   isBranch
     m.execute();                                                                // Execute the code to copy out the splitting key
 
     //stop(t.nodeIndex);
-    t.nodeIndex.copy().ok("""
+    t.nodeIndex.ok("""
 T   At  Wide  Index       Value   Field name
 V    0     2                  2   nodeFree
 """);
     //stop(t.leafFlag);
-    t.leafFlag.copy().ok("""
+    t.leafFlag.ok("""
 T   At  Wide  Index       Value   Field name
 B    0     1                  0   isLeaf
 """);
     //stop(t.branchFlag);
-    t.branchFlag.copy().ok("""
+    t.branchFlag.ok("""
 T   At  Wide  Index       Value   Field name
 B    0     1                  1   isBranch
 """);
@@ -2973,7 +2970,7 @@ B    3     1                  0     lF     lF
     m.execute();
 
     //stop(key);
-    key.copy().ok("""
+    key.ok("""
 T   At  Wide  Index       Value   Field name
 V    0    12                  8   branchKey
 """);
@@ -3203,7 +3200,7 @@ B    3     1                  1     bF     bF
     m.branchFindFirstGreaterOrEqual(t.nodeIndex, k, n);
     m.execute();
     //stop(k, n);
-    n.copy().ok("""
+    n.ok("""
 T   At  Wide  Index       Value   Field name
 V    0     2                  2   branchNext
 """);
@@ -3218,7 +3215,7 @@ V    0     2                  2   branchNext
     m.branchGetTopNext(t.nodeIndex, n);
     m.execute();
     //stop(n);
-    n.copy().ok("""
+    n.ok("""
 T   At  Wide  Index       Value   Field name
 V    0     2                  2   branchNext
 """);
@@ -3262,11 +3259,11 @@ V  114     4                 15             unary     nodes.node.branchOrLeaf.le
     m.leafSplitRoot(t.sourceIndex, t.targetIndex);
     m.execute();
 
-    t.sourceIndex.copy().ok("""
+    t.sourceIndex.ok("""
 T   At  Wide  Index       Value   Field name
 V    0     2                  1   nodeFree
 """);
-    t.targetIndex.copy().ok("""
+    t.targetIndex.ok("""
 T   At  Wide  Index       Value   Field name
 V    0     2                  2   nodeFree
 """);
@@ -3362,11 +3359,11 @@ V   63     2                  0             topNext     nodes.node.branchOrLeaf.
     m.branchSplitRoot(t.sourceIndex, t.targetIndex);
     m.execute();
 
-    t.sourceIndex.copy().ok("""
+    t.sourceIndex.ok("""
 T   At  Wide  Index       Value   Field name
 V    0     2                  1   nodeFree
 """);
-    t.targetIndex.copy().ok("""
+    t.targetIndex.ok("""
 T   At  Wide  Index       Value   Field name
 V    0     2                  2   nodeFree
 """);
