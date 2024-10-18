@@ -383,11 +383,10 @@ class Mjaf extends BitMachine                                                   
      }
 // f2 top = root old top, f1 top = rkn.next, root top = f2, root left = f1
     branchSetTopNext(F2, ort);                                                  // Set top next references for each branch
-    branchSetTopNext(F1,
-      rkn.asLayout().get("branchNext").toVariable());
+    branchSetTopNext(F1, rkn.asLayout().get("branchNext").toVariable());
     branchSetTopNext(root, F2);
     copy(rkn.asLayout().get("branchNext"), F1);                                 // Left next refers to new left branch
-    branchPush (root,  rkn);                                                    // Save root key, next pair
+    branchPush (root, rkn);                                                     // Save root key, next pair
    }
 
   void branchJoinable                                                           // Check that we can join two branches
@@ -406,17 +405,13 @@ class Mjaf extends BitMachine                                                   
    (Layout.Variable target, Layout.Variable key, Layout.Variable source)        // Join the specified branch onto the end of this branch
    {final LayoutAble kn = branchKeyNext.duplicate();                            // Work area for transferring key data pairs from the source code to the target node
 
-    copy(kn.asLayout().get("branchKey"),  key);
-    setIndex(nodes, source);
-    copy(kn.asLayout().get("branchNext"), topNext);
-    setIndex(nodes, target);
+    copy(kn.asLayout().get("branchKey"),  key);      setIndex(nodes, source);
+    copy(kn.asLayout().get("branchNext"), topNext);  setIndex(nodes, target);
     branchStuck.push(kn);
 
     for (int i = 0; i < branchSplitPoint; i++)                                  // Transfer source keys and next
-     {setIndex(nodes, source);
-      branchStuck.shift(kn);
-      setIndex(nodes, target);
-      branchStuck.push(kn);
+     {setIndex(nodes, source); branchStuck.shift(kn);
+      setIndex(nodes, target); branchStuck.push(kn);
      }
     free(source);                                                               // Free the leaf that was joined
    }
@@ -435,7 +430,6 @@ class Mjaf extends BitMachine                                                   
          {branchGet(nodeIndex, index, kn);                                      // Retrieve key/next pair
           copy(result, kn.asLayout().get("branchNext"));
           returnIfLessThan(key, kn.asLayout().get("branchKey"));
-          //new Say() {void action() {say("AAAA", result);}};
           shiftLeftOneByOne(index);
          }
         copy(result, topNext);                                                  // The search key is greater than all the keys in the branch so return the top node
