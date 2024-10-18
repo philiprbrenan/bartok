@@ -1075,9 +1075,9 @@ public class BitMachine extends Test implements LayoutAble                      
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0     8                240   s     s
-V    0     4                  0     a     s.a
-V    4     4                 15     b     s.b
+S    0     8                240   s
+V    0     4                  0     a     a
+V    4     4                 15     b     b
 """);
    }
 
@@ -1162,23 +1162,23 @@ V    4     4                 15     b     s.b
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    25           13979937   s     s
-V    0     4                  1     a     s.a
-V    4     4                  2     b     s.b
-V    8     4                  1     c     s.c
-B   12     1                  1     aa     s.aa
-B   13     1                  0     ab     s.ab
-B   14     1                  1     ac     s.ac
-B   15     1                  0     ba     s.ba
-B   16     1                  1     bb     s.bb
-B   17     1                  0     bc     s.bc
-B   18     1                  1     ca     s.ca
-B   19     1                  0     cb     s.cb
-B   20     1                  1     cc     s.cc
-B   21     1                  0     a0     s.a0
-B   22     1                  1     a1     s.a1
-B   23     1                  1     b1     s.b1
-B   24     1                  0     b2     s.b2
+S    0    25           13979937   s
+V    0     4                  1     a     a
+V    4     4                  2     b     b
+V    8     4                  1     c     c
+B   12     1                  1     aa     aa
+B   13     1                  0     ab     ab
+B   14     1                  1     ac     ac
+B   15     1                  0     ba     ba
+B   16     1                  1     bb     bb
+B   17     1                  0     bc     bc
+B   18     1                  1     ca     ca
+B   19     1                  0     cb     cb
+B   20     1                  1     cc     cc
+B   21     1                  0     a0     a0
+B   22     1                  1     a1     a1
+B   23     1                  1     b1     b1
+B   24     1                  0     b2     b2
 """);
    }
 
@@ -1224,22 +1224,22 @@ B   24     1                  0     b2     s.b2
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    24            8921377   s     s
-V    0     4                  1     a     s.a
-V    4     4                  2     b     s.b
-V    8     4                  1     c     s.c
-B   12     1                  0     aa     s.aa
-B   13     1                  1     ab     s.ab
-B   14     1                  0     ac     s.ac
-B   15     1                  0     ba     s.ba
-B   16     1                  0     bb     s.bb
-B   17     1                  0     bc     s.bc
-B   18     1                  0     ca     s.ca
-B   19     1                  1     cb     s.cb
-B   20     1                  0     cc     s.cc
-B   21     1                  0     a0     s.a0
-B   22     1                  0     a1     s.a1
-B   23     1                  1     a2     s.a2
+S    0    24            8921377   s
+V    0     4                  1     a     a
+V    4     4                  2     b     b
+V    8     4                  1     c     c
+B   12     1                  0     aa     aa
+B   13     1                  1     ab     ab
+B   14     1                  0     ac     ac
+B   15     1                  0     ba     ba
+B   16     1                  0     bb     bb
+B   17     1                  0     bc     bc
+B   18     1                  0     ca     ca
+B   19     1                  1     cb     cb
+B   20     1                  0     cc     cc
+B   21     1                  0     a0     a0
+B   22     1                  0     a1     a1
+B   23     1                  1     a2     a2
 """);
    }
 
@@ -1285,22 +1285,22 @@ B   23     1                  1     a2     s.a2
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    24           10318113   s     s
-V    0     4                  1     a     s.a
-V    4     4                  2     b     s.b
-V    8     4                  1     c     s.c
-B   12     1                  1     aa     s.aa
-B   13     1                  1     ab     s.ab
-B   14     1                  1     ac     s.ac
-B   15     1                  0     ba     s.ba
-B   16     1                  1     bb     s.bb
-B   17     1                  0     bc     s.bc
-B   18     1                  1     ca     s.ca
-B   19     1                  1     cb     s.cb
-B   20     1                  1     cc     s.cc
-B   21     1                  0     a0     s.a0
-B   22     1                  0     a1     s.a1
-B   23     1                  1     a2     s.a2
+S    0    24           10318113   s
+V    0     4                  1     a     a
+V    4     4                  2     b     b
+V    8     4                  1     c     c
+B   12     1                  1     aa     aa
+B   13     1                  1     ab     ab
+B   14     1                  1     ac     ac
+B   15     1                  0     ba     ba
+B   16     1                  1     bb     bb
+B   17     1                  0     bc     bc
+B   18     1                  1     ca     ca
+B   19     1                  1     cb     cb
+B   20     1                  1     cc     cc
+B   21     1                  0     a0     a0
+B   22     1                  0     a1     a1
+B   23     1                  1     a2     a2
 """);
    }
 
@@ -1326,10 +1326,10 @@ B   23     1                  1     a2     s.a2
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    12               1911   s     s
-V    0     4                  7     a     s.a
-V    4     4                  7     b     s.b
-V    8     4                  7     c     s.c
+S    0    12               1911   s
+V    0     4                  7     a     a
+V    4     4                  7     b     b
+V    8     4                  7     c     c
 """);
    }
 
@@ -1352,10 +1352,10 @@ V    8     4                  7     c     s.c
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0     6                 23   s     s
-V    0     4                  7     a     s.a
-B    4     1                  1     b     s.b
-B    5     1                  0     c     s.c
+S    0     6                 23   s
+V    0     4                  7     a     a
+B    4     1                  1     b     b
+B    5     1                  0     c     c
 """);
    }
 
@@ -1382,11 +1382,11 @@ B    5     1                  0     c     s.c
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    13                239   x     x
-B    0     1                  1     i     x.i
-V    1     4                  7     s     x.s
-V    5     4                  7     t     x.t
-V    9     4                  0     e     x.e
+S    0    13                239   x
+B    0     1                  1     i     i
+V    1     4                  7     s     s
+V    5     4                  7     t     t
+V    9     4                  0     e     e
 """);
    }
 
@@ -1413,11 +1413,11 @@ V    9     4                  0     e     x.e
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    13               3598   x     x
-B    0     1                  0     i     x.i
-V    1     4                  7     s     x.s
-V    5     4                  0     t     x.t
-V    9     4                  7     e     x.e
+S    0    13               3598   x
+B    0     1                  0     i     i
+V    1     4                  7     s     s
+V    5     4                  0     t     t
+V    9     4                  7     e     e
 """);
    }
 
@@ -1440,26 +1440,26 @@ V    9     4                  7     e     x.e
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-A    0    96      0               A     A
-S    0    24             590849     s     A.s
-V    0     8                  1       a     A.s.a
-V    8     8                  4       b     A.s.b
-V   16     8                  9       c     A.s.c
-A   24    96      1               A     A
-S   24    24             787970     s     A.s
-V   24     8                  2       a     A.s.a
-V   32     8                  6       b     A.s.b
-V   40     8                 12       c     A.s.c
-A   48    96      2               A     A
-S   48    24             985091     s     A.s
-V   48     8                  3       a     A.s.a
-V   56     8                  8       b     A.s.b
-V   64     8                 15       c     A.s.c
-A   72    96      3               A     A
-S   72    24            1182212     s     A.s
-V   72     8                  4       a     A.s.a
-V   80     8                 10       b     A.s.b
-V   88     8                 18       c     A.s.c
+A    0    96      0               A
+S    0    24             590849     s     s
+V    0     8                  1       a     s.a
+V    8     8                  4       b     s.b
+V   16     8                  9       c     s.c
+A   24    96      1               A
+S   24    24             787970     s     s
+V   24     8                  2       a     s.a
+V   32     8                  6       b     s.b
+V   40     8                 12       c     s.c
+A   48    96      2               A
+S   48    24             985091     s     s
+V   48     8                  3       a     s.a
+V   56     8                  8       b     s.b
+V   64     8                 15       c     s.c
+A   72    96      3               A
+S   72    24            1182212     s     s
+V   72     8                  4       a     s.a
+V   80     8                 10       b     s.b
+V   88     8                 18       c     s.c
 """);
     BitMachine m = new BitMachine();
     m.new For(A)
@@ -1484,26 +1484,26 @@ Line                    OpCode Target
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-A    0    96      0               A     A
-S    0    24             590081     s     A.s
-V    0     8                  1       a     A.s.a
-V    8     8                  1       b     A.s.b
-V   16     8                  9       c     A.s.c
-A   24    96      1               A     A
-S   24    24             786946     s     A.s
-V   24     8                  2       a     A.s.a
-V   32     8                  2       b     A.s.b
-V   40     8                 12       c     A.s.c
-A   48    96      2               A     A
-S   48    24             983811     s     A.s
-V   48     8                  3       a     A.s.a
-V   56     8                  3       b     A.s.b
-V   64     8                 15       c     A.s.c
-A   72    96      3               A     A
-S   72    24            1180676     s     A.s
-V   72     8                  4       a     A.s.a
-V   80     8                  4       b     A.s.b
-V   88     8                 18       c     A.s.c
+A    0    96      0               A
+S    0    24             590081     s     s
+V    0     8                  1       a     s.a
+V    8     8                  1       b     s.b
+V   16     8                  9       c     s.c
+A   24    96      1               A
+S   24    24             786946     s     s
+V   24     8                  2       a     s.a
+V   32     8                  2       b     s.b
+V   40     8                 12       c     s.c
+A   48    96      2               A
+S   48    24             983811     s     s
+V   48     8                  3       a     s.a
+V   56     8                  3       b     s.b
+V   64     8                 15       c     s.c
+A   72    96      3               A
+S   72    24            1180676     s     s
+V   72     8                  4       a     s.a
+V   80     8                  4       b     s.b
+V   88     8                 18       c     s.c
 """);
    }
 
@@ -1527,10 +1527,10 @@ V   88     8                 18       c     A.s.c
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    12                 51   s     s
-V    0     4                  3     a     s.a
-V    4     4                  3     b     s.b
-V    8     4                  0     c     s.c
+S    0    12                 51   s
+V    0     4                  3     a     a
+V    4     4                  3     b     b
+V    8     4                  0     c     c
 """);
    }
 
@@ -1580,28 +1580,28 @@ V    8     4                  0     c     s.c
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    84                      s     s
-V    0     4                  0     a     s.a
-V    4     4                  1     b     s.b
-V    8     4                  0     c     s.c
-V   12     4                  0     eq01     s.eq01
-V   16     4                 15     eq11     s.eq11
-V   20     4                  0     eq10     s.eq10
-V   24     4                 15     ne01     s.ne01
-V   28     4                  0     ne11     s.ne11
-V   32     4                 15     ne10     s.ne10
-V   36     4                 15     lt01     s.lt01
-V   40     4                  0     lt11     s.lt11
-V   44     4                  0     lt10     s.lt10
-V   48     4                 15     le01     s.le01
-V   52     4                 15     le11     s.le11
-V   56     4                  0     le10     s.le10
-V   60     4                  0     gt01     s.gt01
-V   64     4                  0     gt11     s.gt11
-V   68     4                 15     gt10     s.gt10
-V   72     4                  0     ge01     s.ge01
-V   76     4                 15     ge11     s.ge11
-V   80     4                 15     ge10     s.ge10
+S    0    84                      s
+V    0     4                  0     a     a
+V    4     4                  1     b     b
+V    8     4                  0     c     c
+V   12     4                  0     eq01     eq01
+V   16     4                 15     eq11     eq11
+V   20     4                  0     eq10     eq10
+V   24     4                 15     ne01     ne01
+V   28     4                  0     ne11     ne11
+V   32     4                 15     ne10     ne10
+V   36     4                 15     lt01     lt01
+V   40     4                  0     lt11     lt11
+V   44     4                  0     lt10     lt10
+V   48     4                 15     le01     le01
+V   52     4                 15     le11     le11
+V   56     4                  0     le10     le10
+V   60     4                  0     gt01     gt01
+V   64     4                  0     gt11     gt11
+V   68     4                 15     gt10     gt10
+V   72     4                  0     ge01     ge01
+V   76     4                 15     ge11     ge11
+V   80     4                 15     ge10     ge10
 """);
    }
 
@@ -1659,23 +1659,23 @@ V   80     4                 15     ge10     s.ge10
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    19             218344   s     s
-V    0     1                  0     a     s.a
-V    1     2                  0     f00     s.f00
-V    3     2                  1     f01     s.f01
-V    5     2                  3     f11     s.f11
-V    7     1                  1     AllZero____f00     s.AllZero____f00
-V    8     1                  0     NotAllZero_f00     s.NotAllZero_f00
-V    9     1                  0     AllOnes____f00     s.AllOnes____f00
-V   10     1                  1     NotAllOnes_f00     s.NotAllOnes_f00
-V   11     1                  0     AllZero____f01     s.AllZero____f01
-V   12     1                  1     NotAllZero_f01     s.NotAllZero_f01
-V   13     1                  0     AllOnes____f01     s.AllOnes____f01
-V   14     1                  1     NotAllOnes_f01     s.NotAllOnes_f01
-V   15     1                  0     AllZero____f11     s.AllZero____f11
-V   16     1                  1     NotAllZero_f11     s.NotAllZero_f11
-V   17     1                  1     AllOnes____f11     s.AllOnes____f11
-V   18     1                  0     NotAllOnes_f11     s.NotAllOnes_f11
+S    0    19             218344   s
+V    0     1                  0     a     a
+V    1     2                  0     f00     f00
+V    3     2                  1     f01     f01
+V    5     2                  3     f11     f11
+V    7     1                  1     AllZero____f00     AllZero____f00
+V    8     1                  0     NotAllZero_f00     NotAllZero_f00
+V    9     1                  0     AllOnes____f00     AllOnes____f00
+V   10     1                  1     NotAllOnes_f00     NotAllOnes_f00
+V   11     1                  0     AllZero____f01     AllZero____f01
+V   12     1                  1     NotAllZero_f01     NotAllZero_f01
+V   13     1                  0     AllOnes____f01     AllOnes____f01
+V   14     1                  1     NotAllOnes_f01     NotAllOnes_f01
+V   15     1                  0     AllZero____f11     AllZero____f11
+V   16     1                  1     NotAllZero_f11     NotAllZero_f11
+V   17     1                  1     AllOnes____f11     AllOnes____f11
+V   18     1                  0     NotAllOnes_f11     NotAllOnes_f11
 """);
    }
 
@@ -1695,9 +1695,9 @@ V   18     1                  0     NotAllOnes_f11     s.NotAllOnes_f11
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0     8                 19   s     s
-V    0     4                  3     a     s.a
-V    4     4                  1     b     s.b
+S    0     8                 19   s
+V    0     4                  3     a     a
+V    4     4                  1     b     b
 """);
    }
 
@@ -1721,10 +1721,10 @@ V    4     4                  1     b     s.b
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    12                819   s     s
-V    0     4                  3     a     s.a
-V    4     4                  3     b     s.b
-V    8     4                  3     c     s.c
+S    0    12                819   s
+V    0     4                  3     a     a
+V    4     4                  3     b     b
+V    8     4                  3     c     c
 """);
    }
 
@@ -1761,10 +1761,10 @@ AAAA 4
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    12               2047   s     s
-V    0     4                 15     a     s.a
-V    4     4                 15     b     s.b
-V    8     4                  7     c     s.c
+S    0    12               2047   s
+V    0     4                 15     a     a
+V    4     4                 15     b     b
+V    8     4                  7     c     c
 """);
    }
 
@@ -1787,12 +1787,12 @@ V    8     4                  7     c     s.c
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    14              10001   s     s
-V    0     4                  1     a     s.a
-V    4     4                  1     b     s.b
-V    8     4                  7     c     s.c
-B   12     1                  0     r1     s.r1
-B   13     1                  1     r2     s.r2
+S    0    14              10001   s
+V    0     4                  1     a     a
+V    4     4                  1     b     b
+V    8     4                  7     c     c
+B   12     1                  0     r1     r1
+B   13     1                  1     r2     r2
 """);
    }
 
@@ -1819,28 +1819,28 @@ B   13     1                  1     r2     s.r2
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    52                      S     S
-A    0    48      0                 A     S.A
-S    0    12                801       s     S.A.s
-V    0     4                  1         a     S.A.s.a
-V    4     4                  2         b     S.A.s.b
-V    8     4                  3         c     S.A.s.c
-A   12    48      1                 A     S.A
-S   12    12               1074       s     S.A.s
-V   12     4                  2         a     S.A.s.a
-V   16     4                  3         b     S.A.s.b
-V   20     4                  4         c     S.A.s.c
-A   24    48      2                 A     S.A
-S   24    12               1347       s     S.A.s
-V   24     4                  3         a     S.A.s.a
-V   28     4                  4         b     S.A.s.b
-V   32     4                  5         c     S.A.s.c
-A   36    48      3                 A     S.A
-S   36    12               1620       s     S.A.s
-V   36     4                  4         a     S.A.s.a
-V   40     4                  5         b     S.A.s.b
-V   44     4                  6         c     S.A.s.c
-V   48     4                  0     d     S.d
+S    0    52                      S
+A    0    48      0                 A     A
+S    0    12                801       s     A.s
+V    0     4                  1         a     A.s.a
+V    4     4                  2         b     A.s.b
+V    8     4                  3         c     A.s.c
+A   12    48      1                 A     A
+S   12    12               1074       s     A.s
+V   12     4                  2         a     A.s.a
+V   16     4                  3         b     A.s.b
+V   20     4                  4         c     A.s.c
+A   24    48      2                 A     A
+S   24    12               1347       s     A.s
+V   24     4                  3         a     A.s.a
+V   28     4                  4         b     A.s.b
+V   32     4                  5         c     A.s.c
+A   36    48      3                 A     A
+S   36    12               1620       s     A.s
+V   36     4                  4         a     A.s.a
+V   40     4                  5         b     A.s.b
+V   44     4                  6         c     A.s.c
+V   48     4                  0     d     d
 """);
 
     m.reset();  m.copy(d, 1); m.setIndex(A, d); m.copy(d, a); m.execute(); d.ok(2);
