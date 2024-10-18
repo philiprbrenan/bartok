@@ -10,27 +10,27 @@ import java.util.*;
 
 public class Layout extends Test implements LayoutAble                          // A Memory layout for a chip. There might be several such layouts representing parts of the chip.
  {Field top;                                                                    // The top most field in a set of nested fields describing memory.
-  Memory               memory = new Memory();                                   // A sample memory that can be freed if not wanted by assigning null to this non final field.
-  final Map<String,Layout> fullNames = new TreeMap<>();                         // Index of full names
-  final Stack<Layout> layouts = new Stack<>();                                  // All the sub layouts added to this layout so we can unify their memory
+  Memory                memory = new Memory();                                  // A sample memory that can be freed if not wanted by assigning null to this non final field.
+  final Stack<Layout> layouts  = new Stack<>();                                 // All the sub layouts added to this layout so we can unify their memory
 
   void layout(Field field)                                                      // Create a new Layout loaded from a set of definitions
    {top  = field;                                                               // Record layout
     field.layout(0, 0);                                                         // Locate field positions
     memory = new Memory();                                                      // Create a matching memory.
 /// /// ///
-    indexNames(this);                                                           // Index the names of the fields
+    field.indexNames(field, null);                                              // Index the names of the fields
+
     unifyMemory(memory);                                                        // Unify the memory of all declared layouts with the memory of this layout
     memory = new Memory();                                                      // New memory
    }
 
-  Field get(String path) {return fullNames.get(path);}                          // Locate a field from its full name path which must include the top most field
+  Field get(String path) {return top.fullNames.get(path);}                      // Locate a field from its full name path which must include the top most field
 
   LayoutAble copy()                                                             // Copy a layout and share its memory
    {final Layout d = new Layout();                                              // New layout
     if (top == null) return d;                                                  // No fields to duplicate
     d.top = top.duplicate(d);                                                   // Copy each field into this layout
-    d.indexNames(d.top);                                                  // Index the names of the fields
+    d.top.indexNames(d.top, null);                                              // Index the names of the fields
     d.memory = memory;                                                          // Share the existing memory
     return d;
    }
@@ -53,9 +53,9 @@ public class Layout extends Test implements LayoutAble                          
   public Layout.Field asLayoutField() {return top;}                             // Layout associated with this class
   public Layout       asLayout     () {return this;}                            // Layout associated with this class
 
-  void indexNames(Layout layout, String prefix)                                                // Index field names in each containing structure so fields can be accessed by a unique structured name
-   {top.indexNames(layout, prefix);
-   }
+//  void indexNames(Layout layout)                                                // Index field names in each containing structure so fields can be accessed by a unique structured name
+//   {top.indexNames(layout, null);
+//   }
 
   int size() {return top == null ? 0 : top.width;}                              // Size of memory
 
@@ -122,16 +122,16 @@ public class Layout extends Test implements LayoutAble                          
     int at   () {return at;}                                                    // Position of field in memory
     int width() {return width;}                                                 // Size of the memory in bits occupied by this field
 
-    String indexName(Map<String,Field> names, String prefix)                    // The full name of a field
+    String indexName(Layout.Field field, String prefix)                         // The full name of a field
      {final String n = prefix != null ? prefix+"."+name : name;                 // Full name of this field
-      names.put(n, this);                                                       // Index this full name
+      field.fullNames.put(n, this);                                             // Index this full name
       if (fullName == null || fullName.length() < n.length()) fullName = n;     // Longest full anme encountered
       return n;
      }
 
     public Layout.Field asLayoutField() {return this;}                          // Layout associated with this field
     public Layout       asLayout     () {return null;}                          // Layout associated with this field
-    abstract void indexNames(Layout layout, String prefix);                     // Set the full names of all the fields in a layout
+    abstract void indexNames(Layout.Field field, String prefix);                // Set the full names of all the sub fields in a field
 
     Field get(String path) {return fullNames.get(path);}                        // Address a contained field by name
 
@@ -267,7 +267,7 @@ public class Layout extends Test implements LayoutAble                          
     Layout copy()                                                               // Copy a layout and share its memory so we can see and modify current values in the copy
      {final Layout d = new Layout();                                            // New layout
       d.top = duplicate(d);                                                     // Copy each field into this layout
-      d.indexNames(d, null);                                                    // Index the names of the fields
+      d.top.indexNames(d.top, null);                                            // Index the names of the fields
       d.memory = memory;                                                        // Share the existing memory
       return d;
      }
@@ -308,7 +308,7 @@ public class Layout extends Test implements LayoutAble                          
      {super(name); width = Width;
      }
 
-    void indexNames(Layout layout, String prefix)                               // Index the name of this field
+    void indexNames(Layout.Field layout, String prefix)                         // Index the name of this field
      {indexName(layout, prefix);
      }
 
@@ -364,11 +364,11 @@ public class Layout extends Test implements LayoutAble                          
       width = size * element.width;                                             // The size of the array is the sie of its element times the number of elements in the array
      }
 
-    void indexNames(Layout layout, String prefix)                               // Index the name of this field and its sub fields
-     {final String n = indexName(layout, prefix);
-      element.indexNames(layout,      n);                                       // Full names of sub fields relative to outer most layout
-      element.indexNames(Layout.this, n);                                       // Full names of sub fields relative to this layout
-      element.indexNames(fullNames, null);                                      // Index name in this array
+    void indexNames(Layout.Field field, String prefix)                          // Index the name of this field and its sub fields
+     {final String n = indexName(field, prefix);
+      element.indexNames(field, n);                                             // Full names of sub fields relative to outer most layout
+      element.indexNames(this,   n);                                            // Full names of sub fields relative to this layout
+      //element.indexNames(fullNames, null);                                    // Index name in this array
      }
 
     void position(int At)                                                       // Reposition this array after an index of a containing array has been changed
@@ -446,12 +446,12 @@ public class Layout extends Test implements LayoutAble                          
        }
      }
 
-    void indexNames(Map<String,Field> names, String prefix)                     // Index the name of this structure and its sub fields
-     {final String n = indexName(names, prefix);                                // Index the name of this structure
+    void indexNames(Layout.Field field, String prefix)                          // Index the name of this structure and its sub fields
+     {final String n = indexName(field, prefix);                                // Index the name of this structure
       for (Field f : subStack)                                                  // Each fierld in the structure
-       {f.indexNames(names, n);                                                 // Index name in outermost layout
-        f.indexNames(Layout.this.fullNames, n);                                 // Index name in this layout
-        f.indexNames(fullNames, null);                                          // Index name in this structure
+       {f.indexNames(field, n);                                                 // Index name in outermost layout
+        //f.indexNames(Layout.this.fullNames, n);                               // Index name in this layout
+        f.indexNames(field, null);                                              // Index name in this structure
        }
      }
 
