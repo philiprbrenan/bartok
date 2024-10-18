@@ -255,9 +255,9 @@ class Mjaf extends BitMachine                                                   
   void leafJoinable                                                             // Check that we can join two leaves
    (Layout.Variable target, Layout.Variable source, Layout.Bit result)
    {setIndex(nodes, target);                                                    // Index the target leaf
-    Layout.Variable t = leaf.unary.value.copy().asLayoutField().toVariable();
+    Layout.Variable t = leaf.unary.value.copy().asField().toVariable();
     setIndex(nodes, source);
-    Layout.Variable s = leaf.unary.value.copy().asLayoutField().toVariable();
+    Layout.Variable s = leaf.unary.value.copy().asField().toVariable();
 
     unaryFilled(s, t, result);
    }
