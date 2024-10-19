@@ -128,7 +128,7 @@ public class BitMachine extends Test implements LayoutAble                      
          }
        }
       else
-       {if (debug) say("Copy integer:", sourceInt, "to", target.name, "at", target.at);
+       {if (debug) say("Copy integer:", sourceInt, "to", target.name, "at", target.at, "width", target.width);
         target.fromInt(sourceInt);                                              // Copy from source integer
        }
      }
