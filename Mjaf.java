@@ -31,8 +31,8 @@ class Mjaf extends BitMachine                                                   
   final Layout.Structure leafKeyData;                                           // An entry in a leaf node
   final Layout.Structure branchKeyNext;                                         // An entry in a branch node
   final Layout.Union     branchOrLeaf;                                          // Branch or leaf of the tree
-  final Layout.Variable  isBranch;                                              // The node is a branch if true
-  final Layout.Variable  isLeaf;                                                // The node is a leaf if true
+  final Layout.Bit       isBranch;                                              // The node is a branch if true
+  final Layout.Bit       isLeaf;                                                // The node is a leaf if true
   final Layout.Structure node;                                                  // Node of the tree
   final Layout.Array     nodes;                                                 // Array of nodes comprising tree
   final Layout.Structure tree;                                                  // Structure of tree
@@ -210,10 +210,10 @@ class Mjaf extends BitMachine                                                   
    }
 
   void leafFindIndexOf                                                          // Find index of the specified key, data pair in the specified leaf
-   (Layout.Variable index, LayoutAble kd, Layout.Bit found,
+   (Layout.Variable index, Layout.Variable key, Layout.Bit found,
     Layout.Variable result)
    {setIndex(nodes, index);
-    leaf.indexOf(kd, bitsPerKey, found, result);
+    leaf.indexOf(key, bitsPerKey, found, result);
    }
 
   void leafSplitRoot(Layout.Variable F1, Layout.Variable F2)                    // Split the root when it is a leaf
@@ -433,6 +433,31 @@ class Mjaf extends BitMachine                                                   
           shiftLeftOneByOne(index);
          }
         copy(result, topNext);                                                  // The search key is greater than all the keys in the branch so return the top node
+       }
+     };
+   }
+
+//D1 Search                                                                     // Find a key, data pair
+
+  void find(Layout.Variable Key, Layout.Bit Found, Layout.Variable Result)      // Find the data associated with a key in a tree
+   {final Layout.Variable nodeIndex = nodeFree.like();                          // Node index variable
+    final Layout.Variable leafIndex = leaf.unary.value.like();                          // Node index variable
+    zero(nodeIndex);                                                            // Start at the root
+
+    new Repeat()
+     {void code()
+       {setIndex(nodes, nodeIndex);                                             // Address node
+        returnIfOne(isLeaf);                                                    // Exit when we reach a leaf
+        branchFindFirstGreaterOrEqual(nodeIndex, Key, nodeIndex);
+       }
+     };
+
+    leafFindIndexOf(nodeIndex, Key, Found, leafIndex);                          // Find index of the specified key, data pair in the specified leaf
+    new If(Found)
+     {void Then()
+       {final Layout.Structure kd = leafKeyData.like();                         // Key, data pair from the stuck
+        leafGet(nodeIndex, leafIndex, kd);                                      // Get key, data from stuck
+        copy(Result, kd.get("leafData"));
        }
      };
    }
@@ -1601,7 +1626,7 @@ class Mjaf extends BitMachine                                                   
         m.setVariable("nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData", c++);
        }
      }
-    m.copy(m.layout.get("nodesFree.unary").toVariable(), Layout.unary(N)); // Tree globals
+    m.copy(m.layout.get("nodesFree.unary").toVariable(), Layout.unary(N));      // Tree globals
     m.copy(m.nodesCreated,  N);
     m.copy(m.keyDataStored, N);
     m.copy(m.root,          0);                                                 // Root is the zero node
@@ -2771,35 +2796,37 @@ V  264     3                  1               unary     nodes.node.branchOrLeaf.
 
     Layout               l = new Layout();
     Layout.Bit       found = l.bit     ("found");
+    Layout.Variable    key = l.variable("key",    m.bitsPerKey);
     Layout.Variable result = l.variable("result", m.maxKeysPerLeaf);
-    Layout.Structure     s = l.structure("s", found, result);
+    Layout.Structure     s = l.structure("s", found, key, result);
     l.layout(s);
 
-    m.copy(t.sourceIndex, 2);                                                   // Key, data pair
-    m.copy(t.leafIndex,   Layout.unary(2));                                     // Address the last node
-    m.leafGet(t.sourceIndex, t.leafIndex, t.kd);                                // Copy the indexed key, data pair
-    m.leafFindIndexOf(t.sourceIndex, t.kd, found, result);
+    m.copy(t.sourceIndex, 2);                                                   // Leaf to search
+    m.copy(key, 23);                                                            // Key to locate
+    m.leafFindIndexOf(t.sourceIndex, key, found, result);                       // Locate key
     m.execute();
 
-    //stop(l);                                                                  // Unary "11" printed as "3" is binary "2"
+    //stop(l);                                                                  // Unary "111" printed as "7" is binary "3"
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0     5                  7   s
+S    0    17              57391   s
 B    0     1                  1     found     found
-V    1     4                  3     result     result
+V    1    12                 23     key     key
+V   13     4                  7     result     result
 """);
 
     m.reset();
-    m.copy(t.kd.asLayout().get("leafKey"), 25);                                 // Modify the key so it will not be found
-    m.leafFindIndexOf(t.sourceIndex, t.kd, found, result);
+    m.copy(key, 25);                                                            // Key will not be found
+    m.leafFindIndexOf(t.sourceIndex, key, found, result);
     m.execute();
 
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0     5                 30   s
+S    0    17             122930   s
 B    0     1                  0     found     found
-V    1     4                 15     result     result
+V    1    12                 25     key     key
+V   13     4                 15     result     result
 """);
   }
 
@@ -2828,8 +2855,9 @@ V    1     4                  3     result     result
 """);
 
     m.reset();
-    m.copy(t.kd.asLayout().get("leafKey"), 25);                                 // Modify the key so it will not be found
-    m.leafFindIndexOf(t.sourceIndex, t.kd, found, result);
+    final Layout.Variable key = m.branchKey.like();
+    m.copy(key, 25);                                                            // Key will not be found
+    m.leafFindIndexOf(t.sourceIndex, key, found, result);
     m.execute();
 
     //stop(l);
@@ -3418,6 +3446,45 @@ V  267     2                  0             topNext     nodes.node.branchOrLeaf.
 """);
    }
 
+  static void test_find()                                                       // test find
+   {TestLeafTree t = new TestLeafTree();                                        // Create a test tree
+    Mjaf         m = t.mjaf;                                                    // Bit machine to process the tree
+
+    Layout               l = new Layout();
+    Layout.Bit       found = l.bit     ("found");
+    Layout.Variable    key = l.variable("key",  m.bitsPerKey);
+    Layout.Variable   data = l.variable("data", m.bitsPerData);
+    Layout.Structure     s = l.structure("s", found, key, data);
+    l.layout(s);
+    t.ok("""
+V   42    12                  3                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V   54    12                  4                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+""");
+
+    m.copy(key, 2);                                                             // Key to locate
+    m.find(key, found, data);
+    m.execute();
+//  stop(l);
+    l.ok("""
+T   At  Wide  Index       Value   Field name
+S    0    25                  4   s
+B    0     1                  0     found     found
+V    1    12                  2     key     key
+V   13    12                  0     data     data
+""");
+
+    m.copy(key, 3);                                                             // Key to locate
+    m.find(key, found, data);
+    m.execute();
+    l.ok("""
+T   At  Wide  Index       Value   Field name
+S    0    25              32775   s
+B    0     1                  1     found     found
+V    1    12                  3     key     key
+V   13    12                  4     data     data
+""");
+   }
+
   static void oldTests()                                                        // Tests thought to be in good shape
    {create_leaf_tree();        create_branch_tree();
     test_leaf_make();          test_branch_make();
@@ -3432,11 +3499,13 @@ V  267     2                  0             topNext     nodes.node.branchOrLeaf.
     test_branch_top_next();
     test_branch_greater_than_or_equal();
     test_leaf_split_root();    test_branch_split_root();
+
+    test_find();
    }
 
   static void newTests()                                                        // Tests being worked on
    {oldTests();
-    test_leaf_split_root();
+    test_find();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
