@@ -9,7 +9,7 @@ import java.util.*;
 //D1 Construct                                                                  // Construct a bit machine capable of manipulating a BTree
 
 public class BitMachine extends Test implements LayoutAble                      // A machine whose assembler code is just capable enough to manipulate a b-tree
- {final int maxSteps = 999;                                                     // Maximum number of steps to be executed
+ {int maxSteps = 999;                                                           // Maximum number of steps to be executed
   final String bitMachineName;                                                  // The name of the bit machine
   final int bitMachineNumber;                                                   // The number of the bit machine
   final StringBuilder           printer = new StringBuilder();                  // Place test output here for comparison with expected values
