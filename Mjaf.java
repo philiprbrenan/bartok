@@ -139,13 +139,23 @@ class Mjaf extends BitMachine                                                   
     zero(node);                                                                 // Clear the node
    }
 
-  void isLeaf(Layout.Variable index, Layout.Variable result)                    // Check whether the specified node is a leaf
+  void isLeaf(Layout.Variable index, Layout.Bit result)                         // Check whether the specified node is a leaf
    {setIndex(nodes, index);                                                     // Index node
     copy(result, isLeaf);                                                       // Get leaf flag
    }
 
-  void isBranch(Layout.Variable index, Layout.Variable result)                  // Check whether the specified node is a branch
+  void isBranch(Layout.Variable index, Layout.Bit result)                       // Check whether the specified node is a branch
    {setIndex(nodes, index);                                                     // Index node
+    copy(result, isBranch);                                                     // Get branch flag
+   }
+
+  void rootIsLeaf(Layout.Bit result)                                            // Check whether the root is a leaf
+   {setIndex(nodes, root);                                                      // Index node
+    copy(result, isLeaf);                                                       // Get leaf flag
+   }
+
+  void rootIsBranch(Layout.Bit result)                                          // Check whether the root is a branch
+   {setIndex(nodes, root);                                                      // Index node
     copy(result, isBranch);                                                     // Get branch flag
    }
 
@@ -524,13 +534,13 @@ class Mjaf extends BitMachine                                                   
         new IfElse (full)
          {void Then() {}                                                        // Leaf is full so no insertion possible
           void Else()                                                           // Key not found but room in leaf
-           {leafFirstGreaterThanOrEqual(nodeIndex, Key, leafIndex, Inserted);    // Find key to insert before
+           {leafFirstGreaterThanOrEqual(nodeIndex, Key, leafIndex, Inserted);   // Find key to insert before
             new IfElse (Inserted)
              {void Then()
-               {leafInsert(nodeIndex, leafIndex, kd);                            // Insert key, data pair into leaf
+               {leafInsert(nodeIndex, leafIndex, kd);                           // Insert key, data pair into leaf
                }
               void Else()
-               {leafPush(nodeIndex, kd);                                         // Append key, data pair to leaf
+               {leafPush(nodeIndex, kd);                                        // Append key, data pair to leaf
                 ones(Inserted);
                }
              };
@@ -541,62 +551,69 @@ class Mjaf extends BitMachine                                                   
   }
 
 //D1 Insertion                                                                  // Insert keys and data into the Btree
+
 /*
-  void put(Key keyName, Data dataValue)                                         // Insert a new key, data pair into the Btree
-   {if (findAndInsert(keyName, dataValue)) return;                              // Do a fast insert if possible, this is increasingly likely in trees with large leaves
+  void put(Layout.Variable Key, Layout.Variable Data)                           // Insert a new key, data pair into the Btree
+   {new Block()
+     {void code()
+       {final Layout.Bit inserted = Layout.createBit("inserted");               // Whether fast insert succeded or not
+        findAndInsert(Key, Data, inserted);                                     // Do a fast insert if possible
+        returnIfAllOnes(inserted);                                              // Fast inserted succeded
 
-    if (new Node().isLeaf())                                                    // Insert into root as a leaf
-     {final Leaf r = new Node().leaf();                                         // Root is a leaf
-      if (!r.isFull()) r.put(keyName, dataValue);                               // Still room in the root while it is is a leaf
-      else                                                                      // Insert into root as a leaf which is full
-       {final Leaf   l = r.split();                                             // New left hand side of root
-        final Key    k = l.splitKey();                                          // Splitting key
-        final Branch b = new Branch(new Node(r.index));                         // New root with old root to right
-        b.put(k, new Node(l));                                                  // Insert left hand node all of whose elements are less than the first element of what was the root
-        final Leaf f = keyName.lessThanOrEqual(k) ? l : r;                      // Choose leaf
-        f.put(keyName, dataValue);                                              // Place in leaf
-        b.setRoot();                                                            // The root now has just one entry in it - the splitting eky
-       }
-      return;
-     }
-    else new Node().branch().splitRoot();                                       // Split full root which is a branch not a leaf
+        if (new Node().isLeaf())                                                    // Insert into root as a leaf
+         {final Leaf r = new Node().leaf();                                         // Root is a leaf
+          if (!r.isFull()) r.put(keyName, dataValue);                               // Still room in the root while it is is a leaf
+          else                                                                      // Insert into root as a leaf which is full
+           {final Leaf   l = r.split();                                             // New left hand side of root
+            final Key    k = l.splitKey();                                          // Splitting key
+            final Branch b = new Branch(new Node(r.index));                         // New root with old root to right
+            b.put(k, new Node(l));                                                  // Insert left hand node all of whose elements are less than the first element of what was the root
+            final Leaf f = keyName.lessThanOrEqual(k) ? l : r;                      // Choose leaf
+            f.put(keyName, dataValue);                                              // Place in leaf
+            b.setRoot();                                                            // The root now has just one entry in it - the splitting eky
+           }
+          return;
+         }
+        else new Node().branch().splitRoot();                                       // Split full root which is a branch not a leaf
 
-    Branch p = new Node().branch();                                             // The root has already been split so the parent child relationship will be established
-    Node   q = p;                                                               // Child of parent
+        Branch p = new Node().branch();                                             // The root has already been split so the parent child relationship will be established
+        Node   q = p;                                                               // Child of parent
 
-    for(int i = 0; i < 999; ++i)                                                // Step down through tree to find the required leaf, splitting as we go
-     {if (q.isLeaf()) break;                                                    // Stepped to a leaf
-      final Branch b = q.branch();
+        for(int i = 0; i < 999; ++i)                                                // Step down through tree to find the required leaf, splitting as we go
+         {if (q.isLeaf()) break;                                                    // Stepped to a leaf
+          final Branch b = q.branch();
 
-      if (b.isFull())                                                           // Split the branch because it is full and we might need to insert below it requiring a slot in this node
-       {final Key    k = b.splitKey();                                          // Splitting key
-        final Branch l = b.split();                                             // New lower node
-        p.put(k, l);                                                            // Place splitting key in parent
-        final Branch r = new Node().branch();
-        r.splitRoot();                                                          // Root might need to be split to re-establish the invariants at start of loop
-        if (keyName.lessThanOrEqual(k)) q = l;                                  // Position on lower node if search key is less than splitting key
-       }
+          if (b.isFull())                                                           // Split the branch because it is full and we might need to insert below it requiring a slot in this node
+           {final Key    k = b.splitKey();                                          // Splitting key
+            final Branch l = b.split();                                             // New lower node
+            p.put(k, l);                                                            // Place splitting key in parent
+            final Branch r = new Node().branch();
+            r.splitRoot();                                                          // Root might need to be split to re-establish the invariants at start of loop
+            if (keyName.lessThanOrEqual(k)) q = l;                                  // Position on lower node if search key is less than splitting key
+           }
 
-      p = q.branch();                                                           // Step parent down
-      q = p.findFirstGreaterOrEqual(keyName);                                   // Step through to next child
-     }
+          p = q.branch();                                                           // Step parent down
+          q = p.findFirstGreaterOrEqual(keyName);                                   // Step through to next child
+         }
 
-    final Leaf l = q.leaf();                                                    // Address leaf
-    final int g = l.findIndexOfKey(keyName);                                    // Locate index of key
-    if (g != -1) l.setData(dataValue, g);                                       // Key already present in leaf
-    else if (l.isFull())                                                        // Split the leaf because it is full
-     {final Key  k = l.splitKey();                                              // Splitting key
-      final Leaf e = l.split();                                                 // Split left key
-      p.put(k, e);                                                              // Put splitting key in parent
+        final Leaf l = q.leaf();                                                    // Address leaf
+        final int g = l.findIndexOfKey(keyName);                                    // Locate index of key
+        if (g != -1) l.setData(dataValue, g);                                       // Key already present in leaf
+        else if (l.isFull())                                                        // Split the leaf because it is full
+         {final Key  k = l.splitKey();                                              // Splitting key
+          final Leaf e = l.split();                                                 // Split left key
+          p.put(k, e);                                                              // Put splitting key in parent
 
-      if (keyName.lessThanOrEqual(k)) e.put(keyName, dataValue);                // Insert key in the appropriate split leaf
-      else                            l.put(keyName, dataValue);
-     }
-    else l.put(keyName, dataValue);                                             // On a leaf that is not full so we can insert directly
+          if (keyName.lessThanOrEqual(k)) e.put(keyName, dataValue);                // Insert key in the appropriate split leaf
+          else                            l.put(keyName, dataValue);
+         }
+        else l.put(keyName, dataValue);                                             // On a leaf that is not full so we can insert directly
+       } // code
+     } // block
    } // put
 
-
 //D1 Deletion                                                                   // Delete a key from a Btree
+/*
 
   Data delete(Key keyName)                                                      // Delete a key from a tree
    {if (emptyTree()) return null;                                               // The tree is empty
@@ -1561,19 +1578,20 @@ V  318     4                  0             unary     nodes.node.branchOrLeaf.le
    {final Mjaf mjaf = create_leaf_tree();                                       // Create a sample tree
     final Layout  t = mjaf.layout;                                              // Tree layout
     final String
-              node  = "nodes.node.",                                       // Name prefix for a node in the tree
+              node  = "nodes.node.",                                            // Name prefix for a node in the tree
               leaf  = node+"branchOrLeaf.leaf.",                                // Name prefix for leaf stuck
             branch  = node+"branchOrLeaf.branch.",                              // Name prefix for branch
       branchStuck   = branch+"branchStuck.";                                    // Name prefix for branch stuck
 
     final Layout.Variable
-          nodeIndex = t.dupVariable("nodesFree.array.nodeFree"),           // Node index variable
+          nodeIndex = t.dupVariable("nodesFree.array.nodeFree"),                // Node index variable
         sourceIndex = nodeIndex.like(),                                         // Source node index variable
         targetIndex = nodeIndex.like(),                                         // Target node index variable
           leafIndex = t.dupVariable(leaf       +"unary"),                       // Index a key/data pair in a leaf
-        branchIndex = t.dupVariable(branchStuck+"unary"),                       // Index a key/next pair in a branch
-           leafFlag = t.dupVariable(node+"isLeaf"),                             // Is leaf flag
-         branchFlag = t.dupVariable(node+"isBranch");                           // Is branch flag
+        branchIndex = t.dupVariable(branchStuck+"unary");                       // Index a key/next pair in a branch
+    final Layout.Bit
+           leafFlag = t.dupBit(node+"isLeaf"),                                  // Is leaf flag
+         branchFlag = t.dupBit(node+"isBranch");                                // Is branch flag
 
     final Layout lef = new Layout();                                            // Empty full leaf layout
     final Layout.Bit
@@ -1616,9 +1634,10 @@ V  318     4                  0             unary     nodes.node.branchOrLeaf.le
         sourceIndex = t.dupVariable("nodesFree.array.nodeFree"),                // Source node index variable
         targetIndex = t.dupVariable("nodesFree.array.nodeFree"),                // Target node index variable
           leafIndex = t.dupVariable(leaf       +"unary"),                       // Index a key/data pair in a leaf
-        branchIndex = t.dupVariable(branchStuck+"unary"),                       // Index a key/next pair in a branch
-           leafFlag = t.dupVariable(node+"isLeaf"),                             // Is leaf flag
-         branchFlag = t.dupVariable(node+"isBranch");                           // Is branch flag
+        branchIndex = t.dupVariable(branchStuck+"unary");                       // Index a key/next pair in a branch
+    final Layout.Bit
+           leafFlag = t.dupBit(node+"isLeaf"),                                  // Is leaf flag
+         branchFlag = t.dupBit(node+"isBranch");                                // Is branch flag
 
     final Layout bef = new Layout();                                            // Empty full branch layout
     final Layout.Bit
@@ -3228,6 +3247,57 @@ V   13    12                 22     data     data
 """);
    }
 
+  static void test_root_is_leaf_or_branch()                                     // Test root is leaf
+   {TestLeafTree     t = new TestLeafTree();                                     // Create a test tree
+    Mjaf             m = t.mjaf;                                                 // Bit machine to process the tree
+
+    Layout           l = new Layout();
+    Layout.Bit    leaf = l.bit("leaf");
+    Layout.Bit  branch = l.bit("branch");
+    Layout.Structure s = l.structure("s", leaf, branch);
+    l.layout(s);
+
+    m.rootIsLeaf  (leaf);                                                       // Check whether the root is a leaf
+    m.rootIsBranch(branch);                                                     // Check whether the root is a branch
+    m.execute();
+    //stop(l);
+    l.ok("""
+T   At  Wide  Index       Value   Field name
+S    0     2                  1   s
+B    0     1                  1     leaf     leaf
+B    1     1                  0     branch     branch
+""");
+
+    //stop(m.layout);
+    t.ok("""
+A   16   306      0                 nodes     nodes
+S   16   102                  1       node     nodes.node
+B   16     1                  1         isLeaf     nodes.node.isLeaf
+B   17     1                  0         isBranch     nodes.node.isBranch
+""");
+
+    m.reset();
+    m.leafSplitRoot(t.sourceIndex, t.targetIndex);
+    m.rootIsLeaf  (leaf);                                                       // Check whether the root is a leaf
+    m.rootIsBranch(branch);                                                     // Check whether the root is a branch
+    m.execute();
+    //stop(l);
+    l.ok("""
+T   At  Wide  Index       Value   Field name
+S    0     2                  2   s
+B    0     1                  0     leaf     leaf
+B    1     1                  1     branch     branch
+""");
+
+    //stop(m.layout);
+    t.ok("""
+A   16   306      0                 nodes     nodes
+S   16   102                          node     nodes.node
+B   16     1                  0         isLeaf     nodes.node.isLeaf
+B   17     1                  1         isBranch     nodes.node.isBranch
+""");
+   }
+
   static void oldTests()                                                        // Tests thought to be in good shape
    {create_leaf_tree();                 create_branch_tree();
     test_leaf_make();                   test_branch_make();
@@ -3243,13 +3313,15 @@ V   13    12                 22     data     data
     test_leaf_greater_than_or_equal();  test_branch_greater_than_or_equal();
     test_leaf_split_root();             test_branch_split_root();
 
+    test_root_is_leaf_or_branch();
+
     test_find();
     test_find_and_insert();
    }
 
   static void newTests()                                                        // Tests being worked on
    {oldTests();
-    test_find_and_insert();
+    test_root_is_leaf_or_branch();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
