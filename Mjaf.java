@@ -3071,7 +3071,7 @@ B    0     1                  1   found
   static void test_branch_greater_than_or_equal()                               // Find next node associated with  the first key greater than or equal to the search key
    {TestBranchTree  t = new TestBranchTree();                                   // Create a test tree
     Mjaf            m = t.mjaf;                                                 // Bit machine to process the tree
-    Layout.Variable k = m.makeKey(8);                                           // Key to locate
+    Layout.Variable k = m.makeKey (8);                                          // Key to locate
     Layout.Variable n = m.makeNext(0);                                          // Located next node index
 
     m.copy(t.nodeIndex, 2);
@@ -3087,24 +3087,23 @@ V    0     2                  2   next
   static void test_branch_greater_than_or_equal_index()                         // Find index of first key greater than or equal to the search key
    {TestBranchTree  t = new TestBranchTree();                                   // Create a test tree
     Mjaf            m = t.mjaf;                                                 // Bit machine to process the tree
-    Layout.Variable k = m.branchKey.like();                                     // Work area for transferring key
-    Layout.Variable n = m.branchNext.like();                                    // Work area for transferring next node index
+    Layout.Variable k = m.makeKey (8);                                          // Key to locate
+    Layout.Variable n = m.makeNext(0);                                          // Located next node index
 
     m.copy(t.nodeIndex, 2);
-    m.copy(k,           8);
     m.branchFindFirstGreaterOrEqual(t.nodeIndex, k, n);
     m.execute();
     //stop(k, n);
     n.ok("""
 T   At  Wide  Index       Value   Field name
-V    0     2                  2   branchNext
+V    0     2                  2   next
 """);
    }
 
   static void test_branch_top_next()                                            // Get and set the top next field in a branch
    {TestBranchTree  t = new TestBranchTree();                                   // Create a test tree
     Mjaf            m = t.mjaf;                                                 // Bit machine to process the tree
-    Layout.Variable n = m.branchNext.like();                                    // Work area for transferring next node index
+    Layout.Variable n = m.makeNext(0);                                          // Located next node index
 
     m.copy(t.nodeIndex, 2);
     m.branchGetTopNext(t.nodeIndex, n);
@@ -3112,7 +3111,7 @@ V    0     2                  2   branchNext
     //stop(n);
     n.ok("""
 T   At  Wide  Index       Value   Field name
-V    0     2                  2   branchNext
+V    0     2                  2   next
 """);
 
     m.reset();
