@@ -144,9 +144,21 @@ class Mjaf extends BitMachine                                                   
     copy(result, isLeaf);                                                       // Get leaf flag
    }
 
+  Layout.Bit isLeaf(Layout.Variable index)                                      // Check whether the specified node is a leaf
+   {final Layout.Bit result = Layout.createBit("isLeaf");                       // Result bit
+    isLeaf(index, result);                                                       // Check whether the specified node is a leaf
+    return result;
+   }
+
   void isBranch(Layout.Variable index, Layout.Bit result)                       // Check whether the specified node is a branch
    {setIndex(nodes, index);                                                     // Index node
     copy(result, isBranch);                                                     // Get branch flag
+   }
+
+  Layout.Bit isBranch(Layout.Variable index)                                    // Check whether the specified node is a branch
+   {final Layout.Bit result = Layout.createBit("isBranch");                     // Result bit
+    isBranch(index, result);                                                    // Check whether the specified node is a branch
+    return result;
    }
 
   void rootIsLeaf(Layout.Bit result)                                            // Check whether the root is a leaf
@@ -154,9 +166,21 @@ class Mjaf extends BitMachine                                                   
     copy(result, isLeaf);                                                       // Get leaf flag
    }
 
+  Layout.Bit rootIsLeaf()                                                       // Check whether the root is a leaf
+   {final Layout.Bit result = Layout.createBit("rootIsLeaf");                   // Result bit
+    rootIsLeaf(result);                                                         // Check whether the root is a leaf
+    return result;
+   }
+
   void rootIsBranch(Layout.Bit result)                                          // Check whether the root is a branch
    {setIndex(nodes, root);                                                      // Index node
     copy(result, isBranch);                                                     // Get branch flag
+   }
+
+  Layout.Bit rootIsBranch()                                                     // Check whether the root is a branch
+   {final Layout.Bit result = Layout.createBit("rootIsBranch");                 // Result bit
+    rootIsBranch(result);                                                       // Check whether the root is a branch
+    return result;
    }
 
   Layout.Variable nodeIndex(String name)                                        // Create a node index with the specified name
@@ -242,6 +266,23 @@ class Mjaf extends BitMachine                                                   
     leaf.unary.canNotInc(result);
    }
 
+  Layout.Bit leafIsFull(Layout.Variable index)                                  // Leaf is full
+   {Layout.Bit result = Layout.createBit("leafIsFull");
+    leafIsFull(index, result);
+    return result;
+   }
+
+  void leafIsNotFull(Layout.Variable index, Layout.Bit result)                  // Leaf is not full
+   {setIndex(nodes, index);
+    leaf.unary.canInc(result);
+   }
+
+  Layout.Bit leafIsNotFull(Layout.Variable index)                               // Leaf is not full
+   {Layout.Bit result = Layout.createBit("leafIsNotFull");
+    leafIsNotFull(index, result);
+    return result;
+   }
+
   void leafSplitKey(Layout.Variable index, LayoutAble out)                      // Splitting key in a leaf
    {setIndex(nodes, index);
     leaf.elementAt(out, leafSplitIdx);
@@ -289,6 +330,12 @@ class Mjaf extends BitMachine                                                   
     copy(rkn.asLayout().get("branchNext"), F1);                                 // First root key refers to left child
     branchPush (root,  rkn);                                                    // Save root key, next pair
     branchMark(root);                                                           // The root is now a branch
+   }
+
+  void leafSplitRoot()                                                          // Split the root when it is a leaf
+   {final Layout.Variable F1 = leafIndex("left");                               // New left leaf
+    final Layout.Variable F2 = leafIndex("right");                              // New right root
+    leafSplitRoot(F1, F2);
    }
 
   void leafSplit(Layout.Variable target, Layout.Variable source)                // Source leaf, target leaf. After the leaf has been split the upper half will appear in the source and the loweer half in the target
@@ -451,8 +498,7 @@ class Mjaf extends BitMachine                                                   
       branchPush (target, kn);                                                  // Save key, next pair
      }
     branchShift(source, kn);                                                    // Current key, next pair
-    branchSetTopNext(target,                                                    // Copy in the new top node
-      kn.asLayout().get("branchNext").toVariable());
+    branchSetTopNext(target, kn.asLayout().get("branchNext").toVariable());     // Copy in the new top node
    }
 
   void branchSplitRoot(Layout.Variable F1, Layout.Variable F2)                  // Split the root when it is a branch
@@ -478,6 +524,12 @@ class Mjaf extends BitMachine                                                   
     branchSetTopNext(root, F2);
     copy(rkn.asLayout().get("branchNext"), F1);                                 // Left next refers to new left branch
     branchPush (root, rkn);                                                     // Save root key, next pair
+   }
+
+  void branchSplitRoot()                                                        // Split the root when it is a branch
+   {final Layout.Variable F1 = leafIndex("left");                               // New left leaf
+    final Layout.Variable F2 = leafIndex("right");                              // New right root
+    branchSplitRoot(F1, F2);
    }
 
   void branchJoinable                                                           // Check that we can join two branches
@@ -515,15 +567,15 @@ class Mjaf extends BitMachine                                                   
         new Block()
          {void code()
            {final Block inner = this;
-            final LayoutAble kn = branchKeyNext.duplicate();                        // Work area for transferring key data pairs from the source code to the target node
-            final Layout.Variable index =                                           // Index the key, next pairs in the branch
+            final LayoutAble kn = branchKeyNext.duplicate();                    // Work area for transferring key data pairs from the source code to the target node
+            final Layout.Variable index =                                       // Index the key, next pairs in the branch
                   Layout.createVariable("index", maxKeysPerBranch);
-            setIndex(nodes, nodeIndex);                                             // Index the node to search
-            zero(index);                                                            // Start with the first key, next pair in theleaf
+            setIndex(nodes, nodeIndex);                                         // Index the node to search
+            zero(index);                                                        // Start with the first key, next pair in theleaf
 
-            for (int i = 0; i < maxKeysPerBranch; i++)                              // Check each key
-             {inner.returnIfEqual(index, branchStuck.unary.value);                        // Passed all the valid keys
-              branchGet(nodeIndex, index, kn);                                      // Retrieve key/next pair
+            for (int i = 0; i < maxKeysPerBranch; i++)                          // Check each key
+             {inner.returnIfEqual(index, branchStuck.unary.value);              // Passed all the valid keys
+              branchGet(nodeIndex, index, kn);                                  // Retrieve key/next pair
               copy(result, kn.asLayout().get("branchNext"));
               outer.returnIfLessThan(key, kn.asLayout().get("branchKey"));
               shiftLeftOneByOne(index);
@@ -538,14 +590,12 @@ class Mjaf extends BitMachine                                                   
 //D1 Search                                                                     // Find a key, data pair
 
   void find(Layout.Variable Key, Layout.Bit Found, Layout.Variable Result)      // Find the data associated with a key in a tree
-   {final Layout.Variable nodeIndex = nodeFree.like();                          // Node index variable
-    final Layout.Variable leafIndex = leaf.unary.value.like();                  // Node index variable
-    zero(nodeIndex);                                                            // Start at the root
+   {final Layout.Variable nodeIndex = nodeIndex("nodeIndex");                   // Node index variable
+    final Layout.Variable leafIndex = leafIndex("leafIndex");                   // Leaf key, data pair index variable
 
     new Repeat()
      {void code()
-       {setIndex(nodes, nodeIndex);                                             // Address node
-        returnIfOne(isLeaf);                                                    // Exit when we reach a leaf
+       {returnIfOne(isLeaf(nodeIndex));                                         // Exit when we reach a leaf
         branchFindFirstGreaterOrEqual(nodeIndex, Key, nodeIndex);
        }
      };
@@ -553,24 +603,21 @@ class Mjaf extends BitMachine                                                   
     leafFindIndexOf(nodeIndex, Key, Found, leafIndex);                          // Find index of the specified key, data pair in the specified leaf
     new If(Found)
      {void Then()
-       {final Layout.Structure kd = leafKeyData.like();                         // Key, data pair from the stuck
+       {final LayoutAble kd = makeKeyData(null, null);                          // Key, data pair from leaf
         leafGet(nodeIndex, leafIndex, kd);                                      // Get key, data from stuck
-        copy(Result, kd.get("leafData"));
+        copy(Result, kd.asLayout().get("leafData"));
        }
      };
    }
 
   void findAndInsert                                                            // Find the leaf for a key and insert the indicated key, data pair into if possible, returning true if the insertion was possible else false.
    (Layout.Variable Key, Layout.Variable Data, Layout.Bit Inserted)
-   {final Layout.Variable nodeIndex = nodeFree.like();                          // Node index variable
-    final Layout.Variable leafIndex = leaf.unary.value.like();                  // Leaf key, data index variable
-
-    zero(nodeIndex);                                                            // Start at the root
+   {final Layout.Variable nodeIndex = nodeIndex("nodeIndex");                   // Node index variable
+    final Layout.Variable leafIndex = leafIndex("leafIndex");                   // Leaf key, data index variable
 
     new Repeat()                                                                // Step down through branches to a leaf into which it might be possible to insert the key
      {void code()
-       {setIndex(nodes, nodeIndex);                                             // Address node
-        returnIfOne(isLeaf);                                                    // Exit when we reach a leaf
+       {returnIfOne(isLeaf(nodeIndex));                                         // Exit when we reach a leaf
         branchFindFirstGreaterOrEqual(nodeIndex, Key, nodeIndex);               // Step down to the next node
        }
      };
@@ -578,15 +625,11 @@ class Mjaf extends BitMachine                                                   
     leafFindIndexOf(nodeIndex, Key, Inserted, leafIndex);                       // Find index of the specified key, data pair in the specified leaf
     new IfElse (Inserted)
      {void Then()
-       {final LayoutAble kd = makeKeyData(Key, Data);                           // Key, data pair
-        leafPut(nodeIndex, leafIndex, kd);                                      // Key already present in leaf - update data
+       {leafPut(nodeIndex, leafIndex, makeKeyData(Key, Data));                  // Key already present in leaf - update data
        }
       void Else()                                                               // Key not present
-       {final Layout.Bit full = Layout.createBit("full");                       // Bit indicating fullness of leaf
-        leafIsFull(nodeIndex, full);                                            // Check whether leaf is full
-        new IfElse (full)
-         {void Then() {}                                                        // Leaf is full so no insertion possible
-          void Else()                                                           // Key not found but room in leaf
+       {new If (leafIsNotFull(nodeIndex))
+         {void Then()                                                           // Leaf is not full so insertion is possible
            {leafInsertPair(nodeIndex, Key, Data);                               // Insert a key and the corresponding data into a leaf at the correct position
             ones(Inserted);                                                     // Show we were able to insert or update the key
            }
@@ -606,43 +649,41 @@ class Mjaf extends BitMachine                                                   
 
         final Layout.Bit isLeaf = Layout.createBit("isLeaf");                   // Whether the root is a leaf
         rootIsLeaf(isLeaf);
-        new IfElse (isLeaf))                                                    // Insert into root as a leaf
+        new IfElse (isLeaf)                                                     // Insert into root as a leaf
          {void Then()
            {final Layout.Bit isFull = Layout.createBit("isFull");               // Whether the root is full
             leafIsFull(root, isFull);                                           // Check whether the root is full
             new IfElse(isFull)                                                  // Root is a leaf
              {void Then()                                                       // Insert into root as a leaf which is full
-               {final Layout.Variable l = nodeIndex("left");                    // Left leaf
-                final Layout.Variable r = nodeIndex("right");                   // Right leaf
-                leafSplitRoot(l, r);                                            // Split the root known to be a leaf
+               {leafSplitRoot();                                                // Split the root known to be a leaf
                 final Layout.Variable n = nodeIndex("next");                    // The index of the node into which to insert the key, data pair
                 branchFindFirstGreaterOrEqual(root, Key, n);                    // Choose the leaf in which to insert the key
-                leafPut
-                 final Leaf   l = r.split();                                             // New left hand side of root
-                final Key    k = l.splitKey();                                          // Splitting key
-                final Branch b = new Branch(new Node(r.index));                         // New root with old root to right
-                b.put(k, new Node(l));                                                  // Insert left hand node all of whose elements are less than the first element of what was the root
-                final Leaf f = keyName.lessThanOrEqual(k) ? l : r;                      // Choose leaf
-                f.put(keyName, dataValue);                                              // Place in leaf
-                b.setRoot();                                                            // The root now has just one entry in it - the splitting eky
+                leafInsertPair(n, Key, Data);                                   // Insertion is possible because the leaf was just split out of the root and so must have free space
                }
               void Else()                                                       // Still room in the root while it is is a leaf
-               {r.put(Key, Data);                                               // Still room in the root while it is is a leaf
+               {leafInsertPair(root, Key, Data);                                // Insertion is possible because the leaf is not full
                }
-             }
+             };
             returnRegardless();
            }
           void Else()
-           {new Node().branch().splitRoot();                                       // Split full root which is a branch not a leaf
+           {branchSplitRoot();                                                  // Split full root which is a branch not a leaf
            }
          };
 
-        Branch p = new Node().branch();                                             // The root has already been split so the parent child relationship will be established
-        Node   q = p;                                                               // Child of parent
+        final Layout.Variable p = nodeIndex("p");                               // The root is known to be a branch because if it were a leaf we would have either inserted into the leaf or split it.
 
-        for(int i = 0; i < 999; ++i)                                                // Step down through tree to find the required leaf, splitting as we go
-         {if (q.isLeaf()) break;                                                    // Stepped to a leaf
+        new Repeat()                                                            // Step down through tree to find the required leaf, splitting as we go
+         {final Layout.Variable q = nodeIndex("q");                             // Next step down
+          branchFindFirstGreaterOrEqual(p, Key, q);                             // Step down to next child
+          final Layout.Bit isLeaf = Layout.createBit("isLeaf");                // Check whether next child is a leaf
+          isLeaf(q, isLeaf);
+          returnIfOne(isLeaf);                                                  // Stepped to a leaf
+
           final Branch b = q.branch();
+
+          final Layout.Bit isFull = Layout.createBit("isFull");                 // Check whether the chil;d is full and thus needs to be split
+          branchIsFull(q, isFull);
 
           if (b.isFull())                                                           // Split the branch because it is full and we might need to insert below it requiring a slot in this node
            {final Key    k = b.splitKey();                                          // Splitting key
@@ -670,7 +711,7 @@ class Mjaf extends BitMachine                                                   
          }
         else l.put(keyName, dataValue);                                             // On a leaf that is not full so we can insert directly
        } // code
-     } // block
+     }; // block
    } // put
 
 //D1 Deletion                                                                   // Delete a key from a Btree
