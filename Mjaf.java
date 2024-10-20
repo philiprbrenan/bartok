@@ -336,7 +336,7 @@ class Mjaf extends BitMachine                                                   
       void Else()
        {leafPush(NodeIndex, kd);                                                // Append key, data pair to leaf
        }
-    };
+     };
    }
 
   void leafFirstGreaterThanOrEqual(Layout.Variable NodeIndex,                   // Find the index of the first key in a leaf that is greater than or equal to the specified key or set found to be false if such a key cannot be found becuase all the keys in the leaf are less than the search key
@@ -564,10 +564,7 @@ class Mjaf extends BitMachine                                                   
    (Layout.Variable Key, Layout.Variable Data, Layout.Bit Inserted)
    {final Layout.Variable nodeIndex = nodeFree.like();                          // Node index variable
     final Layout.Variable leafIndex = leaf.unary.value.like();                  // Leaf key, data index variable
-    final LayoutAble             kd = leafKeyData.duplicate();                  // Key, data pair
 
-    copy(kd.asLayout().get("leafKey"),  Key);                                   // Copy key
-    copy(kd.asLayout().get("leafData"), Data);                                  // Copy data
     zero(nodeIndex);                                                            // Start at the root
 
     new Repeat()                                                                // Step down through branches to a leaf into which it might be possible to insert the key
@@ -581,7 +578,8 @@ class Mjaf extends BitMachine                                                   
     leafFindIndexOf(nodeIndex, Key, Inserted, leafIndex);                       // Find index of the specified key, data pair in the specified leaf
     new IfElse (Inserted)
      {void Then()
-       {leafPut(nodeIndex, leafIndex, kd);                                      // Key already present in leaf - update data
+       {final LayoutAble kd = makeKeyData(Key, Data);                           // Key, data pair
+        leafPut(nodeIndex, leafIndex, kd);                                      // Key already present in leaf - update data
        }
       void Else()                                                               // Key not present
        {final Layout.Bit full = Layout.createBit("full");                       // Bit indicating fullness of leaf
@@ -589,16 +587,8 @@ class Mjaf extends BitMachine                                                   
         new IfElse (full)
          {void Then() {}                                                        // Leaf is full so no insertion possible
           void Else()                                                           // Key not found but room in leaf
-           {leafFirstGreaterThanOrEqual(nodeIndex, Key, leafIndex, Inserted);   // Find key to insert before
-            new IfElse (Inserted)
-             {void Then()
-               {leafInsert(nodeIndex, leafIndex, kd);                           // Insert key, data pair into leaf
-               }
-              void Else()
-               {leafPush(nodeIndex, kd);                                        // Append key, data pair to leaf
-                ones(Inserted);
-               }
-             };
+           {leafInsertPair(nodeIndex, Key, Data);                               // Insert a key and the corresponding data into a leaf at the correct position
+            ones(Inserted);                                                     // Show we were able to insert or update the key
            }
         };
       }
