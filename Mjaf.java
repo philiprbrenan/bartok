@@ -632,7 +632,7 @@ class Mjaf extends BitMachine                                                   
    }
 
   Layout.Variable branchFindFirstGreaterOrEqualIndex                            // Assuming the branch is not full, find the index for the first key in a branch that is greater than or equal to the specified key or else return all ones if no such key exists.
-   (Layout.Variable nodeIndex, Layout.Variable key)                             // Branch and key
+   (Layout.Variable NodeIndex, Layout.Variable Key)                             // Branch and key
    {final Layout.Variable result = branchIndex();
      new Block()
      {void code()
@@ -643,13 +643,13 @@ class Mjaf extends BitMachine                                                   
             final LayoutAble kn = makeKeyNext();                                // Work area for transferring key data pairs from the source code to the target node
             final Layout.Variable index = branchIndex();                        // Index the key, next pairs in the branch
 
-            setIndex(nodes, nodeIndex);                                         // Index the node to search
+            setIndex(nodes, NodeIndex);                                         // Index the node to search
 
             for (int i = 0; i < maxKeysPerBranch; i++)                          // Check each key
              {inner.returnIfEqual(index, branchStuck.unary.value);              // Passed all the valid keys
-              branchGet(nodeIndex, index, kn);                                  // Retrieve key/next pair
+              branchGet(NodeIndex, index, kn);                                  // Retrieve key/next pair
               copy(result, index);
-              outer.returnIfLessThan(key, keyFromKeyNext(kn));
+              outer.returnIfGreaterThanOrEqual(keyFromKeyNext(kn), Key);
               shiftLeftOneByOne(index);
              }
            }
@@ -3087,16 +3087,54 @@ V    0     2                  2   next
   static void test_branch_greater_than_or_equal_index()                         // Find index of first key greater than or equal to the search key
    {TestBranchTree  t = new TestBranchTree();                                   // Create a test tree
     Mjaf            m = t.mjaf;                                                 // Bit machine to process the tree
-    Layout.Variable k = m.makeKey (8);                                          // Key to locate
-    Layout.Variable n = m.makeNext(0);                                          // Located next node index
+
+    //stop(m.layout);
+    t.ok("""
+S  222    47                              branch     nodes.node.branchOrLeaf.branch
+S  222    45                                branchStuck     nodes.node.branchOrLeaf.branch.branchStuck
+A  222    42      0                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  222    14                  7                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  222    12                  7                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  234     2                  0                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A  236    42      1                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  236    14               4104                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  236    12                  8                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  248     2                  1                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A  250    42      2                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  250    14               8201                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  250    12                  9                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  262     2                  2                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+V  264     3                  7               unary     nodes.node.branchOrLeaf.branch.branchStuck.unary
+""");
 
     m.copy(t.nodeIndex, 2);
-    m.branchFindFirstGreaterOrEqual(t.nodeIndex, k, n);
+    Layout.Variable k = m.makeKey(6);                                           // Key to locate
+    Layout.Variable i = m.branchFindFirstGreaterOrEqualIndex(t.nodeIndex, k);   // Find index of key
     m.execute();
-    //stop(k, n);
-    n.ok("""
+    //stop(i);
+    i.ok("""
 T   At  Wide  Index       Value   Field name
-V    0     2                  2   next
+V    0     3                  0   branchIndex
+""");
+
+    m.reset();
+    m.copy(k, 7);
+    i = m.branchFindFirstGreaterOrEqualIndex(t.nodeIndex, k);                   // Find index of key
+    m.execute();
+    //stop(i);
+    i.ok("""
+T   At  Wide  Index       Value   Field name
+V    0     3                  0   branchIndex
+""");
+
+    m.reset();
+    m.copy(k, 8);
+    i = m.branchFindFirstGreaterOrEqualIndex(t.nodeIndex, k);                   // Find index of key
+    m.execute();
+    //stop(i);
+    i.ok("""
+T   At  Wide  Index       Value   Field name
+V    0     3                  1   branchIndex
 """);
    }
 
@@ -3607,7 +3645,8 @@ V   12     2                  3     branchNext
    }
 
   static void newTests()                                                        // Tests being worked on
-   {oldTests();
+   {//oldTests();
+    test_branch_greater_than_or_equal_index();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
