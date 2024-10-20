@@ -3,7 +3,7 @@
 // Philip R Brenan at appaapps dot com, Appa Apps Ltd Inc., 2024
 //------------------------------------------------------------------------------
 package com.AppaApps.Silicon;                                                   // Design, simulate and layout  a binary tree on a silicon chip.
-
+// All Layouts used as parameters opught to be length checked
 class Mjaf extends BitMachine                                                   // Btree algorithm but with data stored only in the leaves to facilitate deletion without complicating search or insertion. The branches (interior nodes) have an odd number of keys to make the size of a branch as close to that of a leaf as possible to simplify memory management.
  {final int bitsPerKey;                                                         // Number of bits in key
   final int bitsPerData;                                                        // Number of bits in data
@@ -159,6 +159,44 @@ class Mjaf extends BitMachine                                                   
     copy(result, isBranch);                                                     // Get branch flag
    }
 
+  Layout.Variable nodeIndex(String name)                                        // Create a node index with the specified name
+   {return Layout.createVariable(name, bitsPerNext);
+   }
+
+  Layout.Variable leafIndex(String name)                                        // Create a leaf index with the specified name
+   {return Layout.createVariable(name, maxKeysPerLeaf);
+   }
+
+  Layout.Variable branchIndex(String name)                                      // Create a branch index with the specified name
+   {return Layout.createVariable(name, maxKeysPerBranch);
+   }
+
+  Layout.Variable makeKey(int value)                                            // Create a key with the specified value
+   {final Layout.Variable key = Layout.createVariable("key", bitsPerKey);
+    copy(key, value);
+    return key;
+   }
+
+  Layout.Variable makeData(int value)                                           // Create a data item with the specified value
+   {final Layout.Variable data = Layout.createVariable("data", bitsPerData);
+    copy(data, value);
+    return data;
+   }
+
+  LayoutAble makeKeyData(Layout.Variable Key, Layout.Variable Data)             // Create a key, data pair for insertion into a leaf
+   {final LayoutAble kd = leafKeyData.duplicate();                              // Key, data pair
+    if (Key  != null) copy(kd.asLayout().get("leafKey"),  Key);                 // Copy key if requested
+    if (Data != null) copy(kd.asLayout().get("leafData"), Data);                // Copy data if requested
+    return kd;
+   }
+
+  LayoutAble makeKeyNext(Layout.Variable Key, Layout.Variable Next)             // Create a key, next  pair for insertion into a branch
+   {final LayoutAble kn = branchKeyNext.duplicate();                            // Key, next pair
+    if (Key  != null) copy(kn.asLayout().get("branchKey"),  Key);               // Copy key if requested
+    if (Next != null) copy(kn.asLayout().get("branchNext"), Next);              // Copy data if requested
+    return kn;
+   }
+
 //D1 Leaf                                                                       // Process a leaf
 
   void leafMark(Layout.Variable iLeaf)                                          // Mark a node as a leaf not as a branch
@@ -284,8 +322,25 @@ class Mjaf extends BitMachine                                                   
     free(source);                                                               // Free the leaf that was joined
    }
 
-  void leafFirstGreaterThanOrEqual(Layout.Variable NodeIndex,                   // Find the index of the first key in a leaf that is greater than or equal to the specified key or set found to be false if such a key cannot be found
-   Layout.Variable Key, Layout.Variable Leaf, Layout.Bit Result)
+  void leafInsertPair(Layout.Variable NodeIndex,                                // Insert a key and the corresponding data into a leaf at the correct position
+    Layout.Variable Key, Layout.Variable Data)
+   {final Layout.Variable leafIndex = leafIndex("leafIndex");
+    final Layout.Bit         insert = Layout.createBit("insert");
+    final LayoutAble             kd = makeKeyData(Key, Data);                   // Key, data pair to insert
+
+    leafFirstGreaterThanOrEqual(NodeIndex, Key, leafIndex, insert);             // Find key to insert before
+    new IfElse (insert)
+     {void Then()
+       {leafInsert(NodeIndex, leafIndex, kd);                                   // Insert key, data pair into leaf
+       }
+      void Else()
+       {leafPush(NodeIndex, kd);                                                // Append key, data pair to leaf
+       }
+    };
+   }
+
+  void leafFirstGreaterThanOrEqual(Layout.Variable NodeIndex,                   // Find the index of the first key in a leaf that is greater than or equal to the specified key or set found to be false if such a key cannot be found becuase all the keys in the leaf are less than the search key
+    Layout.Variable Key, Layout.Variable Leaf, Layout.Bit Result)
    {new Block()
      {void code()
        {final Block outer = this;
@@ -563,23 +618,35 @@ class Mjaf extends BitMachine                                                   
         rootIsLeaf(isLeaf);
         new IfElse (isLeaf))                                                    // Insert into root as a leaf
          {void Then()
-           {final Leaf r = new Node().leaf();                                         // Root is a leaf
-            if (!r.isFull()) r.put(keyName, dataValue);                               // Still room in the root while it is is a leaf
-            else                                                                      // Insert into root as a leaf which is full
-             {final Leaf   l = r.split();                                             // New left hand side of root
-              final Key    k = l.splitKey();                                          // Splitting key
-              final Branch b = new Branch(new Node(r.index));                         // New root with old root to right
-              b.put(k, new Node(l));                                                  // Insert left hand node all of whose elements are less than the first element of what was the root
-              final Leaf f = keyName.lessThanOrEqual(k) ? l : r;                      // Choose leaf
-              f.put(keyName, dataValue);                                              // Place in leaf
-              b.setRoot();                                                            // The root now has just one entry in it - the splitting eky
+           {final Layout.Bit isFull = Layout.createBit("isFull");               // Whether the root is full
+            leafIsFull(root, isFull);                                           // Check whether the root is full
+            new IfElse(isFull)                                                  // Root is a leaf
+             {void Then()                                                       // Insert into root as a leaf which is full
+               {final Layout.Variable l = nodeIndex("left");                    // Left leaf
+                final Layout.Variable r = nodeIndex("right");                   // Right leaf
+                leafSplitRoot(l, r);                                            // Split the root known to be a leaf
+                final Layout.Variable n = nodeIndex("next");                    // The index of the node into which to insert the key, data pair
+                branchFindFirstGreaterOrEqual(root, Key, n);                    // Choose the leaf in which to insert the key
+                leafPut
+                 final Leaf   l = r.split();                                             // New left hand side of root
+                final Key    k = l.splitKey();                                          // Splitting key
+                final Branch b = new Branch(new Node(r.index));                         // New root with old root to right
+                b.put(k, new Node(l));                                                  // Insert left hand node all of whose elements are less than the first element of what was the root
+                final Leaf f = keyName.lessThanOrEqual(k) ? l : r;                      // Choose leaf
+                f.put(keyName, dataValue);                                              // Place in leaf
+                b.setRoot();                                                            // The root now has just one entry in it - the splitting eky
+               }
+              void Else()                                                       // Still room in the root while it is is a leaf
+               {r.put(Key, Data);                                               // Still room in the root while it is is a leaf
+               }
              }
-            return;
+            returnRegardless();
            }
           void Else()
            {new Node().branch().splitRoot();                                       // Split full root which is a branch not a leaf
            }
          };
+
         Branch p = new Node().branch();                                             // The root has already been split so the parent child relationship will be established
         Node   q = p;                                                               // Child of parent
 
@@ -3302,6 +3369,93 @@ B   17     1                  1         isBranch     nodes.node.isBranch
 """);
    }
 
+  static void test_leaf_insert_pair()                                           // Insert a key and the corresponding data into a leaf at the correct position
+   {TestLeafTree     t = new TestLeafTree();                                    // Create a test tree
+    Mjaf             m = t.mjaf;                                                // Bit machine to process the tree
+
+    //stop(m.layout);
+    t.ok("""
+S  222   100                              leaf     nodes.node.branchOrLeaf.leaf
+A  222    96      0                         array     nodes.node.branchOrLeaf.leaf.array
+S  222    24              73745               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  222    12                 17                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  234    12                 18                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  246    96      1                         array     nodes.node.branchOrLeaf.leaf.array
+S  246    24              81939               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  246    12                 19                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  258    12                 20                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  270    96      2                         array     nodes.node.branchOrLeaf.leaf.array
+S  270    24              90133               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  270    12                 21                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  282    12                 22                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  294    96      3                         array     nodes.node.branchOrLeaf.leaf.array
+S  294    24              98327               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  294    12                 23                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  306    12                 24                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+V  318     4                 15             unary     nodes.node.branchOrLeaf.leaf.unary
+""");
+
+    if (true)
+     {Layout.Variable key  = m.makeKey(6);
+      Layout.Variable data = m.makeKey(6);
+      m.leafSplitRoot(t.sourceIndex, t.targetIndex);
+      m.leafInsertPair(t.targetIndex, key, data);
+      m.execute();
+
+      //stop(m.layout);
+      t.ok("""
+S  222   100                              leaf     nodes.node.branchOrLeaf.leaf
+A  222    96      0                         array     nodes.node.branchOrLeaf.leaf.array
+S  222    24              24581               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  222    12                  5                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  234    12                  6                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  246    96      1                         array     nodes.node.branchOrLeaf.leaf.array
+S  246    24              24582               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  246    12                  6                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  258    12                  6                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  270    96      2                         array     nodes.node.branchOrLeaf.leaf.array
+S  270    24              32775               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  270    12                  7                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  282    12                  8                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  294    96      3                         array     nodes.node.branchOrLeaf.leaf.array
+S  294    24              90133               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  294    12                 21                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  306    12                 22                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+V  318     4                  7             unary     nodes.node.branchOrLeaf.leaf.unary
+""");
+     }
+
+    if (true)
+     {m.reset();
+      Layout.Variable key  = m.makeKey(8);
+      Layout.Variable data = m.makeKey(8);
+      m.leafInsertPair(t.targetIndex, key, data);
+      m.execute();
+
+    //stop(m.layout);
+      t.ok("""
+S  222   100                              leaf     nodes.node.branchOrLeaf.leaf
+A  222    96      0                         array     nodes.node.branchOrLeaf.leaf.array
+S  222    24              24581               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  222    12                  5                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  234    12                  6                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  246    96      1                         array     nodes.node.branchOrLeaf.leaf.array
+S  246    24              24582               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  246    12                  6                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  258    12                  6                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  270    96      2                         array     nodes.node.branchOrLeaf.leaf.array
+S  270    24              32775               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  270    12                  7                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  282    12                  8                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  294    96      3                         array     nodes.node.branchOrLeaf.leaf.array
+S  294    24              32776               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  294    12                  8                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  306    12                  8                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+V  318     4                 15             unary     nodes.node.branchOrLeaf.leaf.unary
+""");
+     }
+   }
+
   static void oldTests()                                                        // Tests thought to be in good shape
    {create_leaf_tree();                 create_branch_tree();
     test_leaf_make();                   test_branch_make();
@@ -3321,11 +3475,11 @@ B   17     1                  1         isBranch     nodes.node.isBranch
 
     test_find();
     test_find_and_insert();
+    test_leaf_insert_pair();
    }
 
   static void newTests()                                                        // Tests being worked on
    {oldTests();
-    test_root_is_leaf_or_branch();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
