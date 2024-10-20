@@ -187,13 +187,17 @@ class Mjaf extends BitMachine                                                   
    {return Layout.createVariable(name, bitsPerNext);
    }
 
+  Layout.Variable nodeIndex() {return nodeIndex("nodeIndex");}                  // Create a node index with a default name
+
   Layout.Variable leafIndex(String name)                                        // Create a leaf index with the specified name
    {return Layout.createVariable(name, maxKeysPerLeaf);
    }
+  Layout.Variable leafIndex() {return leafIndex("leafIndex");}                  // Create a leaf index with a default name
 
   Layout.Variable branchIndex(String name)                                      // Create a branch index with the specified name
    {return Layout.createVariable(name, maxKeysPerBranch);
    }
+  Layout.Variable branchIndex() {return branchIndex("branchIndex");}            // Create a branch index with a default name
 
   Layout.Variable makeKey(int value)                                            // Create a key with the specified value
    {final Layout.Variable key = Layout.createVariable("key", bitsPerKey);
@@ -214,12 +218,17 @@ class Mjaf extends BitMachine                                                   
     return kd;
    }
 
+  LayoutAble makeKeyData() {return makeKeyData(null, null);}                    // Create a key, data pair for insertion into a leaf without loading the fields
+
   LayoutAble makeKeyNext(Layout.Variable Key, Layout.Variable Next)             // Create a key, next  pair for insertion into a branch
    {final LayoutAble kn = branchKeyNext.duplicate();                            // Key, next pair
     if (Key  != null) copy(kn.asLayout().get("branchKey"),  Key);               // Copy key if requested
     if (Next != null) copy(kn.asLayout().get("branchNext"), Next);              // Copy data if requested
     return kn;
    }
+
+  LayoutAble makeKeyNext() {return makeKeyNext(null, null);}                    // Create a key, next  pair for insertion into a branch without loading the fields
+
 
 //D1 Leaf                                                                       // Process a leaf
 
@@ -371,7 +380,7 @@ class Mjaf extends BitMachine                                                   
 
   void leafInsertPair(Layout.Variable NodeIndex,                                // Insert a key and the corresponding data into a leaf at the correct position
     Layout.Variable Key, Layout.Variable Data)
-   {final Layout.Variable leafIndex = leafIndex("leafIndex");
+   {final Layout.Variable leafIndex = leafIndex();
     final Layout.Bit         insert = Layout.createBit("insert");
     final LayoutAble             kd = makeKeyData(Key, Data);                   // Key, data pair to insert
 
@@ -567,11 +576,10 @@ class Mjaf extends BitMachine                                                   
         new Block()
          {void code()
            {final Block inner = this;
-            final LayoutAble kn = branchKeyNext.duplicate();                    // Work area for transferring key data pairs from the source code to the target node
-            final Layout.Variable index =                                       // Index the key, next pairs in the branch
-                  Layout.createVariable("index", maxKeysPerBranch);
+            final LayoutAble kn = makeKeyNext();                                // Work area for transferring key data pairs from the source code to the target node
+            final Layout.Variable index = branchIndex("branchIndex");           // Index the key, next pairs in the branch
+
             setIndex(nodes, nodeIndex);                                         // Index the node to search
-            zero(index);                                                        // Start with the first key, next pair in theleaf
 
             for (int i = 0; i < maxKeysPerBranch; i++)                          // Check each key
              {inner.returnIfEqual(index, branchStuck.unary.value);              // Passed all the valid keys
@@ -590,8 +598,8 @@ class Mjaf extends BitMachine                                                   
 //D1 Search                                                                     // Find a key, data pair
 
   void find(Layout.Variable Key, Layout.Bit Found, Layout.Variable Result)      // Find the data associated with a key in a tree
-   {final Layout.Variable nodeIndex = nodeIndex("nodeIndex");                   // Node index variable
-    final Layout.Variable leafIndex = leafIndex("leafIndex");                   // Leaf key, data pair index variable
+   {final Layout.Variable nodeIndex = nodeIndex();                              // Node index variable
+    final Layout.Variable leafIndex = leafIndex();                              // Leaf key, data pair index variable
 
     new Repeat()
      {void code()
@@ -603,7 +611,7 @@ class Mjaf extends BitMachine                                                   
     leafFindIndexOf(nodeIndex, Key, Found, leafIndex);                          // Find index of the specified key, data pair in the specified leaf
     new If(Found)
      {void Then()
-       {final LayoutAble kd = makeKeyData(null, null);                          // Key, data pair from leaf
+       {final LayoutAble kd = makeKeyData();                                    // Key, data pair from leaf
         leafGet(nodeIndex, leafIndex, kd);                                      // Get key, data from stuck
         copy(Result, kd.asLayout().get("leafData"));
        }
@@ -612,8 +620,8 @@ class Mjaf extends BitMachine                                                   
 
   void findAndInsert                                                            // Find the leaf for a key and insert the indicated key, data pair into if possible, returning true if the insertion was possible else false.
    (Layout.Variable Key, Layout.Variable Data, Layout.Bit Inserted)
-   {final Layout.Variable nodeIndex = nodeIndex("nodeIndex");                   // Node index variable
-    final Layout.Variable leafIndex = leafIndex("leafIndex");                   // Leaf key, data index variable
+   {final Layout.Variable nodeIndex = nodeIndex();                              // Node index variable
+    final Layout.Variable leafIndex = leafIndex();                              // Leaf key, data index variable
 
     new Repeat()                                                                // Step down through branches to a leaf into which it might be possible to insert the key
      {void code()
