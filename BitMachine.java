@@ -1908,7 +1908,7 @@ B    2     1                  1     c     c
    }
 
   static void newTests()                                                        // Tests being worked on
-   {//oldTests();
+   {oldTests();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
