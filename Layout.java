@@ -88,6 +88,10 @@ public class Layout extends Test implements LayoutAble                          
    {return get(name).duplicate().asField().toVariable();
    }
 
+  Bit dupBit(String name)                                                       // Create a variable like the named one in the layout
+   {return get(name).duplicate().asField().toBit();
+   }
+
 //D1 Bit Memory                                                                 // A bit is the element from which memory is constructed.
 
   void    set(int i, Boolean b) {       memory.setElementAt(b, i);}             // Set a bit in the sample memory. This method should be overridden to drive a more useful memory that captures more information about its bits than just their values.
