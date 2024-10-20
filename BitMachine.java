@@ -838,6 +838,12 @@ public class BitMachine extends Test implements LayoutAble                      
 
     abstract void code();                                                       // The code of the block
 
+    class ReturnRegardless extends Branch                                       // Return regardless
+     {ReturnRegardless() {super(null); name = "ReturnRegardless";}             // Forward branch to a come from instruction
+      void action()      {setInstructionIndex(end.position);}                   // Set instruction pointer to continue execution at the next instruction
+     }
+    ReturnRegardless returnRegardless() {return new ReturnRegardless();}        // Leave the block regardless
+
 //D3 Simplex tests                                                              // Exit a block depending on the result of testing the content of a variable
 
     class ReturnIfAllZero extends Branch                                        // Branch if all the bits in a field are zero
@@ -1849,6 +1855,34 @@ V   48     4                  0     d     d
     m.reset();  m.copy(d, 3); m.setIndex(A, d); m.copy(d, c); m.execute(); d.ok(6);
    }
 
+  static void test_return_regardless()
+   {Layout           l = new Layout();
+    Layout.Bit       a = l.bit      ("a");
+    Layout.Bit       b = l.bit      ("b");
+    Layout.Bit       c = l.bit      ("c");
+    Layout.Structure S = l.structure("S", a, b, c);
+    l.layout(S);
+
+    BitMachine m = new BitMachine();
+    m.new Block()
+     {void code()
+       {m.copy(a, 1);
+        returnRegardless();
+        m.copy(b, 2);
+       }
+     };
+    m.copy(c, 3);
+    m.execute();
+    //stop(l);
+    l.ok("""
+T   At  Wide  Index       Value   Field name
+S    0     3                  5   S
+B    0     1                  1     a     a
+B    1     1                  0     b     b
+B    2     1                  1     c     c
+""");
+   }
+
   static void oldTests()                                                        // Tests thought to be in good shape
    {test_zero_and_ones();
     test_invert();
@@ -1870,10 +1904,11 @@ V   48     4                  0     d     d
     test_inc_dec();
     test_unary_filled();
     test_set_index();
+    test_return_regardless();
    }
 
   static void newTests()                                                        // Tests being worked on
-   {oldTests();
+   {//oldTests();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
