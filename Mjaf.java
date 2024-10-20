@@ -551,7 +551,6 @@ class Mjaf extends BitMachine                                                   
   }
 
 //D1 Insertion                                                                  // Insert keys and data into the Btree
-
 /*
   void put(Layout.Variable Key, Layout.Variable Data)                           // Insert a new key, data pair into the Btree
    {new Block()
@@ -560,22 +559,27 @@ class Mjaf extends BitMachine                                                   
         findAndInsert(Key, Data, inserted);                                     // Do a fast insert if possible
         returnIfAllOnes(inserted);                                              // Fast inserted succeded
 
-        if (new Node().isLeaf())                                                    // Insert into root as a leaf
-         {final Leaf r = new Node().leaf();                                         // Root is a leaf
-          if (!r.isFull()) r.put(keyName, dataValue);                               // Still room in the root while it is is a leaf
-          else                                                                      // Insert into root as a leaf which is full
-           {final Leaf   l = r.split();                                             // New left hand side of root
-            final Key    k = l.splitKey();                                          // Splitting key
-            final Branch b = new Branch(new Node(r.index));                         // New root with old root to right
-            b.put(k, new Node(l));                                                  // Insert left hand node all of whose elements are less than the first element of what was the root
-            final Leaf f = keyName.lessThanOrEqual(k) ? l : r;                      // Choose leaf
-            f.put(keyName, dataValue);                                              // Place in leaf
-            b.setRoot();                                                            // The root now has just one entry in it - the splitting eky
+        final Layout.Bit isLeaf = Layout.createBit("isLeaf");                   // Whether the root is a leaf
+        rootIsLeaf(isLeaf);
+        new IfElse (isLeaf))                                                    // Insert into root as a leaf
+         {void Then()
+           {final Leaf r = new Node().leaf();                                         // Root is a leaf
+            if (!r.isFull()) r.put(keyName, dataValue);                               // Still room in the root while it is is a leaf
+            else                                                                      // Insert into root as a leaf which is full
+             {final Leaf   l = r.split();                                             // New left hand side of root
+              final Key    k = l.splitKey();                                          // Splitting key
+              final Branch b = new Branch(new Node(r.index));                         // New root with old root to right
+              b.put(k, new Node(l));                                                  // Insert left hand node all of whose elements are less than the first element of what was the root
+              final Leaf f = keyName.lessThanOrEqual(k) ? l : r;                      // Choose leaf
+              f.put(keyName, dataValue);                                              // Place in leaf
+              b.setRoot();                                                            // The root now has just one entry in it - the splitting eky
+             }
+            return;
            }
-          return;
-         }
-        else new Node().branch().splitRoot();                                       // Split full root which is a branch not a leaf
-
+          void Else()
+           {new Node().branch().splitRoot();                                       // Split full root which is a branch not a leaf
+           }
+         };
         Branch p = new Node().branch();                                             // The root has already been split so the parent child relationship will be established
         Node   q = p;                                                               // Child of parent
 
