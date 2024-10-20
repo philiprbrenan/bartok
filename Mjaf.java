@@ -220,6 +220,21 @@ class Mjaf extends BitMachine                                                   
 
   LayoutAble makeKeyData() {return makeKeyData(null, null);}                    // Create a key, data pair for insertion into a leaf without loading the fields
 
+  Layout.Variable keyFromKeyData(LayoutAble kd)                                 // Get the key from a key, data pair
+   {return kd.asLayout().get("leafKey").toVariable();
+   }
+
+  Layout.Variable dataFromKeyData(LayoutAble kd)                                // Get the data from a key, data pair
+   {return kd.asLayout().get("leafData").toVariable();
+   }
+
+
+  Layout.Variable makeNext(int value)                                           // Create a next item with the specified value
+   {final Layout.Variable next = Layout.createVariable("next", bitsPerNext);
+    copy(next, value);
+    return next;
+   }
+
   LayoutAble makeKeyNext(Layout.Variable Key, Layout.Variable Next)             // Create a key, next  pair for insertion into a branch
    {final LayoutAble kn = branchKeyNext.duplicate();                            // Key, next pair
     if (Key  != null) copy(kn.asLayout().get("branchKey"),  Key);               // Copy key if requested
@@ -229,6 +244,14 @@ class Mjaf extends BitMachine                                                   
 
   LayoutAble makeKeyNext() {return makeKeyNext(null, null);}                    // Create a key, next  pair for insertion into a branch without loading the fields
 
+
+  Layout.Variable keyFromKeyNext(LayoutAble kn)                                 // Get the key from a key, next pair
+   {return kn.asLayout().get("branchKey").toVariable();
+   }
+
+  Layout.Variable nextFromKeyNext(LayoutAble kn)                                // Get the next node from a key, next pair
+   {return kn.asLayout().get("branchNext").toVariable();
+   }
 
 //D1 Leaf                                                                       // Process a leaf
 
@@ -297,6 +320,12 @@ class Mjaf extends BitMachine                                                   
     leaf.elementAt(out, leafSplitIdx);
    }
 
+  LayoutAble leafSplitKey(Layout.Variable index)                                // Return splitting key in a leaf
+   {final LayoutAble out = makeKeyNext();
+    leafSplitKey(index, out);
+    return out;
+   }
+
   void leafPush(Layout.Variable index, LayoutAble kd)                           // Push a key, data pair onto the indicated leaf
    {setIndex(nodes, index);
     leaf.push(kd);
@@ -334,9 +363,8 @@ class Mjaf extends BitMachine                                                   
      }
 
     branchSetTopNext(root, F2);                                                 // Top of root refers to right child
-    copy(rkn.asLayout().get("branchKey"),                                       // Load key
-         rkd.asLayout().get("leafKey"));
-    copy(rkn.asLayout().get("branchNext"), F1);                                 // First root key refers to left child
+    copy( keyFromKeyNext(rkn), keyFromKeyData(rkd));                            // Save key
+    copy(nextFromKeyNext(rkn), F1);                                             // First root key refers to left child
     branchPush (root,  rkn);                                                    // Save root key, next pair
     branchMark(root);                                                           // The root is now a branch
    }
@@ -356,6 +384,14 @@ class Mjaf extends BitMachine                                                   
       leafPush (target, kd);                                                    // Save key, data pair
      }
    }
+
+  Layout.Variable leafSplit(Layout.Variable source)                             // Split the source leaf. After the leaf has been split the upper half will appear in the source and the loweer half in the target
+   {Layout.Variable target = nodeIndex("target");
+    leafSplit(target, source);
+    return target;
+   }
+
+//    }
 
   void leafJoinable                                                             // Check that we can join two leaves
    (Layout.Variable target, Layout.Variable source, Layout.Bit result)
@@ -507,7 +543,7 @@ class Mjaf extends BitMachine                                                   
       branchPush (target, kn);                                                  // Save key, next pair
      }
     branchShift(source, kn);                                                    // Current key, next pair
-    branchSetTopNext(target, kn.asLayout().get("branchNext").toVariable());     // Copy in the new top node
+    branchSetTopNext(target, nextFromKeyNext(kn));                              // Copy in the new top node
    }
 
   void branchSplitRoot(Layout.Variable F1, Layout.Variable F2)                  // Split the root when it is a branch
@@ -529,9 +565,9 @@ class Mjaf extends BitMachine                                                   
      }
 // f2 top = root old top, f1 top = rkn.next, root top = f2, root left = f1
     branchSetTopNext(F2, ort);                                                  // Set top next references for each branch
-    branchSetTopNext(F1, rkn.asLayout().get("branchNext").toVariable());
+    branchSetTopNext(F1, nextFromKeyNext(rkn));
     branchSetTopNext(root, F2);
-    copy(rkn.asLayout().get("branchNext"), F1);                                 // Left next refers to new left branch
+    copy(nextFromKeyNext(rkn), F1);                                             // Left next refers to new left branch
     branchPush (root, rkn);                                                     // Save root key, next pair
    }
 
@@ -557,8 +593,8 @@ class Mjaf extends BitMachine                                                   
    (Layout.Variable target, Layout.Variable key, Layout.Variable source)        // Join the specified branch onto the end of this branch
    {final LayoutAble kn = branchKeyNext.duplicate();                            // Work area for transferring key data pairs from the source code to the target node
 
-    copy(kn.asLayout().get("branchKey"),  key);      setIndex(nodes, source);
-    copy(kn.asLayout().get("branchNext"), topNext);  setIndex(nodes, target);
+    copy( keyFromKeyNext(kn), key);      setIndex(nodes, source);
+    copy(nextFromKeyNext(kn), topNext);  setIndex(nodes, target);
     branchStuck.push(kn);
 
     for (int i = 0; i < branchSplitPoint; i++)                                  // Transfer source keys and next
@@ -577,15 +613,15 @@ class Mjaf extends BitMachine                                                   
          {void code()
            {final Block inner = this;
             final LayoutAble kn = makeKeyNext();                                // Work area for transferring key data pairs from the source code to the target node
-            final Layout.Variable index = branchIndex("branchIndex");           // Index the key, next pairs in the branch
+            final Layout.Variable index = branchIndex();                        // Index the key, next pairs in the branch
 
             setIndex(nodes, nodeIndex);                                         // Index the node to search
 
             for (int i = 0; i < maxKeysPerBranch; i++)                          // Check each key
              {inner.returnIfEqual(index, branchStuck.unary.value);              // Passed all the valid keys
               branchGet(nodeIndex, index, kn);                                  // Retrieve key/next pair
-              copy(result, kn.asLayout().get("branchNext"));
-              outer.returnIfLessThan(key, kn.asLayout().get("branchKey"));
+              copy(result, nextFromKeyNext(kn));
+              outer.returnIfLessThan(key, keyFromKeyNext(kn));
               shiftLeftOneByOne(index);
              }
            }
@@ -593,6 +629,35 @@ class Mjaf extends BitMachine                                                   
         copy(result, topNext);                                                  // The search key is greater than all the keys in the branch so return the top node
        }
      }; // Outer block to exit when we have found the key
+   }
+
+  Layout.Variable branchFindFirstGreaterOrEqualIndex                            // Assuming the branch is not full, find the index for the first key in a branch that is greater than or equal to the specified key or else return all ones if no such key exists.
+   (Layout.Variable nodeIndex, Layout.Variable key)                             // Branch and key
+   {final Layout.Variable result = branchIndex();
+     new Block()
+     {void code()
+       {final Block outer = this;
+        new Block()
+         {void code()
+           {final Block inner = this;
+            final LayoutAble kn = makeKeyNext();                                // Work area for transferring key data pairs from the source code to the target node
+            final Layout.Variable index = branchIndex();                        // Index the key, next pairs in the branch
+
+            setIndex(nodes, nodeIndex);                                         // Index the node to search
+
+            for (int i = 0; i < maxKeysPerBranch; i++)                          // Check each key
+             {inner.returnIfEqual(index, branchStuck.unary.value);              // Passed all the valid keys
+              branchGet(nodeIndex, index, kn);                                  // Retrieve key/next pair
+              copy(result, index);
+              outer.returnIfLessThan(key, keyFromKeyNext(kn));
+              shiftLeftOneByOne(index);
+             }
+           }
+         }; // Inner block in which we search for the key
+        ones(result);
+       }
+     }; // Outer block to exit when we have found the key
+    return result;
    }
 
 //D1 Search                                                                     // Find a key, data pair
@@ -641,19 +706,23 @@ class Mjaf extends BitMachine                                                   
            {leafInsertPair(nodeIndex, Key, Data);                               // Insert a key and the corresponding data into a leaf at the correct position
             ones(Inserted);                                                     // Show we were able to insert or update the key
            }
-        };
-      }
-    };
-  }
+         };
+       }
+     };
+   }
 
-//D1 Insertion                                                                  // Insert keys and data into the Btree
+  Layout.Bit findAndInsert(Layout.Variable Key, Layout.Variable Data)           // Find the leaf for a key and insert the indicated key, data pair into if possible, returning true if the insertion was possible else false.
+   {final Layout.Bit inserted = Layout.createBit("inserted");                   // Whether theinsert succeeded
+    findAndInsert(Key, Data, inserted);                                         // Find the leaf for a key and insert the indicated key, data pair into if possible, returning true if the insertion was possible else false.
+    return inserted;
+   }
+
+//D1 Insertion                                                                  // Insert key, data pairs into the Btree
 /*
   void put(Layout.Variable Key, Layout.Variable Data)                           // Insert a new key, data pair into the Btree
    {new Block()
      {void code()
-       {final Layout.Bit inserted = Layout.createBit("inserted");               // Whether fast insert succeded or not
-        findAndInsert(Key, Data, inserted);                                     // Do a fast insert if possible
-        returnIfAllOnes(inserted);                                              // Fast inserted succeded
+       {returnIfOne(findAndInsert(Key, Data));                                  // Return immediately if fast insert succeeded
 
         final Layout.Bit isLeaf = Layout.createBit("isLeaf");                   // Whether the root is a leaf
         rootIsLeaf(isLeaf);
@@ -1778,7 +1847,7 @@ V  318     4                  0             unary     nodes.node.branchOrLeaf.le
    }
 
   static void test_leaf_make()                                                  // Make a new leaf
-   {TestLeafTree t = new TestLeafTree();                                        // Allocate a new leaf
+   {TestLeafTree t = new TestLeafTree();                                        // Allocate a new leaf treetree tree
     Mjaf     m = t.mjaf;                                                        // Bit machine to process the tree
 
     m.leafMake(t.nodeIndex);                                                    // Choose the node
@@ -2999,7 +3068,23 @@ B    0     1                  1   found
 """);
    }
 
-  static void test_branch_greater_than_or_equal()                               // Find top node associated with  the first key greater than or equal to the search key
+  static void test_branch_greater_than_or_equal()                               // Find next node associated with  the first key greater than or equal to the search key
+   {TestBranchTree  t = new TestBranchTree();                                   // Create a test tree
+    Mjaf            m = t.mjaf;                                                 // Bit machine to process the tree
+    Layout.Variable k = m.makeKey(8);                                           // Key to locate
+    Layout.Variable n = m.makeNext(0);                                          // Located next node index
+
+    m.copy(t.nodeIndex, 2);
+    m.branchFindFirstGreaterOrEqual(t.nodeIndex, k, n);
+    m.execute();
+    //stop(k, n);
+    n.ok("""
+T   At  Wide  Index       Value   Field name
+V    0     2                  2   next
+""");
+   }
+
+  static void test_branch_greater_than_or_equal_index()                         // Find index of first key greater than or equal to the search key
    {TestBranchTree  t = new TestBranchTree();                                   // Create a test tree
     Mjaf            m = t.mjaf;                                                 // Bit machine to process the tree
     Layout.Variable k = m.branchKey.like();                                     // Work area for transferring key
@@ -3436,7 +3521,7 @@ V  318     4                 15             unary     nodes.node.branchOrLeaf.le
 
     if (true)
      {Layout.Variable key  = m.makeKey(6);
-      Layout.Variable data = m.makeKey(6);
+      Layout.Variable data = m.makeData(6);
       m.leafSplitRoot(t.sourceIndex, t.targetIndex);
       m.leafInsertPair(t.targetIndex, key, data);
       m.execute();
@@ -3463,36 +3548,40 @@ V  306    12                 22                 leafData     nodes.node.branchOr
 V  318     4                  7             unary     nodes.node.branchOrLeaf.leaf.unary
 """);
      }
+   }
 
-    if (true)
-     {m.reset();
-      Layout.Variable key  = m.makeKey(8);
-      Layout.Variable data = m.makeKey(8);
-      m.leafInsertPair(t.targetIndex, key, data);
-      m.execute();
+  static void test_from_keyDataNext()                                           // Get the key and data from a key, data pair or the key and next from a key, next pair
+   {TestLeafTree t = new TestLeafTree();                                        // Allocate a new leaf treetree tree
+    Mjaf     m = t.mjaf;                                                        // Bit machine to process the tree
 
-    //stop(m.layout);
-      t.ok("""
-S  222   100                              leaf     nodes.node.branchOrLeaf.leaf
-A  222    96      0                         array     nodes.node.branchOrLeaf.leaf.array
-S  222    24              24581               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  222    12                  5                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  234    12                  6                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  246    96      1                         array     nodes.node.branchOrLeaf.leaf.array
-S  246    24              24582               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  246    12                  6                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  258    12                  6                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  270    96      2                         array     nodes.node.branchOrLeaf.leaf.array
-S  270    24              32775               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  270    12                  7                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  282    12                  8                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-A  294    96      3                         array     nodes.node.branchOrLeaf.leaf.array
-S  294    24              32776               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
-V  294    12                  8                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
-V  306    12                  8                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-V  318     4                 15             unary     nodes.node.branchOrLeaf.leaf.unary
+    Layout.Variable key  = m.makeKey (6);
+    Layout.Variable data = m.makeData(7);
+    Layout.Variable next = m.makeNext(3);
+    LayoutAble        kd = m.makeKeyData(key, data);
+    LayoutAble        kn = m.makeKeyNext(key, next);
+    Layout.Variable   Kd = m.keyFromKeyData(kd);
+    Layout.Variable   kD = m.dataFromKeyData(kd);
+    Layout.Variable   Kn = m.keyFromKeyNext(kn);
+    Layout.Variable   kN = m.nextFromKeyNext(kn);
+    m.execute();
+
+    //stop(Kd, kD, Kn, kN);
+    Kd.copy().ok("""
+T   At  Wide  Index       Value   Field name
+V    0    12                  6     leafKey
 """);
-     }
+    kD.copy().ok("""
+T   At  Wide  Index       Value   Field name
+V   12    12                  7     leafData
+""");
+    Kn.copy().ok("""
+T   At  Wide  Index       Value   Field name
+V    0    12                  6     branchKey
+""");
+    kN.copy().ok("""
+T   At  Wide  Index       Value   Field name
+V   12     2                  3     branchNext
+""");
    }
 
   static void oldTests()                                                        // Tests thought to be in good shape
@@ -3515,6 +3604,7 @@ V  318     4                 15             unary     nodes.node.branchOrLeaf.le
     test_find();
     test_find_and_insert();
     test_leaf_insert_pair();
+    test_from_keyDataNext();
    }
 
   static void newTests()                                                        // Tests being worked on
