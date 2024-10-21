@@ -21,7 +21,6 @@ public class BitMachine extends Test implements LayoutAble                      
   int        instructionIndex = 0;                                              // The current instruction
   int                    step = 0;                                              // The number of the currently executing step
   static int BitMachineNumber = 0;                                              // Bit machine enumerator
-  static boolean        debug = false;                                          // Debug if true
 
   public Layout.Field asField () {return layout.top;}                           // Top most field of the layout associated with this bit machine
   public Layout       asLayout() {return layout;}                               // Layout associated with this bit machine
@@ -88,7 +87,7 @@ public class BitMachine extends Test implements LayoutAble                      
     step = 0;
     for(instructionIndex = 0; instructionIndex < N; ++instructionIndex)         // Instruction sequence
      {final Instruction i = instructions.elementAt(instructionIndex);
-      if (debug) say("Debug:", step+1, instructionIndex, i.position, i.name);
+      //if (debug) say("Debug:", step+1, instructionIndex, i.position, i.name);
       i.action();
       trace();
       if (++step > maxSteps) stop("Terminating after", maxSteps, "steps");
@@ -138,14 +137,14 @@ public class BitMachine extends Test implements LayoutAble                      
      }
     void action()                                                               // Perform instruction
      {if (source != null)                                                       // Copy from source field to target field
-       {if (debug) say("Copy:", source.asInt(), "to", target.name, "at", target.at);
+       {//if (debug) say("Copy:", source.asInt(), "to", target.name, "at", target.at);
         for(int i = length-1; i >= 0; i--)                                      // Copy each bit assuming no overlap
          {final Boolean b = source.get(sOff+i);
           target.set(tOff+i, b);
          }
        }
       else
-       {if (debug) say("Copy integer:", sourceInt, "to", target.name, "at", target.at, "width", target.width);
+       {//if (debug) say("Copy integer:", sourceInt, "to", target.name, "at", target.at, "width", target.width);
         target.fromInt(sourceInt);                                              // Copy from source integer
        }
      }
@@ -1091,7 +1090,22 @@ public class BitMachine extends Test implements LayoutAble                      
 
   public String toString() {return printProgram();}                             // Alternate name to make it easier to print a program
 
-  class Say extends Instruction {Say() {name = "Say";}}                         // Say something to help debug a program
+  static boolean        debug = false;                                          // Debug if true
+
+  class Debug extends Instruction                                               // Enable or  disable debug
+   {final boolean on;
+    Debug(boolean On) {on = On;}                                                // Save debug state
+    void action() {debug = on;}                                                 // Perform instruction
+   }
+  Debug debug(boolean on) {return new Debug(on);}                               // Debug mode
+
+
+  class Say extends Instruction                                                 // Say something to help debug a program
+   {Say() {name = "Say";}
+    void action() {if (debug) debug();}                                         // Say stuff if we are debugging
+    void debug () {}                                                            // Debug stuff to say
+   }
+
   void  Say(Object...O) {say(printer, O);}                                      // Captured say
 
 //D0                                                                            // Tests: I test, therefore I am.  And so do my mentees.  But most other people, apparently, do not, they live in a half world lit by shadows in which they never know if their code works or not.
