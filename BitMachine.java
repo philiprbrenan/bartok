@@ -51,7 +51,7 @@ public class BitMachine extends Test implements LayoutAble                      
   void reset() {printer.setLength(0); instructions.clear(); step = 0;}          // Reset the machine
   void trace() {}                                                               // Trace the execution
 
-  void ok(String expected) {Test.ok(toString(), expected);}                     // Check the code for this machine is as expected
+  void codeOk(String expected) {Test.ok(toString(), expected);}                 // Check the code for this machine is as expected
 
   Layout.Variable getVariable(String name)                                      // Get a variable by name
    {final Layout.Field l = this.layout.get(name);
@@ -62,6 +62,16 @@ public class BitMachine extends Test implements LayoutAble                      
   void setVariable(String name, int value)                                      // Set a variable by name from a specified integer
    {final Layout.Variable v = getVariable(name);                                // Address the variable
     copy(v, value);                                                             // Set the variable
+   }
+
+  void ok(String lines)                                                         // Check that specified lines are present in the memory layout of the bit machine
+   {final String l = layout.toString();                                         // Mmeory as string
+    final int    i = l.indexOf(lines);                                          // Check specified lines are present
+    if (i == -1)                                                                // Lines missing
+     {err("Layout does not contain the specified lines");
+      ++Layout.testsFailed;
+     }
+    else  ++Layout.testsPassed;                                                 // Lines found
    }
 
 //D1 Instruction                                                                // Instructions recognized by the bit machine
@@ -1498,7 +1508,7 @@ V   88     8                 18       c     s.c
        };
      };
 
-    m.ok("""
+    m.codeOk("""
 Line                    OpCode Target
    1                       For
    2                  LessThan
