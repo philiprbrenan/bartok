@@ -3984,13 +3984,20 @@ V   77     8                 44                 leafData     nodes.node.branchOr
 V   85     4                 15             unary     nodes.node.branchOrLeaf.leaf.unary
 """);
 
-    m.put(m.makeKey(5), m.makeData(55));
+    m.reset();
+    m.put(m.makeKey(5), m.makeData(55));                                        // Split leaf root
     m.execute();
 
     //stop(m.layout);
 
     m.ok("""
 T   At  Wide  Index       Value   Field name
+A   19   280      0                 nodes     nodes
+S   19    70                          node     nodes.node
+B   19     1                  0         isLeaf     nodes.node.isLeaf
+B   20     1                  1         isBranch     nodes.node.isBranch
+U   21    68                            branchOrLeaf     nodes.node.branchOrLeaf
+S   21    35                              branch     nodes.node.branchOrLeaf.branch
 S   21    33         1812213250             branchStuck     nodes.node.branchOrLeaf.branch.branchStuck
 A   21    30      0   738471426               array     nodes.node.branchOrLeaf.branch.branchStuck.array
 S   21    10                514                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
@@ -4042,6 +4049,33 @@ S  279    16                  0               leafKeyData     nodes.node.branchO
 V  279     8                  0                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
 V  287     8                  0                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
 V  295     4                  7             unary     nodes.node.branchOrLeaf.leaf.unary
+""");
+
+    m.reset();
+    m.put(m.makeKey(6), m.makeData(66));
+    m.execute();
+
+    //stop(m.layout);
+
+    m.ok("""
+S  231    68                              leaf     nodes.node.branchOrLeaf.leaf
+A  231    64      0                         array     nodes.node.branchOrLeaf.leaf.array
+S  231    16               8451               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  231     8                  3                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  239     8                 33                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  247    64      1                         array     nodes.node.branchOrLeaf.leaf.array
+S  247    16              11268               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  247     8                  4                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  255     8                 44                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  263    64      2                         array     nodes.node.branchOrLeaf.leaf.array
+S  263    16              14085               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  263     8                  5                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  271     8                 55                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+A  279    64      3                         array     nodes.node.branchOrLeaf.leaf.array
+S  279    16              16902               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  279     8                  6                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  287     8                 66                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+V  295     4                 15             unary     nodes.node.branchOrLeaf.leaf.unary
 """);
 
    }
