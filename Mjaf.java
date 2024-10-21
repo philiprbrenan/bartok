@@ -3139,7 +3139,7 @@ B    0     1                  1   found
     //stop(k, n);
     n.ok("""
 T   At  Wide  Index       Value   Field name
-V    0     2                  2   next
+V    0     2                  1   next
 """);
    }
 
@@ -4183,8 +4183,8 @@ V  295     4                  7             unary     nodes.node.branchOrLeaf.le
    }
 
   static void newTests()                                                        // Tests being worked on
-   {//oldTests();
-    test_put();
+   {oldTests();
+    //test_put();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
