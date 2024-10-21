@@ -230,6 +230,18 @@ public class BitMachine extends Test implements LayoutAble                      
    {return new Equals(Result, F1, Off1,  F2, Off2, Length);
    }
 
+  Layout.Bit equals(Layout.Field F1, int F2)                                    // Return a variable which will hold the result of comparing a field to an integer for equality
+   {final Layout.Bit result = Layout.createBit("equals");
+    new Equals(result, F1, F2);
+    return result;
+   }
+
+  Layout.Bit equals(Layout.Field F1, Layout.Field F2)                           // Return a variable which will hold the result of comparing two fields for equality
+   {final Layout.Bit result = Layout.createBit("equals");
+    new Equals(result, F1, F2);
+    return result;
+   }
+
   class LessThan extends Instruction                                            // Check that the first field is less than the second field
    {final Layout.Field f1, f2;                                                  // Fields to compare
     final Layout.Field result;                                                  // Bit field showing result
@@ -1164,7 +1176,19 @@ V    4     4                 15     b     b
     m.equals(a1, a, 1);
     m.equals(b1, b, 1, a, 0, 1);
     m.equals(b2, b, 2, a, 0, 1);
+    Layout.Bit A0 = m.equals(a, 0);
+    Layout.Bit A1 = m.equals(a, 1);
+    Layout.Bit AA = m.equals(a, a);
+    Layout.Bit AB = m.equals(a, b);
+    Layout.Bit AC = m.equals(a, c);
     m.execute();
+    //stop(A0, A1);
+    A0.ok(0);
+    A1.ok(1);
+    AA.ok(1);
+    AB.ok(0);
+    AC.ok(1);
+
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
