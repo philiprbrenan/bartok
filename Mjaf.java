@@ -485,16 +485,16 @@ class Mjaf extends BitMachine                                                   
 
 //D1 Branch                                                                     // Process a branch
 
-  void branchMark(Layout.Variable iBranch)                                      // Mark a node as a branch not a leaf
-   {setIndex(nodes, iBranch);                                                   // Select the leaf to process
-    zero(isLeaf);                                                               // Flag as not a leaf
+  void branchMark(Layout.Variable iBranch)                                      // Mark a node as a branch not a branch
+   {setIndex(nodes, iBranch);                                                   // Select the branch to process
+    zero(isLeaf);                                                               // Flag as not a branch
     ones(isBranch);                                                             // Flag as a branch
    }
 
   void branchMake(Layout.Variable iBranch)                                      // Make a new branch by taking a node off the free nodes stack and converting it into a branch
    {allocate(iBranch);                                                          // Allocate a new node
-    setIndex(nodes, iBranch);                                                   // Select the leaf to process
-    branchStuck.unary.zero();                                                   // Clear leaf
+    setIndex(nodes, iBranch);                                                   // Select the branch to process
+    branchStuck.unary.zero();                                                   // Clear branch
     branchMark(iBranch);
    }
 
@@ -504,35 +504,41 @@ class Mjaf extends BitMachine                                                   
     return i;
    }
 
-  void branchGet(Layout.Variable iBranch, Layout.Variable index, LayoutAble kd) // Get the specified key, next pair in the specified leaf
-   {setIndex(nodes, iBranch);                                                   // Select the leaf to process
-    branchStuck.elementAt(kd, index);                                           // Insert the key, next pair at the specified index in the specified leaf
+  void branchGet(Layout.Variable iBranch, Layout.Variable index, LayoutAble kd) // Get the specified key, next pair in the specified branch
+   {setIndex(nodes, iBranch);                                                   // Select the branch to process
+    branchStuck.elementAt(kd, index);                                           // Insert the key, next pair at the specified index in the specified branch
    }
 
-  void branchPut(Layout.Variable iBranch, Layout.Variable index, LayoutAble kd) // Put the specified key, next pair from the specified leaf
-   {setIndex(nodes, iBranch);                                                   // Select the leaf to process
-    branchStuck.setElementAt(kd, index);                                        // Insert the key, next pair at the specified index in the specified leaf
+  void branchPut(Layout.Variable iBranch, Layout.Variable index, LayoutAble kd) // Put the specified key, next pair from the specified branch
+   {setIndex(nodes, iBranch);                                                   // Select the branch to process
+    branchStuck.setElementAt(kd, index);                                        // Insert the key, next pair at the specified index in the specified branch
    }
 
-  void branchInsert                                                             // Place the specified key, next pair at the specified location in the specified leaf
+  void branchInsert                                                             // Place the specified key, next pair at the specified location in the specified branch
    (Layout.Variable iBranch, Layout.Variable index, LayoutAble kd)
-   {setIndex(nodes, iBranch);                                                   // Select the leaf to process
-    branchStuck.insertElementAt(kd, index);                                     // Insert the key, next pair at the specified index in the specified leaf
+   {setIndex(nodes, iBranch);                                                   // Select the branch to process
+    branchStuck.insertElementAt(kd, index);                                     // Insert the key, next pair at the specified index in the specified branch
    }
 
-  void branchRemove(Layout.Variable iBranch, Layout.Variable index)             // Remove the key, next pair at the specified location in the specified leaf
-   {setIndex(nodes, iBranch);                                                   // Select the leaf to process
-    branchStuck.removeElementAt(index);                                         // Remove the key, next pair at the specified index in the specified leaf
+  void branchRemove(Layout.Variable iBranch, Layout.Variable index)             // Remove the key, next pair at the specified location in the specified branch
+   {setIndex(nodes, iBranch);                                                   // Select the branch to process
+    branchStuck.removeElementAt(index);                                         // Remove the key, next pair at the specified index in the specified branch
    }
 
-  void branchIsEmpty(Layout.Variable index, Layout.Bit result)                  // Leaf is empty
+  void branchIsEmpty(Layout.Variable index, Layout.Bit result)                  // Branch is empty
    {setIndex(nodes, index);
     branchStuck.unary.canNotDec(result);
    }
 
-  void branchIsFull(Layout.Variable index, Layout.Bit result)                   // Leaf is full
+  void branchIsFull(Layout.Variable index, Layout.Bit result)                   // Branch is full
    {setIndex(nodes, index);
     branchStuck.unary.canNotInc(result);
+   }
+
+  Layout.Bit branchIsFull(Layout.Variable index)                                // Branch is full
+   {final Layout.Bit result = Layout.createBit("branchFull");
+    branchIsFull(index, result);
+    return result;
    }
 
   void branchSplitKey(Layout.Variable index, LayoutAble out)                    // Splitting key in a branch
@@ -556,7 +562,7 @@ class Mjaf extends BitMachine                                                   
     branchStuck.shift(kd);
    }
 
-  void branchFindIndexOf                                                        // Find index of the specified key, next pair in the specified leaf
+  void branchFindIndexOf                                                        // Find index of the specified key, next pair in the specified branch
    (Layout.Variable index, LayoutAble kd,
     Layout.Bit found, Layout.Variable result)
    {setIndex(nodes, index);
@@ -623,21 +629,21 @@ class Mjaf extends BitMachine                                                   
    }
 
   void branchSplitRoot()                                                        // Split the root when it is a branch
-   {final Layout.Variable F1 = leafIndex("left");                               // New left leaf
+   {final Layout.Variable F1 = leafIndex("left");                               // New left branch
     final Layout.Variable F2 = leafIndex("right");                              // New right root
     branchSplitRoot(F1, F2);
    }
 
   void branchFission(Layout.Variable parent, Layout.Variable source)            // Split a branch that is one of the children of its parent branch
    {final LayoutAble          kn = branchSplitKey(source);                      // Branch splitting key
-    final Layout.Variable target = branchSplit(source);                         // Split leaf, the target leaf is on the left
+    final Layout.Variable target = branchSplit(source);                         // Split branch, the target branch is on the left
     final Layout.Variable      k = keyFromKeyNext(kn);                          // Split key
     final LayoutAble         pkn = makeKeyNext(k, target);                      // Key, next pair for insertion into branch
     final Layout.Variable      t = branchGetTopNext(parent);                    // Top next of parent
 
     new IfElse(equals(t, source))                                               // Source is top next of parent
      {void Then()
-       {branchPush(parent, pkn);                                                // Append split out leaf as last key, next pair.
+       {branchPush(parent, pkn);                                                // Append split out branch as last key, next pair.
        }
       void Else()
        {final Layout.Variable i = branchFindFirstGreaterOrEqualIndex(parent, k);// Position to insert into branch
@@ -648,7 +654,7 @@ class Mjaf extends BitMachine                                                   
 
   void branchJoinable                                                           // Check that we can join two branches
    (Layout.Variable target, Layout.Variable source, Layout.Bit result)
-   {setIndex(nodes, target);                                                    // Index the target leaf
+   {setIndex(nodes, target);                                                    // Index the target branch
     final Layout.Variable t = branchStuck.unary.value.like();
     copy(t, branchStuck.unary.value);
 
@@ -670,7 +676,7 @@ class Mjaf extends BitMachine                                                   
      {setIndex(nodes, source); branchStuck.shift(kn);
       setIndex(nodes, target); branchStuck.push(kn);
      }
-    free(source);                                                               // Free the leaf that was joined
+    free(source);                                                               // Free the branch that was joined
    }
 
   void branchFindFirstGreaterOrEqual                                            // Find the 'next' for the first key in a branch that is greater than or equal to the specified key or else return the top node if no such key exists.
@@ -787,7 +793,7 @@ class Mjaf extends BitMachine                                                   
    }
 
 //D1 Insertion                                                                  // Insert key, data pairs into the Btree
-/*
+
   void put(Layout.Variable Key, Layout.Variable Data)                           // Insert a new key, data pair into the Btree
    {new Block()
      {void code()
@@ -818,44 +824,25 @@ class Mjaf extends BitMachine                                                   
          };
 
         final Layout.Variable p = nodeIndex("p");                               // The root is known to be a branch because if it were a leaf we would have either inserted into the leaf or split it.
+        final Layout.Variable q = nodeIndex("q");                               // Child beneath parent
 
         new Repeat()                                                            // Step down through tree to find the required leaf, splitting as we go
-         {final Layout.Variable q = nodeIndex("q");                             // Next step down
-          branchFindFirstGreaterOrEqual(p, Key, q);                             // Step down to next child
-          final Layout.Bit isLeaf = Layout.createBit("isLeaf");                // Check whether next child is a leaf
-          isLeaf(q, isLeaf);
-          returnIfOne(isLeaf);                                                  // Stepped to a leaf
+         {void code()
+           {branchFindFirstGreaterOrEqual(p, Key, q);                           // Step down to next child
+            returnIfOne(isLeaf(q));                                             // Stepped to a leaf
 
-          final Branch b = q.branch();
-
-          final Layout.Bit isFull = Layout.createBit("isFull");                 // Check whether the chil;d is full and thus needs to be split
-          branchIsFull(q, isFull);
-
-          if (b.isFull())                                                           // Split the branch because it is full and we might need to insert below it requiring a slot in this node
-           {final Key    k = b.splitKey();                                          // Splitting key
-            final Branch l = b.split();                                             // New lower node
-            p.put(k, l);                                                            // Place splitting key in parent
-            final Branch r = new Node().branch();
-            r.splitRoot();                                                          // Root might need to be split to re-establish the invariants at start of loop
-            if (keyName.lessThanOrEqual(k)) q = l;                                  // Position on lower node if search key is less than splitting key
+            new IfElse (branchIsFull(q))                                        // Split the child branch because it is full and we might need to insert below it requiring a slot in this branch
+             {void Then()                                                       // Branch is full
+               {branchFission(p, q);                                            // Split full branch
+               }
+              void Else()                                                       // Branch was not full
+               {copy(p, q);                                                     // Step down
+               }
+             };
            }
+         };
 
-          p = q.branch();                                                           // Step parent down
-          q = p.findFirstGreaterOrEqual(keyName);                                   // Step through to next child
-         }
-
-        final Leaf l = q.leaf();                                                    // Address leaf
-        final int g = l.findIndexOfKey(keyName);                                    // Locate index of key
-        if (g != -1) l.setData(dataValue, g);                                       // Key already present in leaf
-        else if (l.isFull())                                                        // Split the leaf because it is full
-         {final Key  k = l.splitKey();                                              // Splitting key
-          final Leaf e = l.split();                                                 // Split left key
-          p.put(k, e);                                                              // Put splitting key in parent
-
-          if (keyName.lessThanOrEqual(k)) e.put(keyName, dataValue);                // Insert key in the appropriate split leaf
-          else                            l.put(keyName, dataValue);
-         }
-        else l.put(keyName, dataValue);                                             // On a leaf that is not full so we can insert directly
+        leafFission(p, q);                                                      // If the leaf did not need splitting findAndInsert() would have suceeded
        } // code
      }; // block
    } // put
@@ -1856,16 +1843,6 @@ V  318     4                  0             unary     nodes.node.branchOrLeaf.le
     TestLeafTree()                                                              // Layout temporary storage
      {lef.layout(lefs);
      }
-
-    void ok(String lines)                                                       // Check that specified lines are present in the memory layout of the bit machine describing the tree
-     {final String l = mjaf.layout.toString();                                  // Tree as string
-      final int    i = l.indexOf(lines);                                        // Check specified lines are present
-      if (i == -1)                                                              // Lines missing
-       {err("Layout does not contain the specified lines");
-        ++Layout.testsFailed;
-       }
-      else  ++Layout.testsPassed;                                               // Lines found
-     }
    }
 
   static class TestBranchTree                                                   // Create a test tree
@@ -1902,16 +1879,6 @@ V  318     4                  0             unary     nodes.node.branchOrLeaf.le
 
     TestBranchTree()                                                            // Layout temporary storage
      {bef.layout(befs);
-     }
-
-    void ok(String lines)                                                       // Check that specified lines are present in the memory layout of the bit machine describing the tree
-     {final String l = mjaf.layout.toString();                                  // Tree as string
-      final int    i = l.indexOf(lines);                                        // Check specified lines are present
-      if (i == -1)                                                              // Lines missing
-       {err("Layout does not contain the specified lines");
-        ++Layout.testsFailed;
-       }
-      else  ++Layout.testsPassed;                                               // Lines found
      }
    }
 
@@ -2069,7 +2036,7 @@ B    3     1                  0     Full     Full
     m.execute();
 
     //stop(m.layout);                                                           // State before changes
-    t.ok("""
+    m.ok("""
 S  222   100                              leaf     nodes.node.branchOrLeaf.leaf
 A  222    96      0                         array     nodes.node.branchOrLeaf.leaf.array
 S  222    24              73745               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
@@ -2095,7 +2062,7 @@ V  318     4                  0             unary     nodes.node.branchOrLeaf.le
     m.leafPut(t.nodeIndex, t.leafIndex, t.kd);                                  // Put the key, data pair
     m.execute();
     //stop(m.layout);
-    t.ok("""
+    m.ok("""
 S  222   100                              leaf     nodes.node.branchOrLeaf.leaf
 A  222    96      0                         array     nodes.node.branchOrLeaf.leaf.array
 S  222    24              81939               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
@@ -2135,7 +2102,7 @@ V   12     2                  1     branchNext     branchNext
 """);
 
     //stop(m.layout);
-    t.ok("""
+    m.ok("""
 S  222    47                              branch     nodes.node.branchOrLeaf.branch
 S  222    45                                branchStuck     nodes.node.branchOrLeaf.branch.branchStuck
 A  222    42      0                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
@@ -2157,7 +2124,7 @@ V  262     2                  2                   branchNext     nodes.node.bran
     m.branchPut(t.nodeIndex, t.branchIndex, t.kn);                              // Put the key, next pair
     m.execute();
     //stop(m.layout);
-    t.ok("""
+    m.ok("""
 S  222    47                              branch     nodes.node.branchOrLeaf.branch
 S  222    45                                branchStuck     nodes.node.branchOrLeaf.branch.branchStuck
 A  222    42      0                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
@@ -2196,7 +2163,7 @@ V   12    12                 14     leafData     leafData
 """);
 
     //stop(m.layout);
-    t.ok("""
+    m.ok("""
 S  222   100                              leaf     nodes.node.branchOrLeaf.leaf
 A  222    96      0                         array     nodes.node.branchOrLeaf.leaf.array
 S  222    24              57357               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
@@ -2224,7 +2191,7 @@ V  306    12                 22                 leafData     nodes.node.branchOr
     m.execute();
 
     //stop(m.layout);
-    t.ok("""
+    m.ok("""
 S  222   100                              leaf     nodes.node.branchOrLeaf.leaf
 A  222    96      0                         array     nodes.node.branchOrLeaf.leaf.array
 S  222    24              49163               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
@@ -2253,7 +2220,7 @@ V  318     4                  3             unary     nodes.node.branchOrLeaf.le
     m.execute();
 
     //stop(m.layout);
-    t.ok("""
+    m.ok("""
 S  222   100                              leaf     nodes.node.branchOrLeaf.leaf
 A  222    96      0                         array     nodes.node.branchOrLeaf.leaf.array
 S  222    24              40969               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
@@ -2282,7 +2249,7 @@ V  318     4                  7             unary     nodes.node.branchOrLeaf.le
     m.execute();
 
     //stop(m.layout);
-    t.ok("""
+    m.ok("""
 S  222   100                              leaf     nodes.node.branchOrLeaf.leaf
 A  222    96      0                         array     nodes.node.branchOrLeaf.leaf.array
 S  222    24              40969               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
@@ -2309,7 +2276,7 @@ V  318     4                 15             unary     nodes.node.branchOrLeaf.le
     m.execute();
 
     //stop(m.layout);
-    t.ok("""
+    m.ok("""
 S  222   100                              leaf     nodes.node.branchOrLeaf.leaf
 A  222    96      0                         array     nodes.node.branchOrLeaf.leaf.array
 S  222    24              40969               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
@@ -2336,7 +2303,7 @@ V  318     4                  7             unary     nodes.node.branchOrLeaf.le
     m.execute();
 
     //stop(m.layout);
-    t.ok("""
+    m.ok("""
 S  222   100                              leaf     nodes.node.branchOrLeaf.leaf
 A  222    96      0                         array     nodes.node.branchOrLeaf.leaf.array
 S  222    24              65551               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
@@ -2381,7 +2348,7 @@ V   12     2                  1     branchNext     branchNext
 """);
 
     //stop(m.layout);
-    t.ok("""
+    m.ok("""
 S  222    47                              branch     nodes.node.branchOrLeaf.branch
 S  222    45                                branchStuck     nodes.node.branchOrLeaf.branch.branchStuck
 A  222    42      0                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
@@ -2407,7 +2374,7 @@ V  264     3                  7               unary     nodes.node.branchOrLeaf.
     m.execute();
 
     //stop(m.layout);
-    t.ok("""
+    m.ok("""
 S  222    47                              branch     nodes.node.branchOrLeaf.branch
 S  222    45                                branchStuck     nodes.node.branchOrLeaf.branch.branchStuck
 A  222    42      0  1946247174               array     nodes.node.branchOrLeaf.branch.branchStuck.array
@@ -2433,7 +2400,7 @@ V  264     3                  7               unary     nodes.node.branchOrLeaf.
     m.execute();
 
     //stop(m.layout);
-    t.ok("""
+    m.ok("""
 S  222    47                              branch     nodes.node.branchOrLeaf.branch
 S  222    45                                branchStuck     nodes.node.branchOrLeaf.branch.branchStuck
 A  222    42      0                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
@@ -2457,7 +2424,7 @@ V  264     3                  7               unary     nodes.node.branchOrLeaf.
     m.execute();
 
     //stop(m.layout);
-    t.ok("""
+    m.ok("""
 S  222    47                              branch     nodes.node.branchOrLeaf.branch
 S  222    45                                branchStuck     nodes.node.branchOrLeaf.branch.branchStuck
 A  222    42      0                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
@@ -2481,7 +2448,7 @@ V  264     3                  3               unary     nodes.node.branchOrLeaf.
     m.execute();
 
     //stop(m.layout);
-    t.ok("""
+    m.ok("""
 S  222    47                              branch     nodes.node.branchOrLeaf.branch
 S  222    45                                branchStuck     nodes.node.branchOrLeaf.branch.branchStuck
 A  222    42      0                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
@@ -2514,7 +2481,7 @@ V  264     3                  1               unary     nodes.node.branchOrLeaf.
     m.execute();
 
     //stop(m.layout);                                                           // Source layout
-    t.ok("""
+    m.ok("""
 S  120   100                              leaf     nodes.node.branchOrLeaf.leaf
 A  120    96      0                         array     nodes.node.branchOrLeaf.leaf.array
 S  120    24              40969               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
@@ -2534,7 +2501,7 @@ V  192    12                 15                 leafKey     nodes.node.branchOrL
 V  204    12                 16                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
 """);
                                                                                 // Target layout
-    t.ok("""
+    m.ok("""
 S  222   100                              leaf     nodes.node.branchOrLeaf.leaf
 A  222    96      0                         array     nodes.node.branchOrLeaf.leaf.array
 S  222    24              40969               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
@@ -2579,7 +2546,7 @@ V    0    12                 11     leafKey     leafKey
 V   12    12                 12     leafData     leafData
 """);
    //stop(m.layout);
-   t.ok("""
+   m.ok("""
 S  222   100                              leaf     nodes.node.branchOrLeaf.leaf
 A  222    96      0                         array     nodes.node.branchOrLeaf.leaf.array
 S  222    24              57357               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
@@ -2616,7 +2583,7 @@ V  318     4                  3             unary     nodes.node.branchOrLeaf.le
     m.execute();
 
     //stop(m.layout);                                                           // Source layout
-    t.ok("""
+    m.ok("""
 S  222    47                              branch     nodes.node.branchOrLeaf.branch
 S  222    45                                branchStuck     nodes.node.branchOrLeaf.branch.branchStuck
 A  222    42      0                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
@@ -2659,7 +2626,7 @@ V   12     2                  1     branchNext     branchNext
 """);
 
    //stop(m.layout);
-   t.ok("""
+   m.ok("""
 S  222    47                              branch     nodes.node.branchOrLeaf.branch
 S  222    45                                branchStuck     nodes.node.branchOrLeaf.branch.branchStuck
 A  222    42      0                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
@@ -2766,7 +2733,7 @@ V    1     4                 15     result     result
     m.leafSplit(t.targetIndex, t.sourceIndex);                                  // Split a leaf
     m.execute();
     //stop(m.layout);                                                           // Source layout
-    t.ok("""
+    m.ok("""
 S  120   100                              leaf     nodes.node.branchOrLeaf.leaf
 A  120    96      0                         array     nodes.node.branchOrLeaf.leaf.array
 S  120    24              73745               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
@@ -2786,7 +2753,7 @@ V  192    12                 15                 leafKey     nodes.node.branchOrL
 V  204    12                 16                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
 V  216     4                  3             unary     nodes.node.branchOrLeaf.leaf.unary
 """);
-    t.ok("""
+    m.ok("""
 S  222   100                              leaf     nodes.node.branchOrLeaf.leaf
 A  222    96      0                         array     nodes.node.branchOrLeaf.leaf.array
 S  222    24              90133               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
@@ -2813,7 +2780,7 @@ V  318     4                  3             unary     nodes.node.branchOrLeaf.le
     m.leafJoinable(t.targetIndex, t.sourceIndex, t.lf);                         // Can the joined leaves be joined
     m.execute();
     //stop(m.layout);
-    t.ok("""
+    m.ok("""
 S  120   100                              leaf     nodes.node.branchOrLeaf.leaf
 A  120    96      0                         array     nodes.node.branchOrLeaf.leaf.array
 S  120    24              73745               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
@@ -2833,7 +2800,7 @@ V  192    12                 23                 leafKey     nodes.node.branchOrL
 V  204    12                 24                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
 V  216     4                 15             unary     nodes.node.branchOrLeaf.leaf.unary
 """);
-    t.ok("""
+    m.ok("""
 S  222   100                              leaf     nodes.node.branchOrLeaf.leaf
 A  222    96      0                         array     nodes.node.branchOrLeaf.leaf.array
 S  222    24              98327               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
@@ -2886,7 +2853,7 @@ V    0    12                  8   branchKey
 """);
 
     //stop(m.layout);                                                           // Source layout
-    t.ok("""
+    m.ok("""
 S  120    47                              branch     nodes.node.branchOrLeaf.branch
 S  120    45                                branchStuck     nodes.node.branchOrLeaf.branch.branchStuck
 A  120    42      0                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
@@ -2905,7 +2872,7 @@ V  162     3                  1               unary     nodes.node.branchOrLeaf.
 V  165     2                  1             topNext     nodes.node.branchOrLeaf.branch.topNext
 """);
 
-  t.ok("""
+  m.ok("""
 S  222    47                              branch     nodes.node.branchOrLeaf.branch
 S  222    45                                branchStuck     nodes.node.branchOrLeaf.branch.branchStuck
 A  222    42      0                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
@@ -2931,7 +2898,7 @@ V  267     2                  2             topNext     nodes.node.branchOrLeaf.
     m.branchJoinable(t.targetIndex, t.sourceIndex, t.bf);                       // Can the joined branches be joined
     m.execute();
     //stop(m.layout);
-    t.ok("""
+    m.ok("""
 S  120    47                              branch     nodes.node.branchOrLeaf.branch
 S  120    45                                branchStuck     nodes.node.branchOrLeaf.branch.branchStuck
 A  120    42      0                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
@@ -2949,7 +2916,7 @@ V  160     2                  2                   branchNext     nodes.node.bran
 V  162     3                  7               unary     nodes.node.branchOrLeaf.branch.branchStuck.unary
 V  165     2                  1             topNext     nodes.node.branchOrLeaf.branch.topNext
 """);
-    t.ok("""
+    m.ok("""
 S  222    45                                branchStuck     nodes.node.branchOrLeaf.branch.branchStuck
 A  222    42      0                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
 S  222    14               8201                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
@@ -3111,7 +3078,7 @@ B    3     1                  1     bF     bF
     m.leafFirstGreaterThanOrEqual(t.nodeIndex, k, i, f);
     m.execute();
     //stop(m.layout);
-    t.ok("""
+    m.ok("""
 A   18    96      0                         array     nodes.node.branchOrLeaf.leaf.array
 S   18    24               8193               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
 V   18    12                  1                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
@@ -3153,12 +3120,46 @@ V    0     2                  2   next
 """);
    }
 
+  static void test_from_keyDataNext()                                           // Get the key and data from a key, data pair or the key and next from a key, next pair
+   {TestLeafTree t = new TestLeafTree();                                        // Allocate a new leaf treetree tree
+    Mjaf     m = t.mjaf;                                                        // Bit machine to process the tree
+
+    Layout.Variable key  = m.makeKey (6);
+    Layout.Variable data = m.makeData(7);
+    Layout.Variable next = m.makeNext(3);
+    LayoutAble        kd = m.makeKeyData(key, data);
+    LayoutAble        kn = m.makeKeyNext(key, next);
+    Layout.Variable   Kd = m.keyFromKeyData(kd);
+    Layout.Variable   kD = m.dataFromKeyData(kd);
+    Layout.Variable   Kn = m.keyFromKeyNext(kn);
+    Layout.Variable   kN = m.nextFromKeyNext(kn);
+    m.execute();
+
+    //stop(Kd, kD, Kn, kN);
+    Kd.copy().ok("""
+T   At  Wide  Index       Value   Field name
+V    0    12                  6     leafKey
+""");
+    kD.copy().ok("""
+T   At  Wide  Index       Value   Field name
+V   12    12                  7     leafData
+""");
+    Kn.copy().ok("""
+T   At  Wide  Index       Value   Field name
+V    0    12                  6     branchKey
+""");
+    kN.copy().ok("""
+T   At  Wide  Index       Value   Field name
+V   12     2                  3     branchNext
+""");
+   }
+
   static void test_branch_greater_than_or_equal_index()                         // Find index of first key greater than or equal to the search key
    {TestBranchTree  t = new TestBranchTree();                                   // Create a test tree
     Mjaf            m = t.mjaf;                                                 // Bit machine to process the tree
 
     //stop(m.layout);
-    t.ok("""
+    m.ok("""
 S  222    47                              branch     nodes.node.branchOrLeaf.branch
 S  222    45                                branchStuck     nodes.node.branchOrLeaf.branch.branchStuck
 A  222    42      0                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
@@ -3226,7 +3227,7 @@ V    0     2                  2   next
     m.branchSetTopNext(t.nodeIndex, n);
     m.execute();
     //stop(m.layout);
-    t.ok("""
+    m.ok("""
 V  267     2                  1             topNext     nodes.node.branchOrLeaf.branch.topNext
 """);
    }
@@ -3236,7 +3237,7 @@ V  267     2                  1             topNext     nodes.node.branchOrLeaf.
     Mjaf          m = t.mjaf;                                                   // Bit machine to process the tree
 
     //stop(m.layout);
-    t.ok("""
+    m.ok("""
 S   18   100                              leaf     nodes.node.branchOrLeaf.leaf
 A   18    96      0                         array     nodes.node.branchOrLeaf.leaf.array
 S   18    24               8193               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
@@ -3270,7 +3271,7 @@ V    0     2                  2   nodeFree
 """);
 
     //stop(m.layout);
-    t.ok("""
+    m.ok("""
 B   16     1                  0         isLeaf     nodes.node.isLeaf
 B   17     1                  1         isBranch     nodes.node.isBranch
 U   18   100                            branchOrLeaf     nodes.node.branchOrLeaf
@@ -3291,7 +3292,7 @@ V   58     2                  0                   branchNext     nodes.node.bran
 V   60     3                  1               unary     nodes.node.branchOrLeaf.branch.branchStuck.unary
 V   63     2                  2             topNext     nodes.node.branchOrLeaf.branch.topNext
 """);
-    t.ok("""
+    m.ok("""
 S  120   100                              leaf     nodes.node.branchOrLeaf.leaf
 A  120    96      0                         array     nodes.node.branchOrLeaf.leaf.array
 S  120    24               8193               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
@@ -3311,7 +3312,7 @@ V  192    12                 15                 leafKey     nodes.node.branchOrL
 V  204    12                 16                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
 V  216     4                  3             unary     nodes.node.branchOrLeaf.leaf.unary
 """);
-    t.ok("""
+    m.ok("""
 S  222   100                              leaf     nodes.node.branchOrLeaf.leaf
 A  222    96      0                         array     nodes.node.branchOrLeaf.leaf.array
 S  222    24              24581               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
@@ -3338,7 +3339,7 @@ V  318     4                  3             unary     nodes.node.branchOrLeaf.le
     Mjaf            m = t.mjaf;                                                 // Bit machine to process the tree
 
     //stop(m.layout);
-    t.ok("""
+    m.ok("""
 S   18    47                  0           branch     nodes.node.branchOrLeaf.branch
 S   18    45                                branchStuck     nodes.node.branchOrLeaf.branch.branchStuck
 A   18    42      0                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
@@ -3369,7 +3370,7 @@ T   At  Wide  Index       Value   Field name
 V    0     2                  2   nodeFree
 """);
     //stop(m.layout);
-    t.ok("""
+    m.ok("""
 S   18    47                              branch     nodes.node.branchOrLeaf.branch
 S   18    45                                branchStuck     nodes.node.branchOrLeaf.branch.branchStuck
 A   18    42      0                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
@@ -3387,7 +3388,7 @@ V   58     2                  2                   branchNext     nodes.node.bran
 V   60     3                  1               unary     nodes.node.branchOrLeaf.branch.branchStuck.unary
 V   63     2                  2             topNext     nodes.node.branchOrLeaf.branch.topNext
 """);
-    t.ok("""
+    m.ok("""
 S  120    47                              branch     nodes.node.branchOrLeaf.branch
 S  120    45                                branchStuck     nodes.node.branchOrLeaf.branch.branchStuck
 A  120    42      0                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
@@ -3405,7 +3406,7 @@ V  160     2                  2                   branchNext     nodes.node.bran
 V  162     3                  1               unary     nodes.node.branchOrLeaf.branch.branchStuck.unary
 V  165     2                  1             topNext     nodes.node.branchOrLeaf.branch.topNext
 """);
-    t.ok("""
+    m.ok("""
 S  222    47                  0           branch     nodes.node.branchOrLeaf.branch
 S  222    45                                branchStuck     nodes.node.branchOrLeaf.branch.branchStuck
 A  222    42      0                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
@@ -3437,7 +3438,7 @@ V  267     2                  0             topNext     nodes.node.branchOrLeaf.
     l.layout(s);
 
 
-    t.ok("""
+    m.ok("""
 V   42    12                  3                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
 V   54    12                  4                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
 """);
@@ -3518,7 +3519,7 @@ V   13    12                  8     data     data
     m.findAndInsert(key, data, found);
     m.execute();
     //stop(m.layout);
-    t.ok("""
+    m.ok("""
 S  120   100                              leaf     nodes.node.branchOrLeaf.leaf
 A  120    96      0                         array     nodes.node.branchOrLeaf.leaf.array
 S  120    24               8193               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
@@ -3570,7 +3571,7 @@ B    1     1                  0     branch     branch
 """);
 
     //stop(m.layout);
-    t.ok("""
+    m.ok("""
 A   16   306      0                 nodes     nodes
 S   16   102                  1       node     nodes.node
 B   16     1                  1         isLeaf     nodes.node.isLeaf
@@ -3591,7 +3592,7 @@ B    1     1                  1     branch     branch
 """);
 
     //stop(m.layout);
-    t.ok("""
+    m.ok("""
 A   16   306      0                 nodes     nodes
 S   16   102                          node     nodes.node
 B   16     1                  0         isLeaf     nodes.node.isLeaf
@@ -3604,7 +3605,7 @@ B   17     1                  1         isBranch     nodes.node.isBranch
     Mjaf             m = t.mjaf;                                                // Bit machine to process the tree
 
     //stop(m.layout);
-    t.ok("""
+    m.ok("""
 S  222   100                              leaf     nodes.node.branchOrLeaf.leaf
 A  222    96      0                         array     nodes.node.branchOrLeaf.leaf.array
 S  222    24              73745               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
@@ -3632,7 +3633,7 @@ V  318     4                 15             unary     nodes.node.branchOrLeaf.le
     m.execute();
 
     //stop(m.layout);
-    t.ok("""
+    m.ok("""
 S  222   100                              leaf     nodes.node.branchOrLeaf.leaf
 A  222    96      0                         array     nodes.node.branchOrLeaf.leaf.array
 S  222    24              24581               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
@@ -3683,7 +3684,7 @@ V    0     2                  2   leaf
 
     //stop(m.layout);
 
-    t.ok("""
+    m.ok("""
 A  118   306      1                 nodes     nodes
 S  118   102                  2       node     nodes.node
 B  118     1                  0         isLeaf     nodes.node.isLeaf
@@ -3707,7 +3708,7 @@ V  162     3                  3               unary     nodes.node.branchOrLeaf.
 V  165     2                  0             topNext     nodes.node.branchOrLeaf.branch.topNext
 """);
 
-    t.ok("""
+    m.ok("""
 S  222   100                              leaf     nodes.node.branchOrLeaf.leaf
 A  222    96      0                         array     nodes.node.branchOrLeaf.leaf.array
 S  222    24              45066               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
@@ -3733,7 +3734,7 @@ V  318     4                 15             unary     nodes.node.branchOrLeaf.le
     m.execute();
 
     //stop(m.layout);
-    t.ok("""
+    m.ok("""
 T   At  Wide  Index       Value   Field name
 S    0   322                      tree
 S    0     9                 36     nodesFree     nodesFree
@@ -3896,7 +3897,7 @@ V    0     2                  1   branch
 
     //stop(m.layout);
 
-    t.ok("""
+    m.ok("""
 S  120    45                                branchStuck     nodes.node.branchOrLeaf.branch.branchStuck
 A  120    42      0                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
 S  120    14                 15                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
@@ -3913,7 +3914,7 @@ V  160     2                  2                   branchNext     nodes.node.bran
 V  162     3                  3               unary     nodes.node.branchOrLeaf.branch.branchStuck.unary
 """);
 
-    t.ok("""
+    m.ok("""
 S  222    45                                branchStuck     nodes.node.branchOrLeaf.branch.branchStuck
 A  222    42      0                           array     nodes.node.branchOrLeaf.branch.branchStuck.array
 S  222    14                 10                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
@@ -3935,7 +3936,7 @@ V  264     3                  7               unary     nodes.node.branchOrLeaf.
     m.execute();
 
     //stop(m.layout);
-    t.ok("""
+    m.ok("""
 T   At  Wide  Index       Value   Field name
 S    0   322                      tree
 S    0     9                 36     nodesFree     nodesFree
@@ -4070,37 +4071,16 @@ V  318     4                  0             unary     nodes.node.branchOrLeaf.le
 """);
    }
 
-  static void test_from_keyDataNext()                                           // Get the key and data from a key, data pair or the key and next from a key, next pair
-   {TestLeafTree t = new TestLeafTree();                                        // Allocate a new leaf treetree tree
-    Mjaf     m = t.mjaf;                                                        // Bit machine to process the tree
+  static void test_put()                                                        // Load a Btree
+   {final int BitsPerKey = 8, BitsPerData = 8, MaxKeysPerLeaf = 4, size = 4;    // Dimensions of Btree
+    final Mjaf m = mjaf(BitsPerKey, BitsPerData, MaxKeysPerLeaf, size);         // Crete Btree
 
-    Layout.Variable key  = m.makeKey (6);
-    Layout.Variable data = m.makeData(7);
-    Layout.Variable next = m.makeNext(3);
-    LayoutAble        kd = m.makeKeyData(key, data);
-    LayoutAble        kn = m.makeKeyNext(key, next);
-    Layout.Variable   Kd = m.keyFromKeyData(kd);
-    Layout.Variable   kD = m.dataFromKeyData(kd);
-    Layout.Variable   Kn = m.keyFromKeyNext(kn);
-    Layout.Variable   kN = m.nextFromKeyNext(kn);
+    m.put(m.makeKey(1), m.makeData(11));
     m.execute();
 
-    //stop(Kd, kD, Kn, kN);
-    Kd.copy().ok("""
-T   At  Wide  Index       Value   Field name
-V    0    12                  6     leafKey
-""");
-    kD.copy().ok("""
-T   At  Wide  Index       Value   Field name
-V   12    12                  7     leafData
-""");
-    Kn.copy().ok("""
-T   At  Wide  Index       Value   Field name
-V    0    12                  6     branchKey
-""");
-    kN.copy().ok("""
-T   At  Wide  Index       Value   Field name
-V   12     2                  3     branchNext
+    //stop(m.layout);
+
+    m.layout.ok("""
 """);
    }
 
@@ -4127,10 +4107,13 @@ V   12     2                  3     branchNext
     test_branch_greater_than_or_equal_index();
 
     test_leaf_fission();                test_branch_fission();
+
+    //test_put();
    }
 
   static void newTests()                                                        // Tests being worked on
-   {oldTests();
+   {//oldTests();
+    //test_put();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
