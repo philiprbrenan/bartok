@@ -48,7 +48,7 @@ class Mjaf extends BitMachine                                                   
 
 //D1 Construction                                                               // Create a Btree from nodes which can be branches or leaves.  The data associated with the Btree is stored only in the leaves opposite the keys
 
-  Mjaf(int BitsPerKey, int BitsPerData, int MaxKeysPerLeaf, int size)           // Define a Btree with a specified maximum number of keys per leaf.
+  Mjaf(int BitsPerKey, int BitsPerData, int MaxKeysPerLeaf, int size)           // Define a Btree with the specified dimensions
    {super("Mjaf");
     final int N      = MaxKeysPerLeaf;                                          // Assign a shorter name
     bitsPerKey       = BitsPerKey;
@@ -119,6 +119,7 @@ class Mjaf extends BitMachine                                                   
       nodesFree.element.fromInt(i);                                             // Place the free node
      }
     nodesFree.unary.value.ones();                                               // The stuck is initially full of free nodes
+    setRootToLeaf();
 
     bitMachine(nodesFree, branchStuck, leaf); bitMachines(this);                // Place all the instruction that would otherwise be generated in these machines into this machine instead
    }
@@ -142,6 +143,14 @@ class Mjaf extends BitMachine                                                   
   void clear(Layout.Variable index)                                             // Clear a node
    {setIndex(nodes, index);                                                     // Address node just freed
     zero(node);                                                                 // Clear the node
+   }
+
+  void setRootToLeaf()                                                          // Set the root node of a new tree to be a leaf
+   {nodes.setIndex(0); isLeaf.ones(); isBranch.zero();
+   }
+
+  void setRootToBranch()                                                        // Set the root node of a new tree to be a branch
+   {nodes.setIndex(0); isBranch.ones(); isLeaf.zero();
    }
 
   void isLeaf(Layout.Variable index, Layout.Bit result)                         // Check whether the specified node is a leaf
@@ -309,6 +318,12 @@ class Mjaf extends BitMachine                                                   
     leaf.unary.canNotInc(result);
    }
 
+  Layout.Bit leafRootIsFull()                                                   // Return whether the root, known to be a leaf, is full
+   {final Layout.Bit result = Layout.createBit("leafRootIsFull");
+    leafIsFull(root, result);
+    return result;
+   }
+
   Layout.Bit leafIsFull(Layout.Variable index)                                  // Leaf is full
    {Layout.Bit result = Layout.createBit("leafIsFull");
     leafIsFull(index, result);
@@ -381,8 +396,8 @@ class Mjaf extends BitMachine                                                   
    }
 
   void leafSplitRoot()                                                          // Split the root when it is a leaf
-   {final Layout.Variable F1 = leafIndex("left");                               // New left leaf
-    final Layout.Variable F2 = leafIndex("right");                              // New right root
+   {final Layout.Variable F1 = nodeIndex("left");                               // New left leaf
+    final Layout.Variable F2 = nodeIndex("right");                              // New right root
     leafSplitRoot(F1, F2);
    }
 
@@ -541,6 +556,12 @@ class Mjaf extends BitMachine                                                   
     return result;
    }
 
+  Layout.Bit branchRootIsFull()                                                 // Return whether the root, known to be a branch, is full
+   {final Layout.Bit result = Layout.createBit("branchRootIsFull");
+    branchIsFull(root, result);
+    return result;
+   }
+
   void branchSplitKey(Layout.Variable index, LayoutAble out)                    // Splitting key in a branch
    {setIndex(nodes, index);
     branchStuck.elementAt(out, branchSplitIdx);
@@ -629,8 +650,8 @@ class Mjaf extends BitMachine                                                   
    }
 
   void branchSplitRoot()                                                        // Split the root when it is a branch
-   {final Layout.Variable F1 = leafIndex("left");                               // New left branch
-    final Layout.Variable F2 = leafIndex("right");                              // New right root
+   {final Layout.Variable F1 = nodeIndex("left");                               // New left branch
+    final Layout.Variable F2 = nodeIndex("right");                              // New right root
     branchSplitRoot(F1, F2);
    }
 
@@ -799,13 +820,9 @@ class Mjaf extends BitMachine                                                   
      {void code()
        {returnIfOne(findAndInsert(Key, Data));                                  // Return immediately if fast insert succeeded
 
-        final Layout.Bit isLeaf = Layout.createBit("isLeaf");                   // Whether the root is a leaf
-        rootIsLeaf(isLeaf);
-        new IfElse (isLeaf)                                                     // Insert into root as a leaf
+        new IfElse (rootIsLeaf())                                               // Insert into root as a leaf
          {void Then()
-           {final Layout.Bit isFull = Layout.createBit("isFull");               // Whether the root is full
-            leafIsFull(root, isFull);                                           // Check whether the root is full
-            new IfElse(isFull)                                                  // Root is a leaf
+           {new IfElse(leafRootIsFull())                                        // Root is a leaf
              {void Then()                                                       // Insert into root as a leaf which is full
                {leafSplitRoot();                                                // Split the root known to be a leaf
                 final Layout.Variable n = nodeIndex("next");                    // The index of the node into which to insert the key, data pair
@@ -3655,6 +3672,44 @@ V  318     4                  7             unary     nodes.node.branchOrLeaf.le
 """);
    }
 
+  static void test_leaf_root_is_full()                                          // Test whether the root as a leaf is full
+   {TestLeafTree     t = new TestLeafTree();                                    // Create a test tree
+    Mjaf             m = t.mjaf;                                                // Bit machine to process the tree
+
+    Layout.Bit f = m.leafRootIsFull();
+    m.branchSplitRoot();
+    Layout.Bit F = m.branchRootIsFull();
+    m.execute();
+    //stop(f, F);
+    f.copy().ok("""
+T   At  Wide  Index       Value   Field name
+B    0     1                  1   leafRootIsFull
+""");
+    F.copy().ok("""
+T   At  Wide  Index       Value   Field name
+B    0     1                  0   branchRootIsFull
+""");
+   }
+
+  static void test_branch_root_is_full()                                        // Test whether the root as a branch is full
+   {TestBranchTree   t = new TestBranchTree();                                  // Create a test tree
+    Mjaf             m = t.mjaf;                                                // Bit machine to process the tree
+
+    Layout.Bit f = m.branchRootIsFull();
+    m.branchSplitRoot();
+    Layout.Bit F = m.branchRootIsFull();
+    m.execute();
+    //stop(f, F);
+    f.copy().ok("""
+T   At  Wide  Index       Value   Field name
+B    0     1                  1   branchRootIsFull
+""");
+    F.copy().ok("""
+T   At  Wide  Index       Value   Field name
+B    0     1                  0   branchRootIsFull
+""");
+   }
+
   static void test_leaf_fission()                                               // Split a leaf and insert the split results into the parent branch
    {TestLeafTree     t = new TestLeafTree();                                    // Create a test tree
     Mjaf             m = t.mjaf;                                                // Bit machine to process the tree
@@ -4080,7 +4135,12 @@ V  318     4                  0             unary     nodes.node.branchOrLeaf.le
 
     //stop(m.layout);
 
-    m.layout.ok("""
+    m.ok("""
+S   21    68                              leaf     nodes.node.branchOrLeaf.leaf
+A   21    64      0        2817             array     nodes.node.branchOrLeaf.leaf.array
+S   21    16               2817               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V   21     8                  1                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V   29     8                 11                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
 """);
    }
 
@@ -4105,15 +4165,16 @@ V  318     4                  0             unary     nodes.node.branchOrLeaf.le
     test_leaf_insert_pair();
     test_from_keyDataNext();
     test_branch_greater_than_or_equal_index();
+    test_leaf_root_is_full();           test_branch_root_is_full();
 
     test_leaf_fission();                test_branch_fission();
 
-    //test_put();
+    test_put();
    }
 
   static void newTests()                                                        // Tests being worked on
    {//oldTests();
-    //test_put();
+    test_put();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
