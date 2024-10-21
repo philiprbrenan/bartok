@@ -402,13 +402,22 @@ class Mjaf extends BitMachine                                                   
     return target;
    }
 
-  void leafSplitLowerChild(Layout.Variable parent, Layout.Variable source)      // Split a leaf that is one of the lower children of its parent branch
+  void leafFission(Layout.Variable parent, Layout.Variable source)              // Split a leaf that is one of children of its parent branch
    {LayoutAble          kd = leafSplitKey(source);                              // Leaf splitting key
     Layout.Variable target = leafSplit(source);                                 // Split leaf, the target leaf is on the left
     Layout.Variable      k = keyFromKeyData(kd);                                // Split key
     LayoutAble          kn = makeKeyNext(k, target);                            // Key, next pair for insertion into branch
-    Layout.Variable      i = branchFindFirstGreaterOrEqualIndex(parent, k);     // Position to insert into branch
-    branchInsert(parent, i, kn);                                                // Insert splitting key into branch
+    Layout.Variable      t = branchGetTopNext(parent);                          // Top next of parent
+
+    new IfElse(equals(t, source))                                               // Source is top next of parent
+     {void Then()
+       {branchPush(parent, kn);                                                 // Append split out leaf as last key, next pair.
+       }
+      void Else()
+       {Layout.Variable      i = branchFindFirstGreaterOrEqualIndex(parent, k); // Position to insert into branch
+        branchInsert(parent, i, kn);                                            // Insert splitting key into branch
+       }
+     };
    }
 
   void leafJoinable                                                             // Check that we can join two leaves
@@ -531,6 +540,12 @@ class Mjaf extends BitMachine                                                   
     branchStuck.elementAt(out, branchSplitIdx);
    }
 
+  LayoutAble branchSplitKey(Layout.Variable index)                              // Return splitting key in a branch
+   {final LayoutAble out = branchIndex();
+    branchSplitKey(index, out);
+    return out;
+   }
+
   void branchPush(Layout.Variable index, LayoutAble kd)                         // Push a key, next pair onto the indicated branch
    {setIndex(nodes, index);
     branchStuck.push(kd);
@@ -548,9 +563,15 @@ class Mjaf extends BitMachine                                                   
     branchStuck.indexOf(kd, bitsPerKey, found, result);
    }
 
-  void branchGetTopNext(Layout.Variable nodeIndex, Layout.Variable oldTop)      // Get the top node for a branch
+  void branchGetTopNext(Layout.Variable nodeIndex, Layout.Variable top)         // Get the top node for a branch
    {setIndex(nodes, nodeIndex);
-    copy(oldTop, topNext);
+    copy(top, topNext);
+   }
+
+  Layout.Variable branchGetTopNext(Layout.Variable nodeIndex)                   // Get the top node for a branch
+   {final Layout.Variable top = nodeIndex("top");
+    branchGetTopNext(nodeIndex, top);
+    return top;
    }
 
   void branchSetTopNext(Layout.Variable nodeIndex, Layout.Variable newTop)      // Set the top node for a branch
@@ -568,6 +589,12 @@ class Mjaf extends BitMachine                                                   
      }
     branchShift(source, kn);                                                    // Current key, next pair
     branchSetTopNext(target, nextFromKeyNext(kn));                              // Copy in the new top node
+   }
+
+  Layout.Variable branchSplit(Layout.Variable source)                           // Source branch, target branch. After the branch has been split the upper half will appear in the source and the lower half in the target
+   {final Layout.Variable target = branchIndex();
+    branchSplit(target, source);                                                // Work area for transferring key data pairs from the source code to the target node
+    return target;
    }
 
   void branchSplitRoot(Layout.Variable F1, Layout.Variable F2)                  // Split the root when it is a branch
@@ -599,6 +626,24 @@ class Mjaf extends BitMachine                                                   
    {final Layout.Variable F1 = leafIndex("left");                               // New left leaf
     final Layout.Variable F2 = leafIndex("right");                              // New right root
     branchSplitRoot(F1, F2);
+   }
+
+  void branchFission(Layout.Variable parent, Layout.Variable source)            // Split a branch that is one of the children of its parent branch
+   {LayoutAble          kn = branchSplitKey(source);                            // Branch splitting key
+    Layout.Variable target = branchSplit(source);                               // Split leaf, the target leaf is on the left
+    Layout.Variable      k = keyFromKeyNext(kn);                                // Split key
+    LayoutAble         pkn = makeKeyNext(k, target);                            // Key, next pair for insertion into branch
+    Layout.Variable      t = branchGetTopNext(parent);                          // Top next of parent
+
+    new IfElse(equals(t, source))                                               // Source is top next of parent
+     {void Then()
+       {branchPush(parent, pkn);                                                // Append split out leaf as last key, next pair.
+       }
+      void Else()
+       {Layout.Variable      i = branchFindFirstGreaterOrEqualIndex(parent, k); // Position to insert into branch
+        branchInsert(parent, i, pkn);                                           // Insert splitting key into branch
+       }
+     };
    }
 
   void branchJoinable                                                           // Check that we can join two branches
@@ -3609,7 +3654,7 @@ V  318     4                  7             unary     nodes.node.branchOrLeaf.le
 """);
    }
 
-  static void test_leaf_lower_child()                                           // Split a leaf that is a lower child and insert the split results into the parent branch
+  static void test_leaf_fission()                                               // Split a leaf and insert the split results into the parent branch
    {TestLeafTree     t = new TestLeafTree();                                    // Create a test tree
     Mjaf             m = t.mjaf;                                                // Bit machine to process the tree
 
@@ -3684,7 +3729,7 @@ V  318     4                 15             unary     nodes.node.branchOrLeaf.le
 """);
 
     m.reset();
-    m.leafSplitLowerChild(b, l);
+    m.leafFission(b, l);
     m.execute();
 
     //stop(m.layout);
@@ -3883,7 +3928,7 @@ V   12     2                  3     branchNext
 
   static void newTests()                                                        // Tests being worked on
    {//oldTests();
-    test_leaf_lower_child();
+    test_leaf_fission();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
