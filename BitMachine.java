@@ -64,14 +64,21 @@ public class BitMachine extends Test implements LayoutAble                      
     copy(v, value);                                                             // Set the variable
    }
 
-  void ok(String lines)                                                         // Check that specified lines are present in the memory layout of the bit machine
-   {final String l = layout.toString();                                         // Mmeory as string
-    final int    i = l.indexOf(lines);                                          // Check specified lines are present
-    if (i == -1)                                                                // Lines missing
-     {err("Layout does not contain the specified lines");
-      ++Layout.testsFailed;
+  void ok(String Lines)                                                         // Check that specified lines are present in the memory layout of the bit machine
+   {final String  m = layout.toString();                                        // Memory as string
+    final String[]L = Lines.split("\\n");                                       // Lines of expected
+    int p = 0;
+    for(int i = 0; i < L.length; ++i)                                           // Each expected
+     {final String l = L[i];
+      final int q = m.indexOf(l, p);                                            // Check specified lines are present
+      if (q == -1)                                                              // Line missing
+       {err("Layout does not contain line:", i+1, "\n"+l+"\n");
+        ++Layout.testsFailed;
+        return;
+       }
+      p = q;
      }
-    else  ++Layout.testsPassed;                                                 // Lines found
+    ++Layout.testsPassed;                                                       // Lines found
    }
 
 //D1 Instruction                                                                // Instructions recognized by the bit machine
