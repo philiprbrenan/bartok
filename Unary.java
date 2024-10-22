@@ -29,6 +29,13 @@ class Unary extends BitMachine implements LayoutAble                            
   Layout.Variable get() {return value;}                                         // Get the unary number
   Layout.Field layout() {return layout.top;}                                    // Get the topmost structure
 
+  int value()                                                                   // The current value of the unary number as a binary integer
+   {final String s = value.asString();
+    int N = 0;
+    for (int i = 0; i < s.length(); i++) if (s.charAt(i) == '1') ++N;
+    return N;
+   }
+
 //D1 Arithmetic                                                                 // Arithmetic using unary numbers
 
   void zero() {zero(value);}                                                    // Clear unary number to all zeros
@@ -68,7 +75,12 @@ class Unary extends BitMachine implements LayoutAble                            
     u.canDec(c);
     u.canInc(d);
     u.execute();
-    u.ok("1111");
+    ok(u.layout, """
+T   At  Wide  Index       Value   Field name
+V    0     4                 15   unary
+""");
+
+    ok(u.value(), 4);
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
@@ -91,6 +103,7 @@ V    0     4                 15   unary
     u1.dec();
     u1.execute();
     //stop(u1.layout);
+    ok(u.value(), 2);
     u1.layout.ok("""
 T   At  Wide  Index       Value   Field name
 V    0     4                  3   unary
@@ -110,11 +123,12 @@ V    0     4                  3   unary
     try                                                                         // Get a traceback in a format clickable in Geany if something goes wrong to speed up debugging.
      {if (github_actions) oldTests(); else newTests();                          // Tests to run
       testSummary();                                                            // Summarize test results
+      System.exit(testsFailed);
      }
     catch(Exception e)                                                          // Get a traceback in a format clickable in Geany
      {System.err.println(e);
       System.err.println(fullTraceBack(e));
+      System.exit(1);
      }
-    System.exit(testsFailed);
    }
  }
