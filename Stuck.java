@@ -58,6 +58,8 @@ class Stuck extends BitMachine implements LayoutAble                            
 
   public void ok(String expected) {ok(toString(), expected);}                   // Check the stuck
 
+  int size() {return unary.value();}                                            // The current number of elements in the stuck as a binary integer
+
 //D1 Characteristics                                                            // Characteristics of the stuck
 
   void isFull (Layout.Bit result) {unary.canNotInc(result);}                    // Check the stuck is full
@@ -1050,10 +1052,12 @@ V   40     4                 15     unary     unary
     try                                                                         // Get a traceback in a format clickable in Geany if something goes wrong to speed up debugging.
      {if (github_actions) oldTests(); else newTests();                          // Tests to run
       testSummary();                                                            // Summarize test results
+      System.exit(testsFailed);
      }
     catch(Exception e)                                                          // Get a traceback in a format clickable in Geany
      {System.err.println(e);
       System.err.println(fullTraceBack(e));
+      System.exit(1);
      }
    }
  }
