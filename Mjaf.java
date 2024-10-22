@@ -5,6 +5,8 @@
 package com.AppaApps.Silicon;                                                   // Design, simulate and layout  a binary tree on a silicon chip.
 // Use derived classes to specialize Layouts used as parameters to supply typing
 // Assert Branch or Leaf for all parameters indexing a branch or a leaf
+import java.util.*;
+
 class Mjaf extends BitMachine                                                   // Btree algorithm but with data stored only in the leaves to facilitate deletion without complicating search or insertion. The branches (interior nodes) have an odd number of keys to make the size of a branch as close to that of a leaf as possible to simplify memory management.
  {final int bitsPerKey;                                                         // Number of bits in key
   final int bitsPerData;                                                        // Number of bits in data
@@ -164,6 +166,13 @@ class Mjaf extends BitMachine                                                   
     return result;
    }
 
+  boolean isLeaf(int iLeaf)                                                     // Decide if a node is lwaf so we can print it
+   {Layout.Array nodes = layout.get("nodes").toArray();
+    Layout.Bit   index = layout.get("nodes.node.isLeaf").toBit();
+    nodes.setIndex(iLeaf);                                                          // Select the leaf to process
+    return index.get(0);
+   }
+
   void isBranch(Layout.Variable index, Layout.Bit result)                       // Check whether the specified node is a branch
    {setIndex(nodes, index);                                                     // Index node
     copy(result, isBranch);                                                     // Get branch flag
@@ -286,6 +295,14 @@ class Mjaf extends BitMachine                                                   
    {Layout.Variable i = nodeIndex("leaf");
     leafMake(i);
     return i;
+   }
+
+  int leafGetKey(int iLeaf, int index)                                          // Get leaf key so we can print it
+   {Layout.Array nodes = layout.get("nodes").toArray();
+    Layout.Array leaf  = layout.get("nodes.node.branchOrLeaf.leaf.array").toArray();
+    nodes.setIndex(iLeaf);                                                          // Select the leaf to process
+    leaf.setIndex(index);                                                           // Select the key, data pair to process
+    return leaf.get("leafKeyData.leafKey").asInt();
    }
 
   void leafGet(Layout.Variable iLeaf, Layout.Variable index, LayoutAble kd)     // Get the specified key, data pair in the specified leaf
@@ -498,6 +515,18 @@ class Mjaf extends BitMachine                                                   
      }; // Outer block to exit when we have found the key
    }
 
+  int leafSize(int nodeIndex) {nodes.setIndex(nodeIndex); return  leaf.size();} // Number of key, data pairs in a leaf
+
+  void leafPrint(Stack<StringBuilder>S, int level, int nodeIndex)               // Print leaf horizontally
+   {padStrings(S, level);
+    final StringBuilder s = new StringBuilder();                                // String builder
+    final int K = leafSize(nodeIndex);
+    for  (int i = 0; i < K; i++) s.append(""+leafGetKey(nodeIndex, i)+",");
+    s.setLength(s.length()-1);
+    S.elementAt(level).append(s.toString());
+    padStrings(S, level);
+   }
+
 //D1 Branch                                                                     // Process a branch
 
   void branchMark(Layout.Variable iBranch)                                      // Mark a node as a branch not a branch
@@ -517,6 +546,35 @@ class Mjaf extends BitMachine                                                   
    {Layout.Variable i = nodeIndex("branch");
     branchMake(i);
     return i;
+   }
+
+  int branchGetKey(int iBranch, int index)                                      // Get branch key so we can print it
+   {Layout.Array nodes  = layout.get("nodes").toArray();
+    Layout.Array branch = layout.get("nodes.node.branchOrLeaf.branch.branchStuck.array").toArray();
+    nodes.setIndex(iBranch);                                                    // Select the leaf to process
+    branch.setIndex(index);                                                     // Select the key, data pair to process
+    return branch.get("branchKeyNext.branchKey").asInt();
+   }
+
+  int branchGetNext(int iBranch, int index)                                     // Get branch next so we can traverse the tree during printing
+   {Layout.Array nodes  = layout.get("nodes").toArray();
+    Layout.Array branch = layout.get("nodes.node.branchOrLeaf.branch.branchStuck.array").toArray();
+    nodes.setIndex(iBranch);                                                    // Select the leaf to process
+    branch.setIndex(index);                                                     // Select the key, data pair to process
+    return branch.get("branchKeyNext.branchNext").asInt();
+   }
+
+  int branchGetTopNext(int iBranch)                                             // Get branch top next so we can traverse the tree during printing
+   {Layout.Array nodes  = layout.get("nodes").toArray();
+    nodes.setIndex(iBranch);                                                    // Select the leaf to process
+    return layout.get("nodes.node.branchOrLeaf.branch.topNext").asInt();
+   }
+
+  int branchGetSize(int iBranch)                                                // Get branch next so we can traverse the tree during printing
+   {Layout.Array nodes  = layout.get("nodes").toArray();
+    Layout.Array branch = layout.get("nodes.node.branchOrLeaf.branch.branchStuck.array").toArray();
+    nodes.setIndex(iBranch);                                                    // Select the leaf to process
+    return branch.get("branchKeyNext.branchNext").asInt();
    }
 
   void branchGet(Layout.Variable iBranch, Layout.Variable index, LayoutAble kd) // Get the specified key, next pair in the specified branch
@@ -754,6 +812,53 @@ class Mjaf extends BitMachine                                                   
        }
      }; // Outer block to exit when we have found the key
     return result;
+   }
+
+  int branchSize(int nodeIndex)                                                 // Number of key, data pairs in a branch
+   {nodes.setIndex(nodeIndex);
+    return  branchStuck.size();
+   }
+
+  void branchPrintLeafOrBranch(Stack<StringBuilder>S, int level, int nodeIndex) // Print a branch or a leaf
+   {nodes.setIndex(nodeIndex);
+    if (isLeaf(nodeIndex)) leafPrint(S, level+1, nodeIndex);
+    else                   branchPrint(S, level+1, nodeIndex);
+   }
+
+  void branchPrint(Stack<StringBuilder>S, int level, int nodeIndex)             // Print branch horizontally
+   {padStrings(S, level);
+    final int K = branchSize(nodeIndex);
+    for  (int i = 0; i < K; i++)
+     {final int next = branchGetNext(nodeIndex, i);
+      branchPrintLeafOrBranch(S, level, next);
+      S.elementAt(level).append(branchGetKey(nodeIndex, i));
+     }
+    final int top = branchGetTopNext(nodeIndex);
+    if (isLeaf(top)) leafPrint(S, level+1, top);
+    else             branchPrint(S, level+1, top);
+    padStrings(S, level);
+   }
+
+//D1 Print                                                                      // Print a Btree horizontally
+
+  static void padStrings(Stack<StringBuilder> S, int level)                     // Pad a stack of strings so they all have the same length
+   {for (int i = S.size(); i <= level; ++i) S.push(new StringBuilder());        // Make sure we have a full deck of strings
+    int m = 0;                                                                  // Maximum length
+    for (StringBuilder s : S) m = m < s.length() ? s.length() : m;              // Find maximum length
+    for (StringBuilder s : S)                                                   // Pad each string to maximum length
+     {if (s.length() < m) s.append(" ".repeat(m - s.length()));                 // Pad string to maximum length
+     }
+   }
+
+  String print()                                                                // Print a tree horizontally
+   {final Stack<StringBuilder> S = new Stack<>();
+
+    nodes.setIndex(0);                                                          // Address root
+    if (isLeaf.asInt() == 1) leafPrint(S, 0, 0); else branchPrint(S, 0, 0);     // Tree consists of one leaf node
+
+    final StringBuilder t = new StringBuilder();
+    for  (StringBuilder s : S) t.append(s.toString()+"|\n");
+    return t.toString();
    }
 
 //D1 Search                                                                     // Find a key, data pair
@@ -4087,6 +4192,7 @@ V  295     4                 15             unary     nodes.node.branchOrLeaf.le
 
     m.reset();
     m.put(m.makeKey(7), m.makeData(77));
+    m.put(m.makeKey(8), m.makeData(88));
     m.execute();
 
     //stop(m.layout);
@@ -4150,7 +4256,17 @@ A  263    64      2                         array     nodes.node.branchOrLeaf.le
 S  263    16              19719               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
 V  263     8                  7                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
 V  271     8                 77                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
-V  295     4                  7             unary     nodes.node.branchOrLeaf.leaf.unary
+A  279    64      3                         array     nodes.node.branchOrLeaf.leaf.array
+S  279    16              22536               leafKeyData     nodes.node.branchOrLeaf.leaf.array.leafKeyData
+V  279     8                  8                 leafKey     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey
+V  287     8                 88                 leafData     nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData
+V  295     4                 15             unary     nodes.node.branchOrLeaf.leaf.unary
+""");
+
+    //stop(m.print());
+    ok(m.print(), """
+   2   4       |
+1,2 3,4 5,6,7,8|
 """);
    }
 
@@ -4191,10 +4307,12 @@ V  295     4                  7             unary     nodes.node.branchOrLeaf.le
    {try                                                                         // Get a traceback in a format clickable in Geany if something goes wrong to speed up debugging.
      {if (github_actions) oldTests(); else newTests();                          // Tests to run
       testSummary();                                                            // Summarize test results
+      System.exit(testsFailed);
      }
     catch(Exception e)                                                          // Get a traceback in a format clickable in Geany
      {System.err.println(e);
       System.err.println(fullTraceBack(e));
+      System.exit(1);
      }
    }
  }
