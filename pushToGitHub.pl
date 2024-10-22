@@ -63,7 +63,7 @@ jobs:
         task: [$j]
 
     steps:
-    - uses: actions/checkout\@v3
+    - uses: actions/checkout\@v4
       with:
         ref: 'main'
 
