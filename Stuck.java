@@ -235,20 +235,20 @@ class Stuck extends BitMachine implements LayoutAble                            
     //stop(s.layout);
     s.layout.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    44                  0   s
-A    0    40      0           0     array     array
+S    0    44                      s
+A    0    40      0                 array     array
 S    0    10                 15       s     array.s
 V    0     4                 15         key     array.s.key
 V    4     6                  0         data     array.s.data
-A   10    40      1           0     array     array
+A   10    40      1                 array     array
 S   10    10                 31       s     array.s
 V   10     4                 15         key     array.s.key
 V   14     6                  1         data     array.s.data
-A   20    40      2           0     array     array
+A   20    40      2                 array     array
 S   20    10                 63       s     array.s
 V   20     4                 15         key     array.s.key
 V   24     6                  3         data     array.s.data
-A   30    40      3           0     array     array
+A   30    40      3                 array     array
 S   30    10                127       s     array.s
 V   30     4                 15         key     array.s.key
 V   34     6                  7         data     array.s.data
@@ -300,20 +300,20 @@ B   15     1                  1     f4     f4
     //stop(s.layout);
     s.layout.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    44                  0   S
-A    0    40      0           0     array     array
+S    0    44                      S
+A    0    40      0                 array     array
 S    0    10                 16       s     array.s
 V    0     4                  0         key     array.s.key
 V    4     6                  1         data     array.s.data
-A   10    40      1           0     array     array
+A   10    40      1                 array     array
 S   10    10                 48       s     array.s
 V   10     4                  0         key     array.s.key
 V   14     6                  3         data     array.s.data
-A   20    40      2           0     array     array
+A   20    40      2                 array     array
 S   20    10                112       s     array.s
 V   20     4                  0         key     array.s.key
 V   24     6                  7         data     array.s.data
-A   30    40      3           0     array     array
+A   30    40      3                 array     array
 S   30    10                240       s     array.s
 V   30     4                  0         key     array.s.key
 V   34     6                 15         data     array.s.data
@@ -378,20 +378,20 @@ V    4     6                  1     data     data
     //stop(s.layout);
     s.layout.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    44                  0   s
-A    0    40      0           0     array     array
+S    0    44                      s
+A    0    40      0                 array     array
 S    0    10                240       s     array.s
 V    0     4                  0         key     array.s.key
 V    4     6                 15         data     array.s.data
-A   10    40      1           0     array     array
+A   10    40      1                 array     array
 S   10    10                240       s     array.s
 V   10     4                  0         key     array.s.key
 V   14     6                 15         data     array.s.data
-A   20    40      2           0     array     array
+A   20    40      2                 array     array
 S   20    10                240       s     array.s
 V   20     4                  0         key     array.s.key
 V   24     6                 15         data     array.s.data
-A   30    40      3           0     array     array
+A   30    40      3                 array     array
 S   30    10                240       s     array.s
 V   30     4                  0         key     array.s.key
 V   34     6                 15         data     array.s.data
@@ -449,20 +449,20 @@ V    4     6                 15     data     data
     //stop(s.layout);
     s.layout.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    44                  0   s
-A    0    40      0           0     array     array
+S    0    44                      s
+A    0    40      0                 array     array
 S    0    10                240       s     array.s
 V    0     4                  0         key     array.s.key
 V    4     6                 15         data     array.s.data
-A   10    40      1           0     array     array
+A   10    40      1                 array     array
 S   10    10                112       s     array.s
 V   10     4                  0         key     array.s.key
 V   14     6                  7         data     array.s.data
-A   20    40      2           0     array     array
+A   20    40      2                 array     array
 S   20    10                 48       s     array.s
 V   20     4                  0         key     array.s.key
 V   24     6                  3         data     array.s.data
-A   30    40      3           0     array     array
+A   30    40      3                 array     array
 S   30    10                 16       s     array.s
 V   30     4                  0         key     array.s.key
 V   34     6                  1         data     array.s.data
@@ -504,20 +504,20 @@ V   40     4                 15     unary     unary
     //stop(s.layout);
     s.layout.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    44                  0   s
-A    0    40      0           0     array     array
+S    0    44                      s
+A    0    40      0                 array     array
 S    0    10                240       s     array.s
 V    0     4                  0         key     array.s.key
 V    4     6                 15         data     array.s.data
-A   10    40      1           0     array     array
+A   10    40      1                 array     array
 S   10    10                112       s     array.s
 V   10     4                  0         key     array.s.key
 V   14     6                  7         data     array.s.data
-A   20    40      2           0     array     array
+A   20    40      2                 array     array
 S   20    10                 48       s     array.s
 V   20     4                  0         key     array.s.key
 V   24     6                  3         data     array.s.data
-A   30    40      3           0     array     array
+A   30    40      3                 array     array
 S   30    10                 16       s     array.s
 V   30     4                  0         key     array.s.key
 V   34     6                  1         data     array.s.data
@@ -659,20 +659,20 @@ V    4     6                 44     data     data
     //stop(s.layout);
     s.layout.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    44                  0   s
-A    0    40      0           0     array     array
+S    0    44                      s
+A    0    40      0                 array     array
 S    0    10                 11       s     array.s
 V    0     4                 11         key     array.s.key
 V    4     6                  0         data     array.s.data
-A   10    40      1           0     array     array
+A   10    40      1                 array     array
 S   10    10                 22       s     array.s
 V   10     4                  6         key     array.s.key
 V   14     6                  1         data     array.s.data
-A   20    40      2           0     array     array
+A   20    40      2                 array     array
 S   20    10                 33       s     array.s
 V   20     4                  1         key     array.s.key
 V   24     6                  2         data     array.s.data
-A   30    40      3           0     array     array
+A   30    40      3                 array     array
 S   30    10                 44       s     array.s
 V   30     4                 12         key     array.s.key
 V   34     6                  2         data     array.s.data
@@ -684,20 +684,20 @@ V   40     4                 15     unary     unary
     //stop(s.layout);
     s.layout.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    44                  0   s
-A    0    40      0           0     array     array
+S    0    44                      s
+A    0    40      0                 array     array
 S    0    10                 11       s     array.s
 V    0     4                 11         key     array.s.key
 V    4     6                  0         data     array.s.data
-A   10    40      1           0     array     array
+A   10    40      1                 array     array
 S   10    10                 33       s     array.s
 V   10     4                  1         key     array.s.key
 V   14     6                  2         data     array.s.data
-A   20    40      2           0     array     array
+A   20    40      2                 array     array
 S   20    10                 44       s     array.s
 V   20     4                 12         key     array.s.key
 V   24     6                  2         data     array.s.data
-A   30    40      3           0     array     array
+A   30    40      3                 array     array
 S   30    10                 44       s     array.s
 V   30     4                 12         key     array.s.key
 V   34     6                  2         data     array.s.data
@@ -720,20 +720,20 @@ V   40     4                  7     unary     unary
     //stop(t.layout);
     t.layout.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    44                  0   t
-A    0    40      0           0     array     array
+S    0    44                      t
+A    0    40      0                 array     array
 S    0    10                 11       s     array.s
 V    0     4                 11         key     array.s.key
 V    4     6                  0         data     array.s.data
-A   10    40      1           0     array     array
+A   10    40      1                 array     array
 S   10    10                 44       s     array.s
 V   10     4                 12         key     array.s.key
 V   14     6                  2         data     array.s.data
-A   20    40      2           0     array     array
+A   20    40      2                 array     array
 S   20    10                 44       s     array.s
 V   20     4                 12         key     array.s.key
 V   24     6                  2         data     array.s.data
-A   30    40      3           0     array     array
+A   30    40      3                 array     array
 S   30    10                 44       s     array.s
 V   30     4                 12         key     array.s.key
 V   34     6                  2         data     array.s.data
@@ -757,20 +757,20 @@ V   40     4                  3     unary     unary
     //stop(u.layout);
     u.layout.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    44                  0   u
-A    0    40      0           0     array     array
+S    0    44                      u
+A    0    40      0                 array     array
 S    0    10                 44       s     array.s
 V    0     4                 12         key     array.s.key
 V    4     6                  2         data     array.s.data
-A   10    40      1           0     array     array
+A   10    40      1                 array     array
 S   10    10                 44       s     array.s
 V   10     4                 12         key     array.s.key
 V   14     6                  2         data     array.s.data
-A   20    40      2           0     array     array
+A   20    40      2                 array     array
 S   20    10                 44       s     array.s
 V   20     4                 12         key     array.s.key
 V   24     6                  2         data     array.s.data
-A   30    40      3           0     array     array
+A   30    40      3                 array     array
 S   30    10                 44       s     array.s
 V   30     4                 12         key     array.s.key
 V   34     6                  2         data     array.s.data
@@ -795,20 +795,20 @@ V   40     4                  1     unary     unary
     //stop(v.layout);
     v.layout.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    44                  0   v
-A    0    40      0           0     array     array
+S    0    44                      v
+A    0    40      0                 array     array
 S    0    10                 44       s     array.s
 V    0     4                 12         key     array.s.key
 V    4     6                  2         data     array.s.data
-A   10    40      1           0     array     array
+A   10    40      1                 array     array
 S   10    10                 44       s     array.s
 V   10     4                 12         key     array.s.key
 V   14     6                  2         data     array.s.data
-A   20    40      2           0     array     array
+A   20    40      2                 array     array
 S   20    10                 44       s     array.s
 V   20     4                 12         key     array.s.key
 V   24     6                  2         data     array.s.data
-A   30    40      3           0     array     array
+A   30    40      3                 array     array
 S   30    10                 44       s     array.s
 V   30     4                 12         key     array.s.key
 V   34     6                  2         data     array.s.data
@@ -971,20 +971,20 @@ V   41     4                 15     ie     ie
     //stop(s.layout);
     s.layout.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    44                  0   s
-A    0    40      0           0     array     array
+S    0    44                      s
+A    0    40      0                 array     array
 S    0    10                 11       s     array.s
 V    0     4                 11         key     array.s.key
 V    4     6                  0         data     array.s.data
-A   10    40      1           0     array     array
+A   10    40      1                 array     array
 S   10    10                 22       s     array.s
 V   10     4                  6         key     array.s.key
 V   14     6                  1         data     array.s.data
-A   20    40      2           0     array     array
+A   20    40      2                 array     array
 S   20    10                 33       s     array.s
 V   20     4                  1         key     array.s.key
 V   24     6                  2         data     array.s.data
-A   30    40      3           0     array     array
+A   30    40      3                 array     array
 S   30    10                 44       s     array.s
 V   30     4                 12         key     array.s.key
 V   34     6                  2         data     array.s.data
@@ -1009,20 +1009,20 @@ V   40     4                 15     unary     unary
     //stop(s.layout);
     s.layout.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    44                  0   s
-A    0    40      0           0     array     array
+S    0    44                      s
+A    0    40      0  -1071643648     array     array
 S    0    10                  0       s     array.s
 V    0     4                  0         key     array.s.key
 V    4     6                  0         data     array.s.data
-A   10    40      1           0     array     array
+A   10    40      1  -1071643648     array     array
 S   10    10                  1       s     array.s
 V   10     4                  1         key     array.s.key
 V   14     6                  0         data     array.s.data
-A   20    40      2           0     array     array
+A   20    40      2  -1071643648     array     array
 S   20    10                  2       s     array.s
 V   20     4                  2         key     array.s.key
 V   24     6                  0         data     array.s.data
-A   30    40      3           0     array     array
+A   30    40      3  -1071643648     array     array
 S   30    10                  3       s     array.s
 V   30     4                  3         key     array.s.key
 V   34     6                  0         data     array.s.data
