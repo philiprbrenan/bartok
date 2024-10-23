@@ -9,7 +9,8 @@ import java.util.*;
 //D1 Construct                                                                  // Construct a bit machine capable of manipulating a BTree
 
 public class BitMachine extends Test implements LayoutAble                      // A machine whose assembler code is just capable enough to manipulate a b-tree
- {int maxSteps = 999;                                                           // Maximum number of steps to be executed
+ {int maxSteps = 9999;                                                          // Maximum number of steps to be executed
+  int maxRepeatSteps = 6;                                                      // Maximum number of times a repeat block can be iterated
   final String bitMachineName;                                                  // The name of the bit machine
   final int bitMachineNumber;                                                   // The number of the bit machine
   final StringBuilder           printer = new StringBuilder();                  // Place test output here for comparison with expected values
@@ -98,9 +99,11 @@ public class BitMachine extends Test implements LayoutAble                      
    {String name;                                                                // Name of the instruction
     String label;                                                               // Label of the instruction
     int    position;                                                            // Position of the instruction in the instruction stack
+    final String traceBack;                                                     // The trace back when the instruction was created
 
     Instruction()                                                               // Set name of instruction
-     {name  = getClass().getName().split("\\$")[1];                             // Name of instruction from class name representing the instruction as long as the class has a name
+     {traceBack = Test.traceBack();                                             // Trace back at time instruction was executed
+      name = getClass().getName().split("\\$")[1];                              // Name of instruction from class name representing the instruction as long as the class has a name
       addInstruction();
      }
 
@@ -502,8 +505,8 @@ public class BitMachine extends Test implements LayoutAble                      
 //D2 Constant comparison                                                        // Compare the value of a field  with a constant value to determine whether to branch or not
 
   abstract class Branch extends Instruction                                     // A branch instruction. These instructions are primarily to support 'if' statements. Otherwise instructions based on  'block' are preffereable.
-   {final Layout.Field bit;
-    int target;
+   {final Layout.Field bit;                                                     // Result of comparison
+    int target;                                                                 // Target of branch
 
     Branch(Layout.Field Bit) {bit = Bit;}                                       // Forward branch to a come from instruction
     Branch(Layout.Field Bit, Instruction instruction)                           // Backward branch
@@ -797,12 +800,27 @@ public class BitMachine extends Test implements LayoutAble                      
    }
 
   abstract class Repeat extends Block                                           // Repeat a block of code until a return is requested
-   {Repeat()                                                                    // Iterate over an array
+   {int repeats;                                                                // number of repeats
+    Repeat()                                                                    // Iterate over an array
      {super(true);
       name = "Repeat";
       code();
-      goTo(this);
+      //goTo(this);
+      new Continue(this);
       end = nop();                                                              // End of block
+     }
+    void action() {repeats = 0; say("Reset repetition");}                       // Reset repetition coun every time we start the repeat block
+    class Continue extends GoTo                                                 // Continue a block by going to its start no more than a specified number of times
+     {Continue(Instruction instruction) {super(instruction);}                   // Backward goto
+
+     void action()                                                              // Restart the repeat block unless it has been executed too many times
+       {++repeats;                                                              // Count the number of repeats
+        if (repeats > maxRepeatSteps)                                           // Stop if too many repeats
+         {stop("Repeat has executed", maxRepeatSteps, "times\n"+traceBack);
+         }
+        say("AAAA repitiion", repeats);
+        setInstructionIndex(target+1);                                          // First caller instruction of block.  The repeat instriuction slot itself is used to initialize the repetition counter every time we start a set of repetitions.
+       }
      }
    }
 
