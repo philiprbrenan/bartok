@@ -16,7 +16,7 @@ public class Layout extends Test implements LayoutAble                          
   void layout(Field field)                                                      // Create a new Layout loaded from a set of definitions
    {top  = field;                                                               // Record layout
     field.layout(0, 0);                                                         // Locate field positions
-    memory = new Memory();                                                      // Create a matching memory.
+    //memory = new Memory();                                                      // Create a matching memory.
     field.indexNames();                                                         // Index the names of the fields
     memory = new Memory();                                                      // New memory encompassing all the unified memories
     unifyMemory(memory);                                                        // Unify the memory of all declared layouts with the memory of this layout
@@ -102,7 +102,7 @@ public class Layout extends Test implements LayoutAble                          
     public String toString()                                                    // Print memory
      {final StringBuilder s = new StringBuilder();
       final int N = size();
-      s.append("Memory: "+memoryNumber+" has "+N+" bits\n");                    // Title
+      //s.append("Memory: "+memoryNumber+" has "+N+" bits\n");                  // Title
       int l = 0;
       for (int i = 1; i <= N; i++)
        {final Boolean b = get(i-1);
@@ -191,7 +191,7 @@ public class Layout extends Test implements LayoutAble                          
 
     StringBuilder header()                                                      // Create a string builder with a header preloaded
      {final StringBuilder s = new StringBuilder();
-      s.append("Memory: "+memory.memoryNumber+"\n");
+      //s.append("Memory: "+memory.memoryNumber+"\n");
       s.append(String.format
        ("%1s %4s  %4s  %5s    %8s   %s\n",
         "T", "At", "Wide", "Index", "Value", "Field name"));
@@ -903,7 +903,7 @@ V    4     2                  1     d     d
     //stop(M);
     M.ok("""
 T   At  Wide  Index       Value   Field name
-S    0   184                  0   E
+S    0   184                      E
 V    0    64                  0     C     C
 S   64     8                  1     s     s
 B   64     1                  1       a     s.a
