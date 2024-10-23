@@ -16,7 +16,7 @@ public class Layout extends Test implements LayoutAble                          
   void layout(Field field)                                                      // Create a new Layout loaded from a set of definitions
    {top  = field;                                                               // Record layout
     field.layout(0, 0);                                                         // Locate field positions
-    //memory = new Memory();                                                      // Create a matching memory.
+    //memory = new Memory();                                                    // Create a matching memory.
     field.indexNames();                                                         // Index the names of the fields
     memory = new Memory();                                                      // New memory encompassing all the unified memories
     unifyMemory(memory);                                                        // Unify the memory of all declared layouts with the memory of this layout
