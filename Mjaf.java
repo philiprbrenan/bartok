@@ -48,6 +48,8 @@ class Mjaf extends BitMachine                                                   
   final Layout.Structure workStructure;                                         // Work structure
   final Layout           work;                                                  // Memory work area for temporary, intermediate results
 
+  final static String nbol = "nodes.node.branchOrLeaf.";                        // Search layout
+
 //D1 Construction                                                               // Create a Btree from nodes which can be branches or leaves.  The data associated with the Btree is stored only in the leaves opposite the keys
 
   Mjaf(int BitsPerKey, int BitsPerData, int MaxKeysPerLeaf, int size)           // Define a Btree with the specified dimensions
@@ -198,7 +200,9 @@ class Mjaf extends BitMachine                                                   
   class KeyData                                                                 // A key, data pair
    {final LayoutAble v;
     KeyData(LayoutAble V)
-     {if (V.asField().width != bitsPerKey+bitsPerData) stop("Wrong sized key, data", V);
+     {if (V.asField().width != bitsPerKey+bitsPerData)
+       {stop("Wrong sized key, data", V);
+       }
       v = V;
      }
    }
@@ -206,60 +210,11 @@ class Mjaf extends BitMachine                                                   
   class KeyNext                                                                 // A key, next pair
    {final LayoutAble v;
     KeyNext(LayoutAble V)
-     {if (V.asField().width != bitsPerKey+bitsPerNext) stop("Wrong sized key, next", V);
+     {if (V.asField().width != bitsPerKey+bitsPerNext)
+       {stop("Wrong sized key, next", V);
+       }
       v = V;
      }
-   }
-
-  void isLeaf(NN index, Layout.Bit result)                                      // Check whether the specified node is a leaf
-   {setIndex(nodes, index.v);                                                   // Index node
-    copy(result, isLeaf);                                                       // Get leaf flag
-   }
-
-  Layout.Bit isLeaf(NN index)                                                   // Check whether the specified node is a leaf
-   {final Layout.Bit result = Layout.createBit("isLeaf");                       // Result bit
-    isLeaf(index, result);                                                      // Check whether the specified node is a leaf
-    return result;
-   }
-
-  boolean isLeaf(int iLeaf)                                                     // Decide if a node is leaf so we can print it
-   {Layout.Array nodes = layout.get("nodes").toArray();
-    Layout.Bit   index = layout.get("nodes.node.isLeaf").toBit();
-    nodes.setIndex(iLeaf);                                                      // Select the leaf to process
-    return index.get(0);
-   }
-
-  void isBranch(NN index, Layout.Bit result)                                    // Check whether the specified node is a branch
-   {setIndex(nodes, index.v);                                                   // Index node
-    copy(result, isBranch);                                                     // Get branch flag
-   }
-
-  Layout.Bit isBranch(NN index)                                                 // Return whether the specified node is a branch
-   {final Layout.Bit result = Layout.createBit("isBranch");                     // Result bit
-    isBranch(index, result);                                                    // Check whether the specified node is a branch
-    return result;
-   }
-
-  void rootIsLeaf(Layout.Bit result)                                            // Check whether the root is a leaf
-   {setIndex(nodes, root);                                                      // Index node
-    copy(result, isLeaf);                                                       // Get leaf flag
-   }
-
-  Layout.Bit rootIsLeaf()                                                       // Check whether the root is a leaf
-   {final Layout.Bit result = Layout.createBit("rootIsLeaf");                   // Result bit
-    rootIsLeaf(result);                                                         // Check whether the root is a leaf
-    return result;
-   }
-
-  void rootIsBranch(Layout.Bit result)                                          // Check whether the root is a branch
-   {setIndex(nodes, root);                                                      // Index node
-    copy(result, isBranch);                                                     // Get branch flag
-   }
-
-  Layout.Bit rootIsBranch()                                                     // Check whether the root is a branch
-   {final Layout.Bit result = Layout.createBit("rootIsBranch");                 // Result bit
-    rootIsBranch(result);                                                       // Check whether the root is a branch
-    return result;
    }
 
   NN nodeIndex(String name)                                                     // Create a node index with the specified name
@@ -289,7 +244,6 @@ class Mjaf extends BitMachine                                                   
     copy(data, value);
     return new Data(data);
    }
-
 
   KeyData makeKeyData(Key Key, Data Data)                                       // Create a key, data pair for insertion into a leaf
    {final LayoutAble kd = leafKeyData.duplicate();                              // Key, data pair
@@ -330,7 +284,6 @@ class Mjaf extends BitMachine                                                   
 
   KeyNext makeKeyNext() {return makeKeyNext(null, null);}                       // Create a key, next  pair for insertion into a branch without loading the fields
 
-
   Key keyFromKeyNext(KeyNext kn)                                                // Get the key from a key, next pair
    {return new Key(kn.v.asLayout().get("branchKey").toVariable());
    }
@@ -342,6 +295,35 @@ class Mjaf extends BitMachine                                                   
   void setIndex(Layout.Array array, NN index) {setIndex(array, index.v);}       // Set the index of a layout array
 
 //D1 Leaf                                                                       // Process a leaf
+
+  void isLeaf(NN index, Layout.Bit result)                                      // Check whether the specified node is a leaf
+   {setIndex(nodes, index.v);                                                   // Index node
+    copy(result, isLeaf);                                                       // Get leaf flag
+   }
+
+  Layout.Bit isLeaf(NN index)                                                   // Check whether the specified node is a leaf
+   {final Layout.Bit result = Layout.createBit("isLeaf");                       // Result bit
+    isLeaf(index, result);                                                      // Check whether the specified node is a leaf
+    return result;
+   }
+
+  boolean isLeaf(int iLeaf)                                                     // Decide if a node is leaf so we can print it
+   {Layout.Array nodes = layout.get("nodes").toArray();
+    Layout.Bit   index = layout.get("nodes.node.isLeaf").toBit();
+    nodes.setIndex(iLeaf);                                                      // Select the leaf to process
+    return index.get(0);
+   }
+
+  void rootIsLeaf(Layout.Bit result)                                            // Check whether the root is a leaf
+   {setIndex(nodes, root);                                                      // Index node
+    copy(result, isLeaf);                                                       // Get leaf flag
+   }
+
+  Layout.Bit rootIsLeaf()                                                       // Check whether the root is a leaf
+   {final Layout.Bit result = Layout.createBit("rootIsLeaf");                   // Result bit
+    rootIsLeaf(result);                                                         // Check whether the root is a leaf
+    return result;
+   }
 
   void leafMark(NN iLeaf)                                                       // Mark a node as a leaf not as a branch
    {setIndex(nodes, iLeaf);                                                     // Select the leaf to process
@@ -364,7 +346,7 @@ class Mjaf extends BitMachine                                                   
 
   int leafGetKey(int iLeaf, int index)                                          // Get leaf key so we can print it
    {Layout.Array nodes = layout.get("nodes").toArray();
-    Layout.Array leaf  = layout.get("nodes.node.branchOrLeaf.leaf.array").toArray();
+    Layout.Array leaf  = layout.get(nbol+"leaf.array").toArray();
     nodes.setIndex(iLeaf);                                                      // Select the leaf to process
     leaf.setIndex(index);                                                       // Select the key, data pair to process
     return leaf.get("leafKeyData.leafKey").asInt();
@@ -605,6 +587,28 @@ class Mjaf extends BitMachine                                                   
     branchMark(iBranch);
    }
 
+  void isBranch(NN index, Layout.Bit result)                                    // Check whether the specified node is a branch
+   {setIndex(nodes, index.v);                                                   // Index node
+    copy(result, isBranch);                                                     // Get branch flag
+   }
+
+  Layout.Bit isBranch(NN index)                                                 // Return whether the specified node is a branch
+   {final Layout.Bit result = Layout.createBit("isBranch");                     // Result bit
+    isBranch(index, result);                                                    // Check whether the specified node is a branch
+    return result;
+   }
+
+  void rootIsBranch(Layout.Bit result)                                          // Check whether the root is a branch
+   {setIndex(nodes, root);                                                      // Index node
+    copy(result, isBranch);                                                     // Get branch flag
+   }
+
+  Layout.Bit rootIsBranch()                                                     // Check whether the root is a branch
+   {final Layout.Bit result = Layout.createBit("rootIsBranch");                 // Result bit
+    rootIsBranch(result);                                                       // Check whether the root is a branch
+    return result;
+   }
+
   NN branchMake()                                                               // Make a new branch and return its index
    {NN i = nodeIndex("branch");
     branchMake(i);
@@ -613,7 +617,7 @@ class Mjaf extends BitMachine                                                   
 
   int branchGetKey(int iBranch, int index)                                      // Get branch key so we can print it
    {Layout.Array nodes  = layout.get("nodes").toArray();
-    Layout.Array branch = layout.get("nodes.node.branchOrLeaf.branch.branchStuck.array").toArray();
+    Layout.Array branch = layout.get(nbol+"branch.branchStuck.array").toArray();
     nodes.setIndex(iBranch);                                                    // Select the leaf to process
     branch.setIndex(index);                                                     // Select the key, data pair to process
     return branch.get("branchKeyNext.branchKey").asInt();
@@ -621,7 +625,7 @@ class Mjaf extends BitMachine                                                   
 
   int branchGetNext(int iBranch, int index)                                     // Get branch next so we can traverse the tree during printing
    {Layout.Array nodes  = layout.get("nodes").toArray();
-    Layout.Array branch = layout.get("nodes.node.branchOrLeaf.branch.branchStuck.array").toArray();
+    Layout.Array branch = layout.get(nbol+"branch.branchStuck.array").toArray();
     nodes.setIndex(iBranch);                                                    // Select the leaf to process
     branch.setIndex(index);                                                     // Select the key, data pair to process
     return branch.get("branchKeyNext.branchNext").asInt();
@@ -630,12 +634,12 @@ class Mjaf extends BitMachine                                                   
   int branchGetTopNext(int iBranch)                                             // Get branch top next so we can traverse the tree during printing
    {Layout.Array nodes  = layout.get("nodes").toArray();
     nodes.setIndex(iBranch);                                                    // Select the leaf to process
-    return layout.get("nodes.node.branchOrLeaf.branch.topNext").asInt();
+    return layout.get(nbol+"branch.topNext").asInt();
    }
 
   int branchGetSize(int iBranch)                                                // Get branch next so we can traverse the tree during printing
    {Layout.Array nodes  = layout.get("nodes").toArray();
-    Layout.Array branch = layout.get("nodes.node.branchOrLeaf.branch.branchStuck.array").toArray();
+    Layout.Array branch = layout.get(nbol+"branch.branchStuck.array").toArray();
     nodes.setIndex(iBranch);                                                    // Select the leaf to process
     return branch.get("branchKeyNext.branchNext").asInt();
    }
@@ -896,7 +900,8 @@ class Mjaf extends BitMachine                                                   
     for  (int i = 0; i < K; i++)
      {final int next = branchGetNext(nodeIndex, i);
       branchPrintLeafOrBranch(S, level, next);
-      S.elementAt(level).append(""+branchGetNext(nodeIndex, i)+"("+branchGetKey(nodeIndex, i)+")");
+      S.elementAt(level).append(""+branchGetNext(nodeIndex, i)+
+       "("+branchGetKey(nodeIndex, i)+")");
      }
     final int top = branchGetTopNext(nodeIndex);
      S.elementAt(level).append(""+top+"-"+nodeIndex);
@@ -1682,13 +1687,13 @@ class Mjaf extends BitMachine                                                   
      {m.setIndexFromInt(m.nodes, n);                                            // Index node
       m.setVariable("nodes.node.isLeaf",                      1);
       m.setVariable("nodes.node.isBranch",                    0);
-      m.setVariable("nodes.node.branchOrLeaf.leaf.unary",    15);
+      m.setVariable(nbol+"leaf.unary",    15);
 
       for (int s = 0; s < S; s++)                                               // Each key, data pair in leaf
-       {final Layout.Array a = m.layout.get("nodes.node.branchOrLeaf.leaf.array").toArray();
+       {final Layout.Array a = m.layout.get(nbol+"leaf.array").toArray();
         m.setIndexFromInt(a, s);
-        m.setVariable("nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafKey",  c++);
-        m.setVariable("nodes.node.branchOrLeaf.leaf.array.leafKeyData.leafData", c++);
+        m.setVariable(nbol+"leaf.array.leafKeyData.leafKey",  c++);
+        m.setVariable(nbol+"leaf.array.leafKeyData.leafData", c++);
        }
      }
     m.copy(m.layout.get("nodesFree.unary").toVariable(), Layout.unary(N));      // Tree globals
@@ -1846,13 +1851,13 @@ V  318     4                 15             unary     nodes.node.branchOrLeaf.le
      {m.setIndexFromInt(m.nodes, n);                                            // Index node
       m.setVariable("nodes.node.isLeaf",                      0);
       m.setVariable("nodes.node.isBranch",                    1);
-      m.setVariable("nodes.node.branchOrLeaf.branch.topNext", n);
-      m.setVariable("nodes.node.branchOrLeaf.branch.branchStuck.unary", Layout.unary(N));
+      m.setVariable(nbol+"branch.topNext", n);
+      m.setVariable(nbol+"branch.branchStuck.unary", Layout.unary(N));
       for (int s = 0; s < m.maxKeysPerBranch; s++)                              // Each key, data pair in leaf
-       {final Layout.Array a = m.layout.get("nodes.node.branchOrLeaf.branch.branchStuck.array").toArray();
+       {final Layout.Array a = m.layout.get(nbol+"branch.branchStuck.array").toArray();
         m.setIndexFromInt(a, s);                                                // Index pair
-        m.setVariable("nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey", c++);
-        m.setVariable("nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext", s);
+        m.setVariable(nbol+"branch.branchStuck.array.branchKeyNext.branchKey", c++);
+        m.setVariable(nbol+"branch.branchStuck.array.branchKeyNext.branchNext", s);
        }
      }
     m.copy(m.layout.get("nodesFree.unary").toVariable(), Layout.unary(N));      // Tree globals
