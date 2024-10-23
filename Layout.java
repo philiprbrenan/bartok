@@ -18,8 +18,8 @@ public class Layout extends Test implements LayoutAble                          
     field.layout(0, 0);                                                         // Locate field positions
     memory = new Memory();                                                      // Create a matching memory.
     field.indexNames();                                                         // Index the names of the fields
+    memory = new Memory();                                                      // New memory encompassing all the unified memories
     unifyMemory(memory);                                                        // Unify the memory of all declared layouts with the memory of this layout
-    memory = new Memory();                                                      // New memory
    }
 
   Field get(String path)                                                        // Locate a field from its full name path which must include the top most field
@@ -39,11 +39,6 @@ public class Layout extends Test implements LayoutAble                          
    {final LayoutAble d = copy();                                                // New layout
     d.asLayout().memory = d.asLayout().new Memory();                            // New memory
     return d;                                                                   // Duplicate
-   }
-
-  public String printHeader()                                                   // Header for  print of layout
-   {return String.format("%1s %4s  %4s  %5s    %8s   %s\n",
-                         "T", "At", "Wide", "Index", "Value", "Field name");
    }
 
   public String toString()                                                      // Print the layout with a header
@@ -94,13 +89,32 @@ public class Layout extends Test implements LayoutAble                          
 
 //D1 Bit Memory                                                                 // A bit is the element from which memory is constructed.
 
-  void    set(int i, Boolean b) {       memory.setElementAt(b, i);}             // Set a bit in the sample memory. This method should be overridden to drive a more useful memory that captures more information about its bits than just their values.
+  void    set(int i, Boolean b) {memory.setElementAt(b, i);}                    // Set a bit in the sample memory. This method should be overridden to drive a more useful memory that captures more information about its bits than just their values.
   Boolean get(int i)            {return memory.elementAt(i);}                   // Get a bit from the sample memory
 
   class Memory extends Stack<Boolean>                                           // A sample memory that can be freed if not wanted by assigning null to this non final field.
    {private static final long serialVersionUID = 1L;
+    static int memories = 0;
+    final int memoryNumber = ++memories;                                        // Number the memory to make assist debugging
     Memory()                                                                    // A memory large enough to hold the layout
      {if (top != null) for (int i = 0; i < top.width; i++) push(false);         // Initialize memory to zeros as this simplifies debugging
+     }
+    public String toString()                                                    // Print memory
+     {final StringBuilder s = new StringBuilder();
+      final int N = size();
+      s.append("Memory: "+memoryNumber+" has "+N+" bits\n");                    // Title
+      int l = 0;
+      for (int i = 1; i <= N; i++)
+       {final Boolean b = get(i-1);
+        s.append(b == null ? 'n' : b ? '1' : '.');
+        if (false) {}
+        else if (i % 64 == 0) s.append("\n");
+        else if (i % 32 == 0) s.append("*");
+        else if (i % 16 == 0) s.append("+");
+        else if (i %  8 == 0) s.append(" ");
+       }
+      s.append("\n");
+      return s.toString();
      }
    }
 
@@ -177,7 +191,10 @@ public class Layout extends Test implements LayoutAble                          
 
     StringBuilder header()                                                      // Create a string builder with a header preloaded
      {final StringBuilder s = new StringBuilder();
-      s.append(printHeader());                                                  // Header requested
+      s.append("Memory: "+memory.memoryNumber+"\n");
+      s.append(String.format
+       ("%1s %4s  %4s  %5s    %8s   %s\n",
+        "T", "At", "Wide", "Index", "Value", "Field name"));
       return s;
      }
 
