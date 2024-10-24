@@ -181,6 +181,9 @@ class Mjaf extends BitMachine                                                   
      {if (V.width != maxKeysPerLeaf) stop("Wrong sized leaf index", V);
       v = V;
      }
+
+    LI(String name) {this(Layout.createVariable(name, maxKeysPerLeaf));}        // Create a leaf index with the specified name
+    LI() {this("leafIndex");}                                                   // Create a leaf index with a default name
    }
 
   class Key                                                                     // A as key represented by a layout variable
@@ -221,16 +224,6 @@ class Mjaf extends BitMachine                                                   
       v = V;
      }
    }
-
-  LI leafIndex(String name)                                                     // Create a leaf index with the specified name
-   {return new LI(Layout.createVariable(name, maxKeysPerLeaf));
-   }
-  LI leafIndex() {return leafIndex("leafIndex");}                               // Create a leaf index with a default name
-
-  BI branchIndex(String name)                                                   // Create a branch index with the specified name
-   {return new BI(Layout.createVariable(name, maxKeysPerBranch));
-   }
-  BI branchIndex() {return branchIndex("branchIndex");}                         // Create a branch index with a default name
 
   Key makeKey(int value)                                                        // Create a key with the specified value
    {final Layout.Variable key = Layout.createVariable("key", bitsPerKey);
@@ -518,7 +511,7 @@ class Mjaf extends BitMachine                                                   
    }
 
   void leafInsertPair(NN NodeIndex, Key Key, Data Data)                         // Insert a key and the corresponding data into a leaf at the correct position
-   {final LI      leafIndex = leafIndex();
+   {final LI      leafIndex = new LI();
     final Layout.Bit insert = Layout.createBit("insert");
     final KeyData        kd = makeKeyData(Key, Data);                           // Key, data pair to insert
 
@@ -935,7 +928,7 @@ class Mjaf extends BitMachine                                                   
 
   void find(Key Key, Layout.Bit Found, Data Data)                               // Find the data associated with a key in a tree
    {final NN nodeIndex = new NN();                                           // Node index variable
-    final LI leafIndex = leafIndex();                                           // Leaf key, data pair index variable
+    final LI leafIndex = new LI();                                           // Leaf key, data pair index variable
 
     new Repeat()
      {void code()
@@ -962,7 +955,7 @@ class Mjaf extends BitMachine                                                   
 
   void findAndInsert(Key Key, Data Data, Layout.Bit Inserted)                   // Find the leaf for a key and insert the indicated key, data pair into if possible, returning true if the insertion was possible else false.
    {final NN nodeIndex = new NN();                                           // Node index variable
-    final LI leafIndex = leafIndex();                                           // Leaf key, data index variable
+    final LI leafIndex = new LI();                                           // Leaf key, data index variable
     new Repeat()                                                                // Step down through branches to a leaf into which it might be possible to insert the key
      {void code()
        {returnIfOne(isLeaf(nodeIndex));                                         // Exit when we reach a leaf
