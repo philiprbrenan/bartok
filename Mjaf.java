@@ -192,8 +192,11 @@ class Mjaf extends BitMachine                                                   
   class Data                                                                    // A datum as represented by a layout variable
    {final Layout.Variable v;
     Data(Layout.Variable V)
-     {if (V.width != bitsPerKey) stop("Wrong sized key", V);
+     {if (V.width != bitsPerData) stop("Wrong sized data", V);
       v = V;
+     }
+    Data()
+     {v = Layout.createVariable("data", bitsPerData);
      }
    }
 
@@ -934,7 +937,7 @@ class Mjaf extends BitMachine                                                   
 
 //D1 Search                                                                     // Find a key, data pair
 
-  void find(Key Key, Layout.Bit Found, Data Result)                             // Find the data associated with a key in a tree
+  void find(Key Key, Layout.Bit Found, Data Data)                               // Find the data associated with a key in a tree
    {final NN nodeIndex = nodeIndex();                                           // Node index variable
     final LI leafIndex = leafIndex();                                           // Leaf key, data pair index variable
 
@@ -950,9 +953,15 @@ class Mjaf extends BitMachine                                                   
      {void Then()
        {final KeyData kd = makeKeyData();                                       // Key, data pair from leaf
         leafGet(nodeIndex, leafIndex, kd);                                      // Get key, data from stuck
-        copy(Result.v, kd.v.asLayout().get("leafData"));
+        copy(Data.v, kd.v.asLayout().get("leafData"));
        }
      };
+   }
+
+  Layout.Bit find(Key Key, Data Data)                                           // Find the data associated with a key in a tree
+   {Layout.Bit Found = Layout.createBit("found");                               // Whether we found the key
+    find(Key, Found, Data);
+    return Found;
    }
 
   void findAndInsert(Key Key, Data Data, Layout.Bit Inserted)                   // Find the leaf for a key and insert the indicated key, data pair into if possible, returning true if the insertion was possible else false.
@@ -1044,13 +1053,13 @@ class Mjaf extends BitMachine                                                   
      }; // block
    } // put
 
-//D1 Deletion                                                                   // Delete a key from a BTree
+//D1 Deletion                                                                   // Delete a key from a BTre. If the key is present, return the associated data
 /*
-
-  Data delete(Key keyName)                                                      // Delete a key from a tree
-   {if (emptyTree()) return null;                                               // The tree is empty
-    final Data foundData = find(keyName);                                       // Find the data associated with the key
-    if (foundData == null) return null;                                         // The key is not present so cannot be deleted
+  Layout.Bit delete(Key Key, Data Data)                                         // Delete a key from a tree
+   {final Layout.Bit Found = createBit("found");                                // Whether the key was found or not
+    new Block()
+     {void code()
+       {returnIfZero(findAndInsert(Key, Data));                                 // Return immediately if the key is not present
 
     if (new Node().isLeaf())                                                    // Delete from root as a leaf
      {final Leaf r = new Node().leaf();                                         // Root is a leaf
@@ -4492,9 +4501,8 @@ V  295     4                 15             unary     nodes.node.branchOrLeaf.le
     for (int i = 0; i < size; i++) m.put(m.makeKey(r[i]), m.makeData(2*r[i]));
     m.execute();
     ok(m.print(), """
-                                             10(511)11-0                                                              |
-              14(317)13-10                                         12(578)                  9(858)15-11               |
-27,246,317=14             391,442,472,511=13            545,578=12        586,658,704,858=9            882,906,993=15 |
+         6(317)              5(511)7-0              |
+27,317=6       391,442,511=5          545,578,993=7 |
 """);
    //say("Number of steps ", m.step);
    }
