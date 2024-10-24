@@ -223,6 +223,7 @@ class Mjaf extends BitMachine                                                   
      {v = Layout.createVariable("data", bitsPerData);
       copy(v, value);
      }
+    void ok(String expected) {Test.ok(v.toString(), expected);}                   // Check dat is as expected
    }
 
   class KeyData                                                                 // A key, data pair
@@ -914,13 +915,15 @@ class Mjaf extends BitMachine                                                   
 //D1 Search                                                                     // Find a key, data pair
 
   void find(Key Key, Layout.Bit Found, Data Data)                               // Find the data associated with a key in a tree
-   {final NN nodeIndex = new NN();                                           // Node index variable
-    final LI leafIndex = new LI();                                           // Leaf key, data pair index variable
+   {final NN nodeIndex = new NN();                                              // Node index variable
+    final LI leafIndex = new LI();                                              // Leaf key, data pair index variable
 
     new Repeat()
      {void code()
        {returnIfOne(isLeaf(nodeIndex));                                         // Exit when we reach a leaf
-        branchFindFirstGreaterOrEqual(nodeIndex, Key, nodeIndex);
+        final NN next = new NN("next");                                         // Next child down
+        branchFindFirstGreaterOrEqual(nodeIndex, Key, next);
+        copy(nodeIndex.v, next.v);
        }
      };
 
@@ -937,6 +940,12 @@ class Mjaf extends BitMachine                                                   
   Layout.Bit find(Key Key, Data Data)                                           // Find the data associated with a key in a tree
    {Layout.Bit Found = Layout.createBit("found");                               // Whether we found the key
     find(Key, Found, Data);
+    return Found;
+   }
+
+  Layout.Bit find(int Key, Data Data)                                           // Find the data associated with a key in a tree
+   {Layout.Bit Found = Layout.createBit("found");                               // Whether we found the key
+    find(new Key(Key), Found, Data);
     return Found;
    }
 
@@ -4441,11 +4450,31 @@ V  295     4                 15             unary     nodes.node.branchOrLeaf.le
 1,2,3,4=7     5,6=9         7,8=11     9,10=13            11,12=14            13,14=16            15,16=19       17,18=21            19,20=22            21,22=24            23,24=25           25,26=28            27,28=29            29,30=30            31,32=31 |
 """);
 
-//    m.reset();
-//    final Data data = m.new Data();
-//    final Layout.Bit f = m.find(m.new Key(11), data);
-//    m.execute();
-//    say("AAAA", f, data);
+    if (true)                                                                   // Find the data associated with a key
+     {m.reset();
+      final Data data = m.new Data();
+      final Layout.Bit f = m.find(11, data);
+      m.execute();
+      f.copy().ok("""
+T   At  Wide  Index       Value   Field name
+B    0     1                  1   found
+""");
+      data.ok("""
+T   At  Wide  Index       Value   Field name
+V    0     8                 22   data
+""");
+     }
+
+    if (true)                                                                   // Missing key
+     {m.reset();
+      final Data data = m.new Data();
+      final Layout.Bit f = m.find(33, data);
+      m.execute();
+      f.copy().ok("""
+T   At  Wide  Index       Value   Field name
+B    0     1                  0   found
+""");
+     }
    }
 
   static int[]random_array()                                                    // Random array
@@ -4516,8 +4545,8 @@ V  295     4                 15             unary     nodes.node.branchOrLeaf.le
    }
 
   static void newTests()                                                        // Tests being worked on
-   {oldTests();
-    //test_put_ascending();
+   {//oldTests();
+    test_put_descending();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
