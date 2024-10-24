@@ -54,6 +54,8 @@ class Stuck extends BitMachine implements LayoutAble                            
    {return new Stuck(Name, Max, Layout);
    }
 
+  Stuck like() {return new Stuck(name, max, element.duplicate());}              // Make a stuck like this one
+
   void clear() {zero(stuck);}                                                   // Clear a stuck
 
   public void ok(String expected) {ok(toString(), expected);}                   // Check the stuck
@@ -71,6 +73,12 @@ class Stuck extends BitMachine implements LayoutAble                            
    {setIndexFromUnary(array, unary.value);                                      // Index stuck
     copy(element, ElementToPush.asField());                                     // Copy data into the stuck
     unary.inc();                                                                // Show next free slot
+   }
+
+  void push(int v)                                                              // Push an element set to the specified integer value onto the stuck
+   {final Layout p = element.duplicate();
+    p.asField().fromInt(v);
+    push(p);
    }
 
   void pop(LayoutAble PoppedElement)                                            // Pop an element from the stuck
@@ -1030,6 +1038,51 @@ V   40     4                 15     unary     unary
 """);
    }
 
+  static void test_like()
+   {final int W = 6, M = 4;
+
+    final Layout           l = new Layout();
+    final Layout.Variable  k = l.variable("k",  M);
+    l.layout(k);
+
+    Stuck s = stuck("s", M, l);
+
+    s.push(1);
+    s.push(2);
+    s.execute();
+    //stop(s.layout);
+    s.layout.ok("""
+T   At  Wide  Index       Value   Field name
+S    0    20             196641   s
+A    0    16      0          33     array     array
+V    0     4                  1       k     array.k
+A    4    16      1          33     array     array
+V    4     4                  2       k     array.k
+A    8    16      2          33     array     array
+V    8     4                  0       k     array.k
+A   12    16      3          33     array     array
+V   12     4                  0       k     array.k
+V   16     4                  3     unary     unary
+""");
+
+
+    Stuck S = s.like();
+    S.layout.ok("""
+T   At  Wide  Index       Value   Field name
+S    0    20                  0   s
+A    0    16      0           0     array     array
+V    0     4                  0       k     array.k
+A    4    16      1           0     array     array
+V    4     4                  0       k     array.k
+A    8    16      2           0     array     array
+V    8     4                  0       k     array.k
+A   12    16      3           0     array     array
+V   12     4                  0       k     array.k
+V   16     4                  0     unary     unary
+""");
+   }
+
+
   static void oldTests()                                                        // Tests thought to be in good shape
    {test_push();
     test_pop();
@@ -1041,6 +1094,7 @@ V   40     4                 15     unary     unary
     test_first_last();
     test_index_of();
     test_set_element_at();
+    test_like();
    }
 
   static void newTests()                                                        // Tests being worked on
