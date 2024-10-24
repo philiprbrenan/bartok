@@ -173,6 +173,9 @@ class Mjaf extends BitMachine                                                   
      {if (V.width != maxKeysPerBranch) stop("Wrong sized branch index", V);
       v = V;
      }
+
+    BI(String name) {this(Layout.createVariable(name, maxKeysPerBranch));}      // Create a branch index with the specified name
+    BI() {this("branchIndex");}                                                 // Create a branch index with a default name
    }
 
   class LI                                                                      // An index within a leaf
@@ -191,6 +194,11 @@ class Mjaf extends BitMachine                                                   
     Key(Layout.Variable V)
      {if (V.width != bitsPerKey) stop("Wrong sized key", V);
       v = V;
+     }
+
+    Key(int value)                                                              // Create a key with the specified value
+     {v = Layout.createVariable("key", bitsPerKey);
+      copy(v, value);
      }
    }
 
@@ -223,12 +231,6 @@ class Mjaf extends BitMachine                                                   
        }
       v = V;
      }
-   }
-
-  Key makeKey(int value)                                                        // Create a key with the specified value
-   {final Layout.Variable key = Layout.createVariable("key", bitsPerKey);
-    copy(key, value);
-    return new Key(key);
    }
 
   Data makeData(int value)                                                      // Create a data item with the specified value
@@ -821,7 +823,7 @@ class Mjaf extends BitMachine                                                   
          {void code()
            {final Block inner = this;
             final KeyNext  kn = makeKeyNext();                                  // Work area for transferring key data pairs from the source code to the target node
-            final BI    index = branchIndex();                                  // Index the key, next pairs in the branch
+            final BI    index = new BI();                                       // Index the key, next pairs in the branch
             zero(index.v);
             setIndex(nodes, NodeIndex);                                         // Index the node to search
             for (int i = 0; i < maxKeysPerBranch; i++)                          // Check each key
@@ -847,7 +849,7 @@ class Mjaf extends BitMachine                                                   
    }
 
   BI branchFindFirstGreaterOrEqualIndex(NN NodeIndex, Key Key)                  // Assuming the branch is not full, find the index for the first key in a branch that is greater than or equal to the specified key or else return all ones if no such key exists.
-   {final BI result = branchIndex();
+   {final BI result = new BI();
     new Block()
      {void code()
        {final Block outer = this;
@@ -855,7 +857,7 @@ class Mjaf extends BitMachine                                                   
          {void code()
            {final Block inner = this;
             final KeyNext  kn = makeKeyNext();                                  // Work area for transferring key data pairs from the source code to the target node
-            final BI    index = branchIndex();                                  // Index the key, next pairs in the branch
+            final BI    index = new BI();                                       // Index the key, next pairs in the branch
 
             setIndex(nodes, NodeIndex);                                         // Index the node to search
 
@@ -3307,7 +3309,7 @@ B    0     1                  1   found
   static void test_branch_greater_than_or_equal()                               // Find next node associated with  the first key greater than or equal to the search key
    {TestBranchTree  t = new TestBranchTree();                                   // Create a test tree
     Mjaf            m = t.mjaf;                                                 // Bit machine to process the tree
-    Key             k = m.makeKey (8);                                          // Key to locate
+    Key             k = m.new Key  (8);                                          // Key to locate
     NN              n = m.makeNext(0);                                          // Located next node index
 
     m.copy(t.nodeIndex, 2);
@@ -3324,7 +3326,7 @@ V    0     2                  1   next
    {TestLeafTree t = new TestLeafTree();                                        // Allocate a new leaf treetree tree
     Mjaf     m = t.mjaf;                                                        // Bit machine to process the tree
 
-    Key    key = m.makeKey (6);
+    Key    key = m.new Key  (6);
     Data  data = m.makeData(7);
     NN    next = m.makeNext(3);
     KeyData kd = m.makeKeyData(key, data);
@@ -3378,7 +3380,7 @@ V  264     3                  7               unary     nodes.node.branchOrLeaf.
 """);
 
     m.copy(t.nodeIndex, 2);
-    Key k = m.makeKey(6);                                                       // Key to locate
+    Key k = m.new Key (6);                                                       // Key to locate
     BI  i = m.branchFindFirstGreaterOrEqualIndex(m.new NN(t.nodeIndex), k);     // Find index of key
     m.execute();
     //stop(i);
@@ -3837,7 +3839,7 @@ V  306    12                 24                 leafData     nodes.node.branchOr
 V  318     4                 15             unary     nodes.node.branchOrLeaf.leaf.unary
 """);
 
-    Key  key  = m.makeKey(6);
+    Key  key  = m.new Key (6);
     Data data = m.makeData(6);
     m.leafSplitRoot (m.new NN(t.sourceIndex), m.new NN(t.targetIndex));
     m.leafInsertPair(m.new NN(t.targetIndex), key, data);
@@ -3911,13 +3913,13 @@ B    0     1                  0   branchRootIsFull
     NN l = m.leafMake();
     NN b = m.branchMake();
 
-    m.leafPush(l, m.makeKeyData(m.makeKey(10), m.makeData(11)));
-    m.leafPush(l, m.makeKeyData(m.makeKey(20), m.makeData(22)));
-    m.leafPush(l, m.makeKeyData(m.makeKey(30), m.makeData(33)));
-    m.leafPush(l, m.makeKeyData(m.makeKey(40), m.makeData(44)));
+    m.leafPush(l, m.makeKeyData(m.new Key (10), m.makeData(11)));
+    m.leafPush(l, m.makeKeyData(m.new Key (20), m.makeData(22)));
+    m.leafPush(l, m.makeKeyData(m.new Key (30), m.makeData(33)));
+    m.leafPush(l, m.makeKeyData(m.new Key (40), m.makeData(44)));
 
-    m.branchPush(b, m.makeKeyNext(m.makeKey(25), m.makeNext(0)));
-    m.branchPush(b, m.makeKeyNext(m.makeKey(45), l));
+    m.branchPush(b, m.makeKeyNext(m.new Key (25), m.makeNext(0)));
+    m.branchPush(b, m.makeKeyNext(m.new Key (45), l));
     m.execute();
     //stop(b, l);
 
@@ -4038,12 +4040,12 @@ V  318     4                  3             unary     nodes.node.branchOrLeaf.le
     NN b = m.branchMake();
     NN B = m.branchMake();
 
-    m.branchPush(b, m.makeKeyNext(m.makeKey(10), m.makeNext(0)));
-    m.branchPush(b, m.makeKeyNext(m.makeKey(20), m.makeNext(1)));
-    m.branchPush(b, m.makeKeyNext(m.makeKey(30), m.makeNext(2)));
+    m.branchPush(b, m.makeKeyNext(m.new Key (10), m.makeNext(0)));
+    m.branchPush(b, m.makeKeyNext(m.new Key (20), m.makeNext(1)));
+    m.branchPush(b, m.makeKeyNext(m.new Key (30), m.makeNext(2)));
 
-    m.branchPush(B, m.makeKeyNext(m.makeKey(15), m.makeNext(0)));
-    m.branchPush(B, m.makeKeyNext(m.makeKey(35), b));
+    m.branchPush(B, m.makeKeyNext(m.new Key (15), m.makeNext(0)));
+    m.branchPush(B, m.makeKeyNext(m.new Key (35), b));
     m.execute();
     //stop(b, B);
 
@@ -4148,10 +4150,10 @@ V  264     3                  1               unary     nodes.node.branchOrLeaf.
    {final int BitsPerKey = 8, BitsPerData = 8, MaxKeysPerLeaf = 4, size = 4;    // Dimensions of BTree
     final Mjaf m = mjaf(BitsPerKey, BitsPerData, MaxKeysPerLeaf, size);         // Create BTree
 
-    m.put(m.makeKey(1), m.makeData(11));
-    m.put(m.makeKey(2), m.makeData(22));
-    m.put(m.makeKey(3), m.makeData(33));
-    m.put(m.makeKey(4), m.makeData(44));
+    m.put(m.new Key (1), m.makeData(11));
+    m.put(m.new Key (2), m.makeData(22));
+    m.put(m.new Key (3), m.makeData(33));
+    m.put(m.new Key (4), m.makeData(44));
     m.execute();
 
     //stop(m.layout);
@@ -4179,7 +4181,7 @@ V   85     4                 15             unary     nodes.node.branchOrLeaf.le
 """);
 
     m.reset();
-    m.put(m.makeKey(5), m.makeData(55));                                        // Split leaf root
+    m.put(m.new Key (5), m.makeData(55));                                        // Split leaf root
     m.execute();
 
     //stop(m.layout);
@@ -4296,7 +4298,7 @@ V  295     4                  7             unary     nodes.node.branchOrLeaf.le
 
     m.reset();
     m.debug(true);
-    m.put(m.makeKey(6), m.makeData(66));
+    m.put(m.new Key (6), m.makeData(66));
     m.execute();
 
     //stop(m.layout);
@@ -4324,8 +4326,8 @@ V  295     4                 15             unary     nodes.node.branchOrLeaf.le
 """);
 
     m.reset();
-    m.put(m.makeKey(7), m.makeData(77));
-    m.put(m.makeKey(8), m.makeData(88));
+    m.put(m.new Key (7), m.makeData(77));
+    m.put(m.new Key (8), m.makeData(88));
     m.execute();
 
     //stop(m.layout);
@@ -4434,7 +4436,7 @@ V  295     4                 15             unary     nodes.node.branchOrLeaf.le
    {final int BitsPerKey = 8, BitsPerData = 8, MaxKeysPerLeaf = 4, size = 32;   // Dimensions of BTree
     final Mjaf m = mjaf(BitsPerKey, BitsPerData, MaxKeysPerLeaf, size);         // Create BTree
     final int N = 32;
-    for (int i = 1; i <= N; i++) m.put(m.makeKey(i), m.makeData(2*i));
+    for (int i = 1; i <= N; i++) m.put(m.new Key (i), m.makeData(2*i));
     m.execute();
     ok(m.print(), """
                                                           17(8)                                                                    10(16)18-0                                                                                                                       |
@@ -4448,7 +4450,7 @@ V  295     4                 15             unary     nodes.node.branchOrLeaf.le
    {final int BitsPerKey = 8, BitsPerData = 8, MaxKeysPerLeaf = 4, size = 32;   // Dimensions of BTree
     final Mjaf m = mjaf(BitsPerKey, BitsPerData, MaxKeysPerLeaf, size);         // Create BTree
     final int N = 32;
-    for (int i = N; i > 0; i--) m.put(m.makeKey(i), m.makeData(2*i));
+    for (int i = N; i > 0; i--) m.put(m.new Key (i), m.makeData(2*i));
     m.execute();
     ok(m.print(), """
                                                                                                            10(16)                                                                     17(24)18-0                                                                     |
@@ -4476,7 +4478,7 @@ V  295     4                 15             unary     nodes.node.branchOrLeaf.le
     m.maxSteps = 23_000;
 
     final int[]r = random_array();
-    for (int i = 0; i < r.length; i++) m.put(m.makeKey(r[i]), m.makeData(2*r[i]));
+    for (int i = 0; i < r.length; i++) m.put(m.new Key (r[i]), m.makeData(2*r[i]));
     m.execute();
     ok(m.print(), """
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                208(511)209-0                                                                                                                                                                                                                                                                                                                                                                                                                                               |
@@ -4493,7 +4495,7 @@ V  295     4                 15             unary     nodes.node.branchOrLeaf.le
     final Mjaf m = mjaf(BitsPerKey, BitsPerData, MaxKeysPerLeaf, size);         // Create BTree
 
     final int[]r = random_array();
-    for (int i = 0; i < size; i++) m.put(m.makeKey(r[i]), m.makeData(2*r[i]));
+    for (int i = 0; i < size; i++) m.put(m.new Key (r[i]), m.makeData(2*r[i]));
     m.execute();
     ok(m.print(), """
          6(317)              5(511)7-0              |
