@@ -22,7 +22,9 @@ Unary      - Unary arithmetic in bit assembler
 
 # Sample Output
 
-Here is a [B-Tree](https://en.wikipedia.org/wiki/B-tree), printed horizontally, showing the (keys) in each level and the number of each __-__branch and __=__leaf:
+Here is a [B-Tree](https://en.wikipedia.org/wiki/B-tree), printed horizontally, showing the (keys) in each level and the
+number of each __ -branch__ and __ =leaf__ :
+
 ```
          6(317)              5(511)7-0              |
 27,317=6       391,442,511=5          545,578,993=7 |
