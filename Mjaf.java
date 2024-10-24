@@ -159,6 +159,8 @@ class Mjaf extends BitMachine                                                   
    {nodes.setIndex(0); isBranch.ones(); isLeaf.zero();
    }
 
+//D1 Components                                                                 // The components of leaves and branches used to construct a tree
+
   class NN                                                                      // A node number
    {final Layout.Variable v;
     NN(Layout.Variable V)
@@ -939,8 +941,8 @@ class Mjaf extends BitMachine                                                   
    }
 
   void findAndInsert(Key Key, Data Data, Layout.Bit Inserted)                   // Find the leaf for a key and insert the indicated key, data pair into if possible, returning true if the insertion was possible else false.
-   {final NN nodeIndex = new NN();                                           // Node index variable
-    final LI leafIndex = new LI();                                           // Leaf key, data index variable
+   {final NN nodeIndex = new NN();                                              // Node index variable
+    final LI leafIndex = new LI();                                              // Leaf key, data index variable
     new Repeat()                                                                // Step down through branches to a leaf into which it might be possible to insert the key
      {void code()
        {returnIfOne(isLeaf(nodeIndex));                                         // Exit when we reach a leaf
