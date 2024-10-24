@@ -22,11 +22,10 @@ Unary      - Unary arithmetic in bit assembler
 
 # Sample Output
 
-Here is a [B-Tree](https://en.wikipedia.org/wiki/B-tree), printed horizontally, showing the keys in each level and the numbers of each level:
+Here is a [B-Tree](https://en.wikipedia.org/wiki/B-tree), printed horizontally, showing the (keys) in each level and the number of each -branch and =leaf:
 ```
-                                             10(511)11-0                                                              |
-              14(317)13-10                                         12(578)                  9(858)15-11               |
-27,246,317=14             391,442,472,511=13            545,578=12        586,658,704,858=9            882,906,993=15 |
+         6(317)              5(511)7-0              |
+27,317=6       391,442,511=5          545,578,993=7 |
 ```
 
 The [B-Tree](https://en.wikipedia.org/wiki/B-tree) was created by running [Java](https://en.wikipedia.org/wiki/Java_(programming_language)) generated machine [code](https://en.wikipedia.org/wiki/Computer_program) for a custom [instruction set architecture](https://en.wikipedia.org/wiki/Instruction_set_architecture) focussed on manipulating a [B-Tree](https://en.wikipedia.org/wiki/B-tree) .  The machine [code](https://en.wikipedia.org/wiki/Computer_program) is executed on a [bit](https://en.wikipedia.org/wiki/Bit) machine emulated in [Java](https://en.wikipedia.org/wiki/Java_(programming_language)) as well.
