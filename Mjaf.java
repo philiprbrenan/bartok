@@ -4485,7 +4485,7 @@ V  295     4                 15             unary     nodes.node.branchOrLeaf.le
    }
 
   static void test_put_random_small()                                           // Load a BTree from a small amount of random data so it easy to see the full tree
-   {final int BitsPerKey = 10, BitsPerData = 10, MaxKeysPerLeaf = 4, size = 16; // Dimensions of BTree
+   {final int BitsPerKey = 10, BitsPerData = 10, MaxKeysPerLeaf = 4, size = 8;  // Dimensions of BTree
     final Mjaf m = mjaf(BitsPerKey, BitsPerData, MaxKeysPerLeaf, size);         // Create BTree
 
     final int[]r = random_array();
