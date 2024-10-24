@@ -165,6 +165,11 @@ class Mjaf extends BitMachine                                                   
      }
     NN(String name) {this(Layout.createVariable(name, bitsPerNext));}           // Create a node index with the specified name
     NN() {this("nodeIndex");}                                                   // Create a node index with a default name
+
+    NN(int value)                                                               // Create a next item with the specified value
+     {final Layout.Variable next = v = Layout.createVariable("next", bitsPerNext);
+      copy(next, value);
+     }
    }
 
   class BI                                                                      // An index within a branch
@@ -195,7 +200,6 @@ class Mjaf extends BitMachine                                                   
      {if (V.width != bitsPerKey) stop("Wrong sized key", V);
       v = V;
      }
-
     Key(int value)                                                              // Create a key with the specified value
      {v = Layout.createVariable("key", bitsPerKey);
       copy(v, value);
@@ -211,6 +215,10 @@ class Mjaf extends BitMachine                                                   
     Data()
      {v = Layout.createVariable("data", bitsPerData);
      }
+    Data(int value)                                                             // Create a data item with the specified value
+     {v = Layout.createVariable("data", bitsPerData);
+      copy(v, value);
+     }
    }
 
   class KeyData                                                                 // A key, data pair
@@ -221,6 +229,18 @@ class Mjaf extends BitMachine                                                   
        }
       v = V;
      }
+
+    KeyData(Key Key, Data Data)                                                 // Create a key, data pair for insertion into a leaf
+     {final LayoutAble kd = v = leafKeyData.duplicate();                        // Key, data pair
+      if (Key  != null) copy(kd.asLayout().get("leafKey"),  Key.v);             // Copy key if requested
+      if (Data != null) copy(kd.asLayout().get("leafData"), Data.v);            // Copy data if requested
+     }
+
+    KeyData()   {this(null, null);}                                             // Create a key, data pair for insertion into a leaf without loading the fields
+    KeyData(int key, int data) {this(new Key(key), new Data(data));}            // Create a key, data pair for insertion into a leaf providing integer arguments
+
+    Key  key () {return new Key(v.asLayout().get("leafKey").toVariable());}     // Get the key from a key, data pair
+    Data data() {return new Data(v.asLayout().get("leafData").toVariable());}   // Get the data from a key, data pair
    }
 
   class KeyNext                                                                 // A key, next pair
@@ -231,59 +251,22 @@ class Mjaf extends BitMachine                                                   
        }
       v = V;
      }
-   }
 
-  Data makeData(int value)                                                      // Create a data item with the specified value
-   {final Layout.Variable data = Layout.createVariable("data", bitsPerData);
-    copy(data, value);
-    return new Data(data);
-   }
+    KeyNext(Key Key, NN Next)                                                   // Create a key, next  pair for insertion into a branch
+     {final LayoutAble kn = v = branchKeyNext.duplicate();                      // Key, next pair
+      if (Key  != null) copy(kn.asLayout().get("branchKey"),  Key.v);           // Copy key if requested
+      if (Next != null) copy(kn.asLayout().get("branchNext"), Next.v);          // Copy data if requested
+     }
 
-  KeyData makeKeyData(Key Key, Data Data)                                       // Create a key, data pair for insertion into a leaf
-   {final LayoutAble kd = leafKeyData.duplicate();                              // Key, data pair
-    if (Key  != null) copy(kd.asLayout().get("leafKey"),  Key.v);               // Copy key if requested
-    if (Data != null) copy(kd.asLayout().get("leafData"), Data.v);              // Copy data if requested
-    return new KeyData(kd);
-   }
+    KeyNext(int Key, int Next)                                                  // Create a key, next  pair for insertion into a branch
+     {final LayoutAble kn = v = branchKeyNext.duplicate();                      // Key, next pair
+      copy(kn.asLayout().get("branchKey"),  Key);
+      copy(kn.asLayout().get("branchNext"), Next);
+     }
 
-  KeyData makeKeyData() {return makeKeyData(null, null);}                       // Create a key, data pair for insertion into a leaf without loading the fields
-
-  Key keyFromKeyData(KeyData kd)                                                // Get the key from a key, data pair
-   {return new Key(kd.v.asLayout().get("leafKey").toVariable());
-   }
-
-  Data dataFromKeyData(KeyData kd)                                              // Get the data from a key, data pair
-   {return new Data(kd.v.asLayout().get("leafData").toVariable());
-   }
-
-  NN makeNext(int value)                                                        // Create a next item with the specified value
-   {final Layout.Variable next = Layout.createVariable("next", bitsPerNext);
-    copy(next, value);
-    return new NN(next);
-   }
-
-  KeyNext makeKeyNext(Key Key, NN Next)                                         // Create a key, next  pair for insertion into a branch
-   {final LayoutAble kn = branchKeyNext.duplicate();                            // Key, next pair
-    if (Key  != null) copy(kn.asLayout().get("branchKey"),  Key.v);             // Copy key if requested
-    if (Next != null) copy(kn.asLayout().get("branchNext"), Next.v);            // Copy data if requested
-    return new KeyNext(kn);
-   }
-
-  KeyNext makeKeyNext(int Key, int Next)                                        // Create a key, next  pair for insertion into a branch
-   {final LayoutAble kn = branchKeyNext.duplicate();                            // Key, next pair
-    copy(kn.asLayout().get("branchKey"),  Key);
-    copy(kn.asLayout().get("branchNext"), Next);
-    return new KeyNext(kn);
-   }
-
-  KeyNext makeKeyNext() {return makeKeyNext(null, null);}                       // Create a key, next  pair for insertion into a branch without loading the fields
-
-  Key keyFromKeyNext(KeyNext kn)                                                // Get the key from a key, next pair
-   {return new Key(kn.v.asLayout().get("branchKey").toVariable());
-   }
-
-  NN nextFromKeyNext(KeyNext kn)                                                // Get the next node from a key, next pair
-   {return new NN(kn.v.asLayout().get("branchNext").toVariable());
+    KeyNext() {this(null, null);}                                               // Create a key, next  pair for insertion into a branch without loading the fields
+    Key key() {return new Key(v.asLayout().get("branchKey").toVariable());}     // Get the key from a key, next pair
+    NN next() {return new NN(v.asLayout().get("branchNext").toVariable());}     // Get the next node from a key, next pair
    }
 
   void setIndex(Layout.Array array, NN index) {setIndex(array, index.v);}       // Set the index of a layout array
@@ -405,7 +388,7 @@ class Mjaf extends BitMachine                                                   
    }
 
   KeyData leafSplitKey(NN index)                                                // Return splitting key in a leaf
-   {final KeyData out = makeKeyData();
+   {final KeyData out = new KeyData();
     leafSplitKey(index, out);
     return out;
    }
@@ -443,8 +426,8 @@ class Mjaf extends BitMachine                                                   
       leafPush (F2, rkd);                                                       // Save key, data pair to new right child
      }
 
-    copy( keyFromKeyNext(rkn).v, keyFromKeyData(lkd).v);                        // Save key
-    copy(nextFromKeyNext(rkn).v, F1.v);                                         // First root key refers to left child
+    copy(rkn.key().v, lkd.key().v);                                             // Save key
+    copy(rkn.next().v, F1.v);                                                   // First root key refers to left child
     setIndex(nodes, r);                                                         // Index the root
     zero(node);                                                                 // Clear the root
     branchSetTopNext(r, F2);                                                    // Top of root refers to right child
@@ -477,8 +460,8 @@ class Mjaf extends BitMachine                                                   
   void leafFission(NN parent, NN source)                                        // Split a leaf that is one of children of its parent branch
    {KeyData kd = leafSplitKey(source);                                          // Leaf splitting key
     NN  target = leafSplit(source);                                             // Split leaf, the target leaf is on the left
-    Key      k = keyFromKeyData(kd);                                            // Split key
-    KeyNext kn = makeKeyNext(k, target);                                        // Key, next pair for insertion into branch
+    Key      k = kd.key();                                                      // Split key
+    KeyNext kn = new KeyNext(k, target);                                        // Key, next pair for insertion into branch
     NN       t = branchGetTopNext(parent);                                      // Top next of parent
 
     new IfElse(equals(t.v, source.v))                                           // Source is top next of parent
@@ -515,7 +498,7 @@ class Mjaf extends BitMachine                                                   
   void leafInsertPair(NN NodeIndex, Key Key, Data Data)                         // Insert a key and the corresponding data into a leaf at the correct position
    {final LI      leafIndex = new LI();
     final Layout.Bit insert = Layout.createBit("insert");
-    final KeyData        kd = makeKeyData(Key, Data);                           // Key, data pair to insert
+    final KeyData        kd = new KeyData(Key, Data);                           // Key, data pair to insert
 
     leafFirstGreaterThanOrEqual(NodeIndex, Key, leafIndex, insert);             // Find key to insert before
     new IfElse (insert)
@@ -687,7 +670,7 @@ class Mjaf extends BitMachine                                                   
    }
 
   KeyNext branchSplitKey(NN index)                                              // Return splitting key in a branch
-   {final KeyNext out = makeKeyNext();
+   {final KeyNext out = new KeyNext();
     branchSplitKey(index, out);
     return out;
    }
@@ -732,11 +715,11 @@ class Mjaf extends BitMachine                                                   
       branchPush (target, kn);                                                  // Save key, next pair
      }
     branchShift(source, kn);                                                    // Current key, next pair
-    branchSetTopNext(target, nextFromKeyNext(kn));                              // Copy in the new top node
+    branchSetTopNext(target, kn.next());                                        // Copy in the new top node
    }
 
   NN branchSplit(NN source)                                                     // Source branch, target branch. After the branch has been split the upper half will appear in the source and the lower half in the target
-   {final NN target = new NN();                                              // Index of split out node
+   {final NN target = new NN();                                                 // Index of split out node
     branchSplit(target, source);                                                // Work area for transferring key data pairs from the source code to the target node
     return target;
    }
@@ -760,9 +743,9 @@ class Mjaf extends BitMachine                                                   
      }
 // f2 top = root old top, f1 top = rkn.next, root top = f2, root left = f1
     branchSetTopNext(F2, ort);                                                  // Set top next references for each branch
-    branchSetTopNext(F1, nextFromKeyNext(rkn));
+    branchSetTopNext(F1, rkn.next());
     branchSetTopNext(new NN(root), F2);
-    copy(nextFromKeyNext(rkn).v, F1.v);                                         // Left next refers to new left branch
+    copy(rkn.next().v, F1.v);                                                   // Left next refers to new left branch
     branchPush (new NN(root), rkn);                                             // Save root key, next pair
    }
 
@@ -775,8 +758,8 @@ class Mjaf extends BitMachine                                                   
   void branchFission(NN parent, NN source)                                      // Split a branch that is one of the children of its parent branch
    {final KeyNext  kn = branchSplitKey(source);                                 // Branch splitting key
     final NN   target = branchSplit(source);                                    // Split branch, the target branch is on the left
-    final Key       k = keyFromKeyNext(kn);                                     // Split key
-    final KeyNext pkn = makeKeyNext(k, target);                                 // Key, next pair for insertion into branch
+    final Key       k = kn.key();                                               // Split key
+    final KeyNext pkn = new KeyNext(k, target);                                 // Key, next pair for insertion into branch
     final NN        t = branchGetTopNext(parent);                               // Top next of parent
 
     new IfElse(equals(t.v, source.v))                                           // Source is top next of parent
@@ -804,8 +787,8 @@ class Mjaf extends BitMachine                                                   
   void branchJoin(NN target, Key key, NN source)                                // Join the specified branch onto the end of this branch
    {final KeyNext kn = new KeyNext(branchKeyNext.duplicate());                  // Work area for transferring key data pairs from the source code to the target node
 
-    copy( keyFromKeyNext(kn).v, key.v);    setIndex(nodes, source);
-    copy(nextFromKeyNext(kn).v, topNext);  setIndex(nodes, target);
+    copy(kn. key().v, key.v);    setIndex(nodes, source);
+    copy(kn.next().v, topNext);  setIndex(nodes, target);
     branchStuck.push(kn.v);
 
     for (int i = 0; i < branchSplitPoint; i++)                                  // Transfer source keys and next
@@ -822,15 +805,15 @@ class Mjaf extends BitMachine                                                   
         new Block()
          {void code()
            {final Block inner = this;
-            final KeyNext  kn = makeKeyNext();                                  // Work area for transferring key data pairs from the source code to the target node
+            final KeyNext  kn = new KeyNext();                                  // Work area for transferring key data pairs from the source code to the target node
             final BI    index = new BI();                                       // Index the key, next pairs in the branch
             zero(index.v);
             setIndex(nodes, NodeIndex);                                         // Index the node to search
             for (int i = 0; i < maxKeysPerBranch; i++)                          // Check each key
              {inner.returnIfEqual(index.v, branchStuck.unary.value);            // Passed all the valid keys
               branchGet(NodeIndex, index, kn);                                  // Retrieve key/next pair
-              copy(Result.v, nextFromKeyNext(kn).v);
-              outer.returnIfGreaterThanOrEqual(keyFromKeyNext(kn).v, Key.v);
+              copy(Result.v, kn.next().v);
+              outer.returnIfGreaterThanOrEqual(kn.key().v, Key.v);
               shiftLeftOneByOne(index.v);
              }
            }
@@ -856,7 +839,7 @@ class Mjaf extends BitMachine                                                   
         new Block()
          {void code()
            {final Block inner = this;
-            final KeyNext  kn = makeKeyNext();                                  // Work area for transferring key data pairs from the source code to the target node
+            final KeyNext  kn = new KeyNext();                                  // Work area for transferring key data pairs from the source code to the target node
             final BI    index = new BI();                                       // Index the key, next pairs in the branch
 
             setIndex(nodes, NodeIndex);                                         // Index the node to search
@@ -865,7 +848,7 @@ class Mjaf extends BitMachine                                                   
              {inner.returnIfEqual(index.v, branchStuck.unary.value);            // Passed all the valid keys
               branchGet(NodeIndex, index, kn);                                  // Retrieve key/next pair
               copy(result.v, index.v);
-              outer.returnIfGreaterThanOrEqual(keyFromKeyNext(kn).v, Key.v);
+              outer.returnIfGreaterThanOrEqual(kn.key().v, Key.v);
               shiftLeftOneByOne(index.v);
              }
            }
@@ -942,7 +925,7 @@ class Mjaf extends BitMachine                                                   
     leafFindIndexOf(nodeIndex, Key, Found, leafIndex);                          // Find index of the specified key, data pair in the specified leaf
     new If(Found)
      {void Then()
-       {final KeyData kd = makeKeyData();                                       // Key, data pair from leaf
+       {final KeyData kd = new KeyData();                                       // Key, data pair from leaf
         leafGet(nodeIndex, leafIndex, kd);                                      // Get key, data from stuck
         copy(Data.v, kd.v.asLayout().get("leafData"));
        }
@@ -969,7 +952,7 @@ class Mjaf extends BitMachine                                                   
     leafFindIndexOf(nodeIndex, Key, Inserted, leafIndex);                       // Find index of the specified key, data pair in the specified leaf
     new IfElse (Inserted)
      {void Then()
-       {leafPut(nodeIndex, leafIndex, makeKeyData(Key, Data));                  // Key already present in leaf - update data
+       {leafPut(nodeIndex, leafIndex, new KeyData(Key, Data));                  // Key already present in leaf - update data
        }
       void Else()                                                               // Key not present
        {new If (leafIsNotFull(nodeIndex))
@@ -2907,7 +2890,7 @@ V    1     3                  3     result     result
 """);
 
     m.reset();
-    final KeyNext key = m.makeKeyNext(25, 0);
+    final KeyNext key = m.new KeyNext(25, 0);
     m.branchFindIndexOf(m.new NN(t.sourceIndex), key, found, m.new BI(result));
     m.execute();
 
@@ -3309,8 +3292,8 @@ B    0     1                  1   found
   static void test_branch_greater_than_or_equal()                               // Find next node associated with  the first key greater than or equal to the search key
    {TestBranchTree  t = new TestBranchTree();                                   // Create a test tree
     Mjaf            m = t.mjaf;                                                 // Bit machine to process the tree
-    Key             k = m.new Key  (8);                                          // Key to locate
-    NN              n = m.makeNext(0);                                          // Located next node index
+    Key             k = m.new Key(8);                                          // Key to locate
+    NN              n = m.new NN (0);                                           // Located next node index
 
     m.copy(t.nodeIndex, 2);
     m.branchFindFirstGreaterOrEqual(m.new NN(t.nodeIndex), k, n);
@@ -3326,15 +3309,12 @@ V    0     2                  1   next
    {TestLeafTree t = new TestLeafTree();                                        // Allocate a new leaf treetree tree
     Mjaf     m = t.mjaf;                                                        // Bit machine to process the tree
 
-    Key    key = m.new Key  (6);
-    Data  data = m.makeData(7);
-    NN    next = m.makeNext(3);
-    KeyData kd = m.makeKeyData(key, data);
-    KeyNext kn = m.makeKeyNext(key, next);
-    Key     Kd = m.keyFromKeyData(kd);
-    Data    kD = m.dataFromKeyData(kd);
-    Key     Kn = m.keyFromKeyNext(kn);
-    NN      kN = m.nextFromKeyNext(kn);
+    KeyData kd = m.new KeyData(6, 7);
+    KeyNext kn = m.new KeyNext(6, 3);
+    Key     Kd = kd.key();
+    Data    kD = kd.data();
+    Key     Kn = kn.key();
+    NN      kN = kn.next();
     m.execute();
 
     //stop(Kd, kD, Kn, kN);
@@ -3413,7 +3393,7 @@ V    0     3                  1   branchIndex
   static void test_branch_top_next()                                            // Get and set the top next field in a branch
    {TestBranchTree  t = new TestBranchTree();                                   // Create a test tree
     Mjaf            m = t.mjaf;                                                 // Bit machine to process the tree
-    NN              n = m.makeNext(0);                                          // Located next node index
+    NN              n = m.new NN(0);                                              // Located next node index
 
     m.copy(t.nodeIndex, 2);
     m.branchGetTopNext(m.new NN(t.nodeIndex), n);
@@ -3840,7 +3820,7 @@ V  318     4                 15             unary     nodes.node.branchOrLeaf.le
 """);
 
     Key  key  = m.new Key (6);
-    Data data = m.makeData(6);
+    Data data = m.new Data(6);
     m.leafSplitRoot (m.new NN(t.sourceIndex), m.new NN(t.targetIndex));
     m.leafInsertPair(m.new NN(t.targetIndex), key, data);
     m.execute();
@@ -3913,13 +3893,13 @@ B    0     1                  0   branchRootIsFull
     NN l = m.leafMake();
     NN b = m.branchMake();
 
-    m.leafPush(l, m.makeKeyData(m.new Key (10), m.makeData(11)));
-    m.leafPush(l, m.makeKeyData(m.new Key (20), m.makeData(22)));
-    m.leafPush(l, m.makeKeyData(m.new Key (30), m.makeData(33)));
-    m.leafPush(l, m.makeKeyData(m.new Key (40), m.makeData(44)));
+    m.leafPush(l, m.new KeyData(10, 11));
+    m.leafPush(l, m.new KeyData(20, 22));
+    m.leafPush(l, m.new KeyData(30, 33));
+    m.leafPush(l, m.new KeyData(40, 44));
 
-    m.branchPush(b, m.makeKeyNext(m.new Key (25), m.makeNext(0)));
-    m.branchPush(b, m.makeKeyNext(m.new Key (45), l));
+    m.branchPush(b, m.new KeyNext(25, 0));
+    m.branchPush(b, m.new KeyNext(m.new Key (45), l));
     m.execute();
     //stop(b, l);
 
@@ -4040,12 +4020,12 @@ V  318     4                  3             unary     nodes.node.branchOrLeaf.le
     NN b = m.branchMake();
     NN B = m.branchMake();
 
-    m.branchPush(b, m.makeKeyNext(m.new Key (10), m.makeNext(0)));
-    m.branchPush(b, m.makeKeyNext(m.new Key (20), m.makeNext(1)));
-    m.branchPush(b, m.makeKeyNext(m.new Key (30), m.makeNext(2)));
+    m.branchPush(b, m.new KeyNext(10, 0));
+    m.branchPush(b, m.new KeyNext(20, 1));
+    m.branchPush(b, m.new KeyNext(30, 2));
 
-    m.branchPush(B, m.makeKeyNext(m.new Key (15), m.makeNext(0)));
-    m.branchPush(B, m.makeKeyNext(m.new Key (35), b));
+    m.branchPush(B, m.new KeyNext(15, 0));
+    m.branchPush(B, m.new KeyNext(m.new Key(35), b));
     m.execute();
     //stop(b, B);
 
@@ -4150,10 +4130,10 @@ V  264     3                  1               unary     nodes.node.branchOrLeaf.
    {final int BitsPerKey = 8, BitsPerData = 8, MaxKeysPerLeaf = 4, size = 4;    // Dimensions of BTree
     final Mjaf m = mjaf(BitsPerKey, BitsPerData, MaxKeysPerLeaf, size);         // Create BTree
 
-    m.put(m.new Key (1), m.makeData(11));
-    m.put(m.new Key (2), m.makeData(22));
-    m.put(m.new Key (3), m.makeData(33));
-    m.put(m.new Key (4), m.makeData(44));
+    m.put(m.new Key (1), m.new Data(11));
+    m.put(m.new Key (2), m.new Data(22));
+    m.put(m.new Key (3), m.new Data(33));
+    m.put(m.new Key (4), m.new Data(44));
     m.execute();
 
     //stop(m.layout);
@@ -4181,7 +4161,7 @@ V   85     4                 15             unary     nodes.node.branchOrLeaf.le
 """);
 
     m.reset();
-    m.put(m.new Key (5), m.makeData(55));                                        // Split leaf root
+    m.put(m.new Key (5), m.new Data(55));                                        // Split leaf root
     m.execute();
 
     //stop(m.layout);
@@ -4298,7 +4278,7 @@ V  295     4                  7             unary     nodes.node.branchOrLeaf.le
 
     m.reset();
     m.debug(true);
-    m.put(m.new Key (6), m.makeData(66));
+    m.put(m.new Key (6), m.new Data(66));
     m.execute();
 
     //stop(m.layout);
@@ -4326,8 +4306,8 @@ V  295     4                 15             unary     nodes.node.branchOrLeaf.le
 """);
 
     m.reset();
-    m.put(m.new Key (7), m.makeData(77));
-    m.put(m.new Key (8), m.makeData(88));
+    m.put(m.new Key (7), m.new Data(77));
+    m.put(m.new Key (8), m.new Data(88));
     m.execute();
 
     //stop(m.layout);
@@ -4436,7 +4416,7 @@ V  295     4                 15             unary     nodes.node.branchOrLeaf.le
    {final int BitsPerKey = 8, BitsPerData = 8, MaxKeysPerLeaf = 4, size = 32;   // Dimensions of BTree
     final Mjaf m = mjaf(BitsPerKey, BitsPerData, MaxKeysPerLeaf, size);         // Create BTree
     final int N = 32;
-    for (int i = 1; i <= N; i++) m.put(m.new Key (i), m.makeData(2*i));
+    for (int i = 1; i <= N; i++) m.put(m.new Key (i), m.new Data(2*i));
     m.execute();
     ok(m.print(), """
                                                           17(8)                                                                    10(16)18-0                                                                                                                       |
@@ -4450,7 +4430,7 @@ V  295     4                 15             unary     nodes.node.branchOrLeaf.le
    {final int BitsPerKey = 8, BitsPerData = 8, MaxKeysPerLeaf = 4, size = 32;   // Dimensions of BTree
     final Mjaf m = mjaf(BitsPerKey, BitsPerData, MaxKeysPerLeaf, size);         // Create BTree
     final int N = 32;
-    for (int i = N; i > 0; i--) m.put(m.new Key (i), m.makeData(2*i));
+    for (int i = N; i > 0; i--) m.put(m.new Key (i), m.new Data(2*i));
     m.execute();
     ok(m.print(), """
                                                                                                            10(16)                                                                     17(24)18-0                                                                     |
@@ -4478,7 +4458,7 @@ V  295     4                 15             unary     nodes.node.branchOrLeaf.le
     m.maxSteps = 23_000;
 
     final int[]r = random_array();
-    for (int i = 0; i < r.length; i++) m.put(m.new Key (r[i]), m.makeData(2*r[i]));
+    for (int i = 0; i < r.length; i++) m.put(m.new Key (r[i]), m.new Data(2*r[i]));
     m.execute();
     ok(m.print(), """
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                208(511)209-0                                                                                                                                                                                                                                                                                                                                                                                                                                               |
@@ -4495,7 +4475,7 @@ V  295     4                 15             unary     nodes.node.branchOrLeaf.le
     final Mjaf m = mjaf(BitsPerKey, BitsPerData, MaxKeysPerLeaf, size);         // Create BTree
 
     final int[]r = random_array();
-    for (int i = 0; i < size; i++) m.put(m.new Key (r[i]), m.makeData(2*r[i]));
+    for (int i = 0; i < size; i++) m.put(m.new Key (r[i]), m.new Data(2*r[i]));
     m.execute();
     ok(m.print(), """
          6(317)              5(511)7-0              |
