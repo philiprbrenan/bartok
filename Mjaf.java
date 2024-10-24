@@ -1,5 +1,5 @@
 //------------------------------------------------------------------------------
-// Btree in bit machine assembler.
+// BTree in bit machine assembler.
 // Philip R Brenan at appaapps dot com, Appa Apps Ltd Inc., 2024
 //------------------------------------------------------------------------------
 package com.AppaApps.Silicon;                                                   // Design, simulate and layout  a binary tree on a silicon chip.
@@ -7,11 +7,11 @@ package com.AppaApps.Silicon;                                                   
 // Assert Branch or Leaf for all parameters indexing a branch or a leaf
 import java.util.*;
 
-class Mjaf extends BitMachine                                                   // Btree algorithm but with data stored only in the leaves to facilitate deletion without complicating search or insertion. The branches (interior nodes) have an odd number of keys to make the size of a branch as close to that of a leaf as possible to simplify memory management.
+class Mjaf extends BitMachine                                                   // BTree algorithm but with data stored only in the leaves to facilitate deletion without complicating search or insertion. The branches (interior nodes) have an odd number of keys to make the size of a branch as close to that of a leaf as possible to simplify memory management.
  {final int bitsPerKey;                                                         // Number of bits in key
   final int bitsPerData;                                                        // Number of bits in data
   final int bitsPerNext;                                                        // Number of bits in next level
-  final int maxKeysPerLeaf;                                                     // The maximum number of keys per leaf.  This should be an even number greater than three. The maximum number of keys per branch is one less. The normal Btree algorithm requires an odd number greater than two for both leaves and branches.  The difference arises because we only store data in leaves not in leaves and branches as does the classic Btree algorithm.
+  final int maxKeysPerLeaf;                                                     // The maximum number of keys per leaf.  This should be an even number greater than three. The maximum number of keys per branch is one less. The normal BTree algorithm requires an odd number greater than two for both leaves and branches.  The difference arises because we only store data in leaves not in leaves and branches as does the classic BTree algorithm.
   final int maxKeysPerBranch;                                                   // The maximum number of keys per branch.
   final int maxNodes;                                                           // The maximum number of nodes in the tree
   final int leafSplitPoint;                                                     // The point at which to split a leaf
@@ -50,9 +50,9 @@ class Mjaf extends BitMachine                                                   
 
   final static String nbol = "nodes.node.branchOrLeaf.";                        // Search layout
 
-//D1 Construction                                                               // Create a Btree from nodes which can be branches or leaves.  The data associated with the Btree is stored only in the leaves opposite the keys
+//D1 Construction                                                               // Create a BTree from nodes which can be branches or leaves.  The data associated with the BTree is stored only in the leaves opposite the keys
 
-  Mjaf(int BitsPerKey, int BitsPerData, int MaxKeysPerLeaf, int size)           // Define a Btree with the specified dimensions
+  Mjaf(int BitsPerKey, int BitsPerData, int MaxKeysPerLeaf, int size)           // Define a BTree with the specified dimensions
    {super("Mjaf");
     final int N      = MaxKeysPerLeaf;                                          // Assign a shorter name
     bitsPerKey       = BitsPerKey;
@@ -128,7 +128,7 @@ class Mjaf extends BitMachine                                                   
     bitMachine(nodesFree, branchStuck, leaf); bitMachines(this);                // Place all the instruction that would otherwise be generated in these machines into this machine instead
    }
 
-  static Mjaf mjaf(int Key, int Data, int MaxKeysPerLeaf, int size)             // Define a Btree with a specified maximum number of keys per leaf.
+  static Mjaf mjaf(int Key, int Data, int MaxKeysPerLeaf, int size)             // Define a BTree with a specified maximum number of keys per leaf.
    {return new Mjaf(Key, Data, MaxKeysPerLeaf, size);
    }
 
@@ -910,7 +910,7 @@ class Mjaf extends BitMachine                                                   
     padStrings(S, level);
    }
 
-//D1 Print                                                                      // Print a Btree horizontally
+//D1 Print                                                                      // Print a BTree horizontally
 
   static void padStrings(Stack<StringBuilder> S, int level)                     // Pad a stack of strings so they all have the same length
    {for (int i = S.size(); i <= level; ++i) S.push(new StringBuilder());        // Make sure we have a full deck of strings
@@ -988,9 +988,9 @@ class Mjaf extends BitMachine                                                   
     return inserted;
    }
 
-//D1 Insertion                                                                  // Insert key, data pairs into the Btree
+//D1 Insertion                                                                  // Insert key, data pairs into the BTree
 
-  void put(Key Key, Data Data)                                                  // Insert a new key, data pair into the Btree
+  void put(Key Key, Data Data)                                                  // Insert a new key, data pair into the BTree
    {new Block()
      {void code()
        {returnIfOne(findAndInsert(Key, Data));                                  // Return immediately if fast insert succeeded
@@ -1044,7 +1044,7 @@ class Mjaf extends BitMachine                                                   
      }; // block
    } // put
 
-//D1 Deletion                                                                   // Delete a key from a Btree
+//D1 Deletion                                                                   // Delete a key from a BTree
 /*
 
   Data delete(Key keyName)                                                      // Delete a key from a tree
@@ -1054,7 +1054,7 @@ class Mjaf extends BitMachine                                                   
 
     if (new Node().isLeaf())                                                    // Delete from root as a leaf
      {final Leaf r = new Node().leaf();                                         // Root is a leaf
-      final int  i = r.findIndexOfKey(keyName);                                 // Only one leaf and the key is known to be in the Btree so it must be in this leaf
+      final int  i = r.findIndexOfKey(keyName);                                 // Only one leaf and the key is known to be in the BTree so it must be in this leaf
       r.removeKey (i);
       r.removeData(i);
       keyDataStored.dec();
@@ -4146,9 +4146,9 @@ V  264     3                  1               unary     nodes.node.branchOrLeaf.
 """);
    }
 
-  static void test_put()                                                        // Load a Btree
-   {final int BitsPerKey = 8, BitsPerData = 8, MaxKeysPerLeaf = 4, size = 4;    // Dimensions of Btree
-    final Mjaf m = mjaf(BitsPerKey, BitsPerData, MaxKeysPerLeaf, size);         // Crete Btree
+  static void test_put()                                                        // Load a BTree
+   {final int BitsPerKey = 8, BitsPerData = 8, MaxKeysPerLeaf = 4, size = 4;    // Dimensions of BTree
+    final Mjaf m = mjaf(BitsPerKey, BitsPerData, MaxKeysPerLeaf, size);         // Create BTree
 
     m.put(m.makeKey(1), m.makeData(11));
     m.put(m.makeKey(2), m.makeData(22));
@@ -4432,21 +4432,56 @@ V  295     4                 15             unary     nodes.node.branchOrLeaf.le
 """);
    }
 
-  static void test_put9()                                                       // Load a Btree
-   {final int BitsPerKey = 8, BitsPerData = 8, MaxKeysPerLeaf = 4, size = 12;   // Dimensions of Btree
-    final Mjaf m = mjaf(BitsPerKey, BitsPerData, MaxKeysPerLeaf, size);         // Crete Btree
-    final int N = 15;
-    for (int i = 1; i < N; i++) m.put(m.makeKey(i), m.makeData(2*i));
-    m.execute();
-    m.reset();
-    BitMachine.debug = true;
-    m.put(m.makeKey(N), m.makeData(2*N));
+  static void test_put_ascending()                                              // Load a BTree from an ascending sequence
+   {final int BitsPerKey = 8, BitsPerData = 8, MaxKeysPerLeaf = 4, size = 32;   // Dimensions of BTree
+    final Mjaf m = mjaf(BitsPerKey, BitsPerData, MaxKeysPerLeaf, size);         // Create BTree
+    final int N = 32;
+    for (int i = 1; i <= N; i++) m.put(m.makeKey(i), m.makeData(2*i));
     m.execute();
     ok(m.print(), """
-                     6(4)                   3(8)7-0                                         |
-       10(2)9-6                8(6)5-3                    4(10)        2(12)11-7            |
-1,2=10         3,4=9     5,6=8        7,8=5        9,10=4      11,12=2          13,14,15=11 |
+                                                          17(8)                                                                    10(16)18-0                                                                                                                       |
+                        26(4)23-17                                                         20(12)15-10                                                                    12(20)                            8(24)27-18                                              |
+       30(2)29-26                        28(6)25-23                    24(10)22-20                             21(14)19-15                            16(18)14-12                        13(22)11-8                           9(26)        7(28)31-27               |
+1,2=30           3,4=29           5,6=28           7,8=25      9,10=24            11,12=22            13,14=21            15,16=19           17,18=16            19,20=14       21,22=13           23,24=11           25,26=9      27,28=7           29,30,31,32=31 |
 """);
+   }
+
+  static void test_put_descending()                                             // Load a BTree from a descending sequence
+   {final int BitsPerKey = 8, BitsPerData = 8, MaxKeysPerLeaf = 4, size = 32;   // Dimensions of BTree
+    final Mjaf m = mjaf(BitsPerKey, BitsPerData, MaxKeysPerLeaf, size);         // Create BTree
+    final int N = 32;
+    for (int i = N; i > 0; i--) m.put(m.makeKey(i), m.makeData(2*i));
+    m.execute();
+    ok(m.print(), """
+                                                                                                           10(16)                                                                     17(24)18-0                                                                     |
+                                   8(8)                            12(12)15-10                                                                20(20)23-17                                                                    26(28)27-18                             |
+          7(4)      9(6)11-8                   13(10)14-12                             16(14)19-15                        21(18)22-20                             24(22)25-23                            28(26)29-26                             30(30)31-27         |
+1,2,3,4=7     5,6=9         7,8=11     9,10=13            11,12=14            13,14=16            15,16=19       17,18=21            19,20=22            21,22=24            23,24=25           25,26=28            27,28=29            29,30=30            31,32=31 |
+""");
+   }
+
+  static int[]random_array()                                                    // Random array
+   {final int[]r = {27, 442, 545, 317, 511, 578, 391, 993, 858, 586, 472, 906, 658, 704, 882, 246, 261, 501, 354, 903, 854, 279, 526, 686, 987, 403, 401, 989, 650, 576, 436, 560, 806, 554, 422, 298, 425, 912, 503, 611, 135, 447, 344, 338, 39, 804, 976, 186, 234, 106, 667, 494, 690, 480, 288, 151, 773, 769, 260, 809, 438, 237, 516, 29, 376, 72, 946, 103, 961, 55, 358, 232, 229, 90, 155, 657, 681, 43, 907, 564, 377, 615, 612, 157, 922, 272, 490, 679, 830, 839, 437, 826, 577, 937, 884, 13, 96, 273, 1, 188};
+    return r;
+   }
+
+  static void test_put_random()                                                 // Load a BTree from random data
+   {final int BitsPerKey = 10, BitsPerData = 10, MaxKeysPerLeaf = 4, size = 256;// Dimensions of BTree
+    final Mjaf m = mjaf(BitsPerKey, BitsPerData, MaxKeysPerLeaf, size);         // Create BTree
+
+    m.maxSteps = 23_000;
+
+    final int[]r = random_array();
+    for (int i = 0; i < r.length; i++) m.put(m.makeKey(r[i]), m.makeData(2*r[i]));
+    m.execute();
+    ok(m.print(), """
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               208(511)209-0                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+                                                                                                                                           201(186)                                                                                                                                 226(317)240-208                                                                                                                                                                                                                                                                                                                                                                                              211(658)241-209                                                                                                                                                                                                                                                                           |
+                                                                             216(103)229-201                                                                                                      203(246)243-226                                                                                                                                                                     234(403)                                                                   225(472)250-240                                                                                                                                   214(578)245-211                                                                                                                             205(704)                                                                           236(858)                                               207(912)251-241                                                                   |
+            200(27)          232(39)             215(72)220-216                                         222(135)231-229                                                219(234)246-203                                       202(261)                228(279)254-243                                           223(344)            212(358)                242(391)237-234                                224(425)                    248(442)230-225                                               233(501)253-250                                         239(545)            213(560)252-214                                               218(611)                210(650)247-245                                               217(686)238-205                                        227(806)                204(830)249-236                                        244(903)221-207                                                   206(961)            235(987)255-251            |
+1,13,27=200        29,39=232        43,55,72=215               90,96,103=220                106,135=222                151,155,157,186=231         188,229,232,234=219                237,246=246                260,261=202         272,273,279=228                288,298,317=254                338,344=223         354,358=212         376,377,391=242                401,403=237         422,425=224         436,437,438,442=248                447,472=230                480,490,494,501=233                503,511=253              516,526,545=239         554,560=213                564,576,577,578=252                586,611=218         612,615,650=210                657,658=247                667,679,681,686=217                690,704=238         769,773,804,806=227         809,826,830=204                839,854,858=249         882,884,903=244                906,907,912=221                922,937,946,961=206         976,987=235                989,993=255 |
+""");
+   //say("Number of steps", m.step);
    }
 
   static void oldTests()                                                        // Tests thought to be in good shape
@@ -4474,12 +4509,13 @@ V  295     4                 15             unary     nodes.node.branchOrLeaf.le
 
     test_leaf_fission();                test_branch_fission();
 
-    test_put();
+    test_put();  test_put_ascending();  test_put_descending();
+    test_put_random();
    }
 
   static void newTests()                                                        // Tests being worked on
-   {oldTests();
-    test_put9();
+   {//oldTests();
+    test_put_random();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
