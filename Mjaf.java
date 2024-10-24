@@ -163,6 +163,8 @@ class Mjaf extends BitMachine                                                   
      {if (V.width != bitsPerNext) stop("Wrong sized node number", V);
       v = V;
      }
+    NN(String name) {this(Layout.createVariable(name, bitsPerNext));}           // Create a node index with the specified name
+    NN() {this("nodeIndex");}                                                   // Create a node index with a default name
    }
 
   class BI                                                                      // An index within a branch
@@ -219,12 +221,6 @@ class Mjaf extends BitMachine                                                   
       v = V;
      }
    }
-
-  NN nodeIndex(String name)                                                     // Create a node index with the specified name
-   {return new NN(Layout.createVariable(name, bitsPerNext));
-   }
-
-  NN nodeIndex() {return nodeIndex("nodeIndex");}                               // Create a node index with a default name
 
   LI leafIndex(String name)                                                     // Create a leaf index with the specified name
    {return new LI(Layout.createVariable(name, maxKeysPerLeaf));
@@ -342,7 +338,7 @@ class Mjaf extends BitMachine                                                   
    }
 
   NN leafMake()                                                                 // Make a new leaf and return its index
-   {NN i = nodeIndex("leaf");
+   {final NN i = new NN("leaf");
     leafMake(i);
     return i;
    }
@@ -462,8 +458,8 @@ class Mjaf extends BitMachine                                                   
    }
 
   void leafSplitRoot()                                                          // Split the root when it is a leaf
-   {final NN F1 = nodeIndex("left");                                            // New left leaf
-    final NN F2 = nodeIndex("right");                                           // New right root
+   {final NN F1 = new NN("left");                                               // New left leaf
+    final NN F2 = new NN("right");                                              // New right root
     leafSplitRoot(F1, F2);
    }
 
@@ -478,7 +474,7 @@ class Mjaf extends BitMachine                                                   
    }
 
   NN leafSplit(NN source)                                                       // Split the source leaf. After the leaf has been split the upper half will appear in the source and the loweer half in the target
-   {final NN target = nodeIndex("target");
+   {final NN target = new NN("target");
     leafSplit(target, source);
     return target;
    }
@@ -613,7 +609,7 @@ class Mjaf extends BitMachine                                                   
    }
 
   NN branchMake()                                                               // Make a new branch and return its index
-   {NN i = nodeIndex("branch");
+   {final NN i = new NN("branch");
     branchMake(i);
     return i;
    }
@@ -722,7 +718,7 @@ class Mjaf extends BitMachine                                                   
    }
 
   NN branchGetTopNext(NN nodeIndex)                                             // Get the top node for a branch
-   {final NN top = nodeIndex("top");
+   {final NN top = new NN("top");
     branchGetTopNext(nodeIndex, top);
     return top;
    }
@@ -745,7 +741,7 @@ class Mjaf extends BitMachine                                                   
    }
 
   NN branchSplit(NN source)                                                     // Source branch, target branch. After the branch has been split the upper half will appear in the source and the lower half in the target
-   {final NN target = nodeIndex();                                              // Index of split out node
+   {final NN target = new NN();                                              // Index of split out node
     branchSplit(target, source);                                                // Work area for transferring key data pairs from the source code to the target node
     return target;
    }
@@ -776,8 +772,8 @@ class Mjaf extends BitMachine                                                   
    }
 
   void branchSplitRoot()                                                        // Split the root when it is a branch
-   {final NN F1 = nodeIndex("left");                                            // New left branch
-    final NN F2 = nodeIndex("right");                                           // New right root
+   {final NN F1 = new NN("left");                                               // New left branch
+    final NN F2 = new NN("right");                                              // New right root
     branchSplitRoot(F1, F2);
    }
 
@@ -852,7 +848,7 @@ class Mjaf extends BitMachine                                                   
    }
 
   NN branchFindFirstGreaterOrEqual(NN NodeIndex, Key Key)                       // Return the 'next' for the first key in a branch that is greater than or equal to the specified key or else return the top node if no such key exists.
-   {final NN Result = nodeIndex("child");
+   {final NN Result = new NN("child");
     branchFindFirstGreaterOrEqual(NodeIndex, Key, Result);
     return Result;
    }
@@ -938,7 +934,7 @@ class Mjaf extends BitMachine                                                   
 //D1 Search                                                                     // Find a key, data pair
 
   void find(Key Key, Layout.Bit Found, Data Data)                               // Find the data associated with a key in a tree
-   {final NN nodeIndex = nodeIndex();                                           // Node index variable
+   {final NN nodeIndex = new NN();                                           // Node index variable
     final LI leafIndex = leafIndex();                                           // Leaf key, data pair index variable
 
     new Repeat()
@@ -965,7 +961,7 @@ class Mjaf extends BitMachine                                                   
    }
 
   void findAndInsert(Key Key, Data Data, Layout.Bit Inserted)                   // Find the leaf for a key and insert the indicated key, data pair into if possible, returning true if the insertion was possible else false.
-   {final NN nodeIndex = nodeIndex();                                           // Node index variable
+   {final NN nodeIndex = new NN();                                           // Node index variable
     final LI leafIndex = leafIndex();                                           // Leaf key, data index variable
     new Repeat()                                                                // Step down through branches to a leaf into which it might be possible to insert the key
      {void code()
@@ -1009,7 +1005,7 @@ class Mjaf extends BitMachine                                                   
            {new IfElse(leafRootIsFull())                                        // Root is a leaf
              {void Then()                                                       // Insert into root as a leaf which is full
                {leafSplitRoot();                                                // Split the root known to be a leaf
-                final NN n = nodeIndex("next");                                 // The index of the node into which to insert the key, data pair
+                final NN n = new NN("next");                                    // The index of the node into which to insert the key, data pair
                 branchFindFirstGreaterOrEqual(new NN(root), Key, n);            // Choose the leaf in which to insert the key
                 leafInsertPair(n, Key, Data);                                   // Insertion is possible because the leaf was just split out of the root and so must have free space
                }
@@ -1028,8 +1024,8 @@ class Mjaf extends BitMachine                                                   
            }
          };
 
-        final NN p = nodeIndex("p");                                            // The root is known to be a branch because if it were a leaf we would have either inserted into the leaf or split it.
-        final NN q = nodeIndex("q");                                            // Child beneath parent
+        final NN p = new NN("p");                                               // The root is known to be a branch because if it were a leaf we would have either inserted into the leaf or split it.
+        final NN q = new NN("q");                                               // Child beneath parent
         new Repeat()                                                            // Step down through tree to find the required leaf, splitting as we go
          {void code()
            {branchFindFirstGreaterOrEqual(p, Key, q);                           // Step down to next child
@@ -4467,6 +4463,12 @@ V  295     4                 15             unary     nodes.node.branchOrLeaf.le
           7(4)      9(6)11-8                   13(10)14-12                             16(14)19-15                        21(18)22-20                             24(22)25-23                            28(26)29-26                             30(30)31-27         |
 1,2,3,4=7     5,6=9         7,8=11     9,10=13            11,12=14            13,14=16            15,16=19       17,18=21            19,20=22            21,22=24            23,24=25           25,26=28            27,28=29            29,30=30            31,32=31 |
 """);
+
+//    m.reset();
+//    final Data data = m.new Data();
+//    final Layout.Bit f = m.find(m.new Key(11), data);
+//    m.execute();
+//    say("AAAA", f, data);
    }
 
   static int[]random_array()                                                    // Random array
@@ -4537,8 +4539,8 @@ V  295     4                 15             unary     nodes.node.branchOrLeaf.le
    }
 
   static void newTests()                                                        // Tests being worked on
-   {//oldTests();
-    test_put_random_small();
+   {oldTests();
+    //test_put_ascending();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
