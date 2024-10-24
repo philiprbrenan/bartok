@@ -149,6 +149,8 @@ class Mjaf extends BitMachine                                                   
     zero(node);                                                                 // Clear the node
    }
 
+  void setIndex(Layout.Array array, NN index) {setIndex(array, index.v);}       // Set the index of a layout array
+
   void setRootToLeaf()                                                          // Set the root node of a new tree to be a leaf
    {nodes.setIndex(0); isLeaf.ones(); isBranch.zero();
    }
@@ -268,8 +270,6 @@ class Mjaf extends BitMachine                                                   
     Key key() {return new Key(v.asLayout().get("branchKey").toVariable());}     // Get the key from a key, next pair
     NN next() {return new NN(v.asLayout().get("branchNext").toVariable());}     // Get the next node from a key, next pair
    }
-
-  void setIndex(Layout.Array array, NN index) {setIndex(array, index.v);}       // Set the index of a layout array
 
 //D1 Leaf                                                                       // Process a leaf
 
