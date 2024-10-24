@@ -4481,7 +4481,22 @@ V  295     4                 15             unary     nodes.node.branchOrLeaf.le
             200(27)          232(39)             215(72)220-216                                         222(135)231-229                                                219(234)246-203                                       202(261)                228(279)254-243                                           223(344)            212(358)                242(391)237-234                                224(425)                    248(442)230-225                                               233(501)253-250                                         239(545)            213(560)252-214                                               218(611)                210(650)247-245                                               217(686)238-205                                        227(806)                204(830)249-236                                        244(903)221-207                                                   206(961)            235(987)255-251            |
 1,13,27=200        29,39=232        43,55,72=215               90,96,103=220                106,135=222                151,155,157,186=231         188,229,232,234=219                237,246=246                260,261=202         272,273,279=228                288,298,317=254                338,344=223         354,358=212         376,377,391=242                401,403=237         422,425=224         436,437,438,442=248                447,472=230                480,490,494,501=233                503,511=253              516,526,545=239         554,560=213                564,576,577,578=252                586,611=218         612,615,650=210                657,658=247                667,679,681,686=217                690,704=238         769,773,804,806=227         809,826,830=204                839,854,858=249         882,884,903=244                906,907,912=221                922,937,946,961=206         976,987=235                989,993=255 |
 """);
-   //say("Number of steps", m.step);
+   //say("Number of steps ", m.step);
+   }
+
+  static void test_put_random_small()                                           // Load a BTree from a small amount of random data so it easy to see the full tree
+   {final int BitsPerKey = 10, BitsPerData = 10, MaxKeysPerLeaf = 4, size = 16; // Dimensions of BTree
+    final Mjaf m = mjaf(BitsPerKey, BitsPerData, MaxKeysPerLeaf, size);         // Create BTree
+
+    final int[]r = random_array();
+    for (int i = 0; i < size; i++) m.put(m.makeKey(r[i]), m.makeData(2*r[i]));
+    m.execute();
+    ok(m.print(), """
+                                             10(511)11-0                                                              |
+              14(317)13-10                                         12(578)                  9(858)15-11               |
+27,246,317=14             391,442,472,511=13            545,578=12        586,658,704,858=9            882,906,993=15 |
+""");
+   //say("Number of steps ", m.step);
    }
 
   static void oldTests()                                                        // Tests thought to be in good shape
@@ -4515,7 +4530,7 @@ V  295     4                 15             unary     nodes.node.branchOrLeaf.le
 
   static void newTests()                                                        // Tests being worked on
    {//oldTests();
-    test_put_random();
+    test_put_random_small();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
