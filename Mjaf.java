@@ -923,19 +923,18 @@ class Mjaf extends BitMachine                                                   
 
     Path(Key Key)                                                               // Find the path in the BTree to the key
      {key = Key;
+      bitMachines(path);
       new Repeat()
        {void code()
          {returnIfOne(isLeaf(nodeIndex));                                       // Exit when we reach a leaf
           final NN next = new NN("next");                                       // Next child down
           branchFindFirstGreaterOrEqual(nodeIndex, Key, next);                  // Find next child
           copy(nodeIndex.v, next.v);                                            // Child becomes parent
-          path.push2(nodeIndex.v);                                              // Save child index
-new Say() {void action() {say("BBBB", nodeIndex.v, path.asLayout());}};
+          path.push(nodeIndex.v);                                               // Save child index
          }
        };
 
       leafFindIndexOf(nodeIndex, Key, found, leafIndex);                        // Find index of the specified key, data pair in the specified leaf
-new Say() {void action() {say("CCCC", Key, found, path.asLayout());}};
      }
    }
 
@@ -4552,10 +4551,174 @@ B    0     1                  0   found
        14(2)13-10                   12(6)9-7                     8(10)        6(12)15-11               |
 1,2=14           3,4=13      5,6=12         7,8=9         9,10=8      11,12=6           13,14,15,16=15 |
 """);
-    m.reset();
-    Path p1 = m.new Path(m.new Key(1));
-    m.execute();
-    say("AAAA", p1.key.v,  p1.found, p1.path.layout, p1.nodeIndex.v, p1.leafIndex.v);
+
+    if (true)                                                                   // Path to key 1
+     {m.reset();
+      Path p = m.new Path(m.new Key(1));
+      m.execute();
+
+      p.key.v.asLayout().ok("""
+T   At  Wide  Index       Value   Field name
+V    0     5                  1   key
+""");
+
+      p.found.asLayout().ok("""
+T   At  Wide  Index       Value   Field name
+B    0     1                  1   found
+""");
+
+      p.path.asLayout().ok("""
+T   At  Wide  Index       Value   Field name
+S    0    25            3145962   path
+A    0    20      0         234     array     array
+V    0     4                 10       nodeIndex     array.nodeIndex
+A    4    20      1         234     array     array
+V    4     4                 14       nodeIndex     array.nodeIndex
+A    8    20      2         234     array     array
+V    8     4                  0       nodeIndex     array.nodeIndex
+A   12    20      3         234     array     array
+V   12     4                  0       nodeIndex     array.nodeIndex
+A   16    20      4         234     array     array
+V   16     4                  0       nodeIndex     array.nodeIndex
+V   20     5                  3     unary     unary
+""");
+
+      p.nodeIndex.v.asLayout().ok("""
+T   At  Wide  Index       Value   Field name
+V    0     4                 14   nodeIndex
+""");
+
+      p.leafIndex.v.asLayout().ok("""
+T   At  Wide  Index       Value   Field name
+V    0     4                  0   leafIndex
+""");
+     }
+
+    if (true)                                                                   // Path to key 2
+     {m.reset();
+      Path p = m.new Path(m.new Key(2));
+      m.execute();
+
+      p.key.v.asLayout().ok("""
+T   At  Wide  Index       Value   Field name
+V    0     5                  2   key
+""");
+
+      p.found.asLayout().ok("""
+T   At  Wide  Index       Value   Field name
+B    0     1                  1   found
+""");
+
+      p.path.asLayout().ok("""
+T   At  Wide  Index       Value   Field name
+S    0    25            3145962   path
+A    0    20      0         234     array     array
+V    0     4                 10       nodeIndex     array.nodeIndex
+A    4    20      1         234     array     array
+V    4     4                 14       nodeIndex     array.nodeIndex
+A    8    20      2         234     array     array
+V    8     4                  0       nodeIndex     array.nodeIndex
+A   12    20      3         234     array     array
+V   12     4                  0       nodeIndex     array.nodeIndex
+A   16    20      4         234     array     array
+V   16     4                  0       nodeIndex     array.nodeIndex
+V   20     5                  3     unary     unary
+""");
+
+      p.nodeIndex.v.asLayout().ok("""
+T   At  Wide  Index       Value   Field name
+V    0     4                 14   nodeIndex
+""");
+
+      p.leafIndex.v.asLayout().ok("""
+T   At  Wide  Index       Value   Field name
+V    0     4                  1   leafIndex
+""");
+     }
+
+    if (true)                                                                   // Path to key 16
+     {m.reset();
+      Path p = m.new Path(m.new Key(16));
+      m.execute();
+
+      p.key.v.asLayout().ok("""
+T   At  Wide  Index       Value   Field name
+V    0     5                 16   key
+""");
+
+      p.found.asLayout().ok("""
+T   At  Wide  Index       Value   Field name
+B    0     1                  1   found
+""");
+
+      p.path.asLayout().ok("""
+T   At  Wide  Index       Value   Field name
+S    0    25            3145979   path
+A    0    20      0         251     array     array
+V    0     4                 11       nodeIndex     array.nodeIndex
+A    4    20      1         251     array     array
+V    4     4                 15       nodeIndex     array.nodeIndex
+A    8    20      2         251     array     array
+V    8     4                  0       nodeIndex     array.nodeIndex
+A   12    20      3         251     array     array
+V   12     4                  0       nodeIndex     array.nodeIndex
+A   16    20      4         251     array     array
+V   16     4                  0       nodeIndex     array.nodeIndex
+V   20     5                  3     unary     unary
+""");
+
+      p.nodeIndex.v.asLayout().ok("""
+T   At  Wide  Index       Value   Field name
+V    0     4                 15   nodeIndex
+""");
+
+      p.leafIndex.v.asLayout().ok("""
+T   At  Wide  Index       Value   Field name
+V    0     4                  7   leafIndex
+""");
+     }
+
+    if (true)                                                                   // Path to missing key
+     {m.reset();
+      Path p = m.new Path(m.new Key(17));
+      m.execute();
+
+      p.key.v.asLayout().ok("""
+T   At  Wide  Index       Value   Field name
+V    0     5                 17   key
+""");
+
+      p.found.asLayout().ok("""
+T   At  Wide  Index       Value   Field name
+B    0     1                  0   found
+""");
+
+      p.path.asLayout().ok("""
+T   At  Wide  Index       Value   Field name
+S    0    25            3145979   path
+A    0    20      0         251     array     array
+V    0     4                 11       nodeIndex     array.nodeIndex
+A    4    20      1         251     array     array
+V    4     4                 15       nodeIndex     array.nodeIndex
+A    8    20      2         251     array     array
+V    8     4                  0       nodeIndex     array.nodeIndex
+A   12    20      3         251     array     array
+V   12     4                  0       nodeIndex     array.nodeIndex
+A   16    20      4         251     array     array
+V   16     4                  0       nodeIndex     array.nodeIndex
+V   20     5                  3     unary     unary
+""");
+
+      p.nodeIndex.v.asLayout().ok("""
+T   At  Wide  Index       Value   Field name
+V    0     4                 15   nodeIndex
+""");
+
+      p.leafIndex.v.asLayout().ok("""
+T   At  Wide  Index       Value   Field name
+V    0     4                 15   leafIndex
+""");
+     }
    }
 
   static void oldTests()                                                        // Tests thought to be in good shape
@@ -4588,8 +4751,8 @@ B    0     1                  0   found
    }
 
   static void newTests()                                                        // Tests being worked on
-   {oldTests();
-    //test_path();
+   {//oldTests();
+    test_path();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
