@@ -3,7 +3,7 @@
 // Philip R Brenan at appaapps dot com, Appa Apps Ltd Inc., 2024
 //------------------------------------------------------------------------------
 package com.AppaApps.Silicon;                                                   // Simulate a silicon chip.
-// Add tags to fields so that we can check that we are getting a field of the right sort.
+
 import java.util.*;
 
 //D1 Construct                                                                  // Layout a description of the memory used by a chip
@@ -545,14 +545,14 @@ public class Layout extends Test implements LayoutAble                          
    {final Layout          l = new Layout();
     final Layout.Variable v = l.bit(name);                                      // New variable
     l.layout(v);                                                                // Layout the variable
-    return l.asField().toBit();                                           // Bit
+    return l.asField().toBit();                                                 // Bit
    }
 
   static Layout.Variable createVariable(String name, int width)                 // Create a single variable
    {final Layout          l = new Layout();
     final Layout.Variable v = l.variable(name, width);                          // New variable
     l.layout(v);                                                                // Layout the variable
-    return l.asField().toVariable();                                      // Variable
+    return l.asField().toVariable();                                            // Variable
    }
 
 //D1 Bits                                                                       // A collection of bits abstracted from memory layouts
