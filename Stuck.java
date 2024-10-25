@@ -47,14 +47,15 @@ class Stuck extends BitMachine implements LayoutAble                            
     temp     = tempLay.structure("structure", source, target, buffer);          // Temporary structure
     tempLay.layout(temp);                                                       // Layout of temporary storage
     temp.zero();                                                                // Clear temporary storage
-    bitMachine(unary); bitMachines(this);
+    bitMachines(unary);
    }
 
   static Stuck stuck(String Name, int Max, Layout Layout)                       // Create the stuck
    {return new Stuck(Name, Max, Layout);
    }
 
-  Stuck like() {return new Stuck(name, max, element.duplicate());}              // Make a stuck like this one
+  Stuck like()        {return new Stuck(name, max, element.duplicate());}       // Make a stuck like this one
+  Stuck like(int Max) {return new Stuck(name, Max, element.duplicate());}       // Make a stuck like this one with a specified size
 
   void clear() {zero(stuck);}                                                   // Clear a stuck
 
@@ -71,6 +72,15 @@ class Stuck extends BitMachine implements LayoutAble                            
 
   void push(LayoutAble ElementToPush)                                           // Push an element onto the stuck
    {setIndexFromUnary(array, unary.value);                                      // Index stuck
+    copy(element, ElementToPush.asField());                                     // Copy data into the stuck
+    unary.inc();                                                                // Show next free slot
+   }
+
+  void push2(LayoutAble ElementToPush)                                           // Push an element onto the stuck
+   {
+say("SSSS11");
+new Say() {void action() {say("SSSS22");}};
+    setIndexFromUnary(array, unary.value);                                      // Index stuck
     copy(element, ElementToPush.asField());                                     // Copy data into the stuck
     unary.inc();                                                                // Show next free slot
    }
@@ -1066,19 +1076,15 @@ V   16     4                  3     unary     unary
 """);
 
 
-    Stuck S = s.like();
+    Stuck S = s.like(2);
     S.layout.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    20                  0   s
-A    0    16      0           0     array     array
+S    0    10                  0   s
+A    0     8      0           0     array     array
 V    0     4                  0       k     array.k
-A    4    16      1           0     array     array
+A    4     8      1           0     array     array
 V    4     4                  0       k     array.k
-A    8    16      2           0     array     array
-V    8     4                  0       k     array.k
-A   12    16      3           0     array     array
-V   12     4                  0       k     array.k
-V   16     4                  0     unary     unary
+V    8     2                  0     unary     unary
 """);
    }
 
