@@ -125,7 +125,7 @@ class Mjaf extends BitMachine                                                   
     nodesFree.unary.value.ones();                                               // The stuck is initially full of free nodes
     setRootToLeaf();
 
-    bitMachine(nodesFree, branchStuck, leaf); bitMachines(this);                // Place all the instruction that would otherwise be generated in these machines into this machine instead
+    bitMachines(nodesFree, branchStuck, leaf);                                  // Place all the instruction that would otherwise be generated in these machines into this machine instead
    }
 
   static Mjaf mjaf(int Key, int Data, int MaxKeysPerLeaf, int size)             // Define a BTree with a specified maximum number of keys per leaf.
@@ -910,6 +910,33 @@ class Mjaf extends BitMachine                                                   
     final StringBuilder t = new StringBuilder();
     for  (StringBuilder s : S) t.append(s.toString()+"|\n");
     return t.toString();
+   }
+
+//D1 Path                                                                       // Find the path from the root to a specified key in a leaf
+
+  class Path                                                                    // Describe the path from the root to a specified key in a leaf
+   {final Key          key;                                                     // Key being searched for
+    final Layout.Bit found = Layout.createBit("found");                         // Whether the key was found or not
+    final NN     nodeIndex = new NN();                                          // Node index of the leaf that should contain the key
+    final Stuck       path = new Stuck("path", bitsPerKey, nodeIndex.v.asLayout()); // Guess a stuck that is big enough to hold the path
+    final LI     leafIndex = new LI();                                          // Index of key, data pair in the leaf if found
+
+    Path(Key Key)                                                               // Find the path in the BTree to the key
+     {key = Key;
+      new Repeat()
+       {void code()
+         {returnIfOne(isLeaf(nodeIndex));                                       // Exit when we reach a leaf
+          final NN next = new NN("next");                                       // Next child down
+          branchFindFirstGreaterOrEqual(nodeIndex, Key, next);                  // Find next child
+          copy(nodeIndex.v, next.v);                                            // Child becomes parent
+          path.push2(nodeIndex.v);                                              // Save child index
+new Say() {void action() {say("BBBB", nodeIndex.v, path.asLayout());}};
+         }
+       };
+
+      leafFindIndexOf(nodeIndex, Key, found, leafIndex);                        // Find index of the specified key, data pair in the specified leaf
+new Say() {void action() {say("CCCC", Key, found, path.asLayout());}};
+     }
    }
 
 //D1 Search                                                                     // Find a key, data pair
@@ -4489,7 +4516,7 @@ B    0     1                  0   found
     m.maxSteps = 23_000;
 
     final int[]r = random_array();
-    for (int i = 0; i < r.length; i++) m.put(m.new Key (r[i]), m.new Data(2*r[i]));
+    for (int i = 0; i < r.length; i++) m.put(m.new Key(r[i]), m.new Data(2*r[i]));
     m.execute();
     ok(m.print(), """
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                208(511)209-0                                                                                                                                                                                                                                                                                                                                                                                                                                               |
@@ -4506,13 +4533,29 @@ B    0     1                  0   found
     final Mjaf m = mjaf(BitsPerKey, BitsPerData, MaxKeysPerLeaf, size);         // Create BTree
 
     final int[]r = random_array();
-    for (int i = 0; i < size; i++) m.put(m.new Key (r[i]), m.new Data(2*r[i]));
+    for (int i = 0; i < size; i++) m.put(m.new Key(r[i]), m.new Data(2*r[i]));
     m.execute();
     ok(m.print(), """
          6(317)              5(511)7-0              |
 27,317=6       391,442,511=5          545,578,993=7 |
 """);
    //say("Number of steps ", m.step);
+   }
+
+  static void test_path()                                                       // Locate the path from the root to the leaf which should contain the key
+   {final int BitsPerKey = 5, BitsPerData = 6, MaxKeysPerLeaf = 4, size = 16;   // Dimensions of BTree
+    final Mjaf m = mjaf(BitsPerKey, BitsPerData, MaxKeysPerLeaf, size);         // Create BTree
+    for (int i = 1; i <= size; i++) m.put(m.new Key(i), m.new Data(2*i));
+    m.execute();
+    ok(m.print(), """
+                        10(4)                     7(8)11-0                                             |
+       14(2)13-10                   12(6)9-7                     8(10)        6(12)15-11               |
+1,2=14           3,4=13      5,6=12         7,8=9         9,10=8      11,12=6           13,14,15,16=15 |
+""");
+    m.reset();
+    Path p1 = m.new Path(m.new Key(1));
+    m.execute();
+    say("AAAA", p1.key.v,  p1.found, p1.path.layout, p1.nodeIndex.v, p1.leafIndex.v);
    }
 
   static void oldTests()                                                        // Tests thought to be in good shape
@@ -4545,8 +4588,8 @@ B    0     1                  0   found
    }
 
   static void newTests()                                                        // Tests being worked on
-   {//oldTests();
-    test_put_descending();
+   {oldTests();
+    //test_path();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
