@@ -76,15 +76,6 @@ class Stuck extends BitMachine implements LayoutAble                            
     unary.inc();                                                                // Show next free slot
    }
 
-  void push2(LayoutAble ElementToPush)                                           // Push an element onto the stuck
-   {
-say("SSSS11");
-new Say() {void action() {say("SSSS22");}};
-    setIndexFromUnary(array, unary.value);                                      // Index stuck
-    copy(element, ElementToPush.asField());                                     // Copy data into the stuck
-    unary.inc();                                                                // Show next free slot
-   }
-
   void push(int v)                                                              // Push an element set to the specified integer value onto the stuck
    {final Layout p = element.duplicate();
     p.asField().fromInt(v);
