@@ -36,14 +36,15 @@ public class BitMachine extends Test implements LayoutAble                      
 
   String bitMachineName() {return bitMachineName+"_"+bitMachineNumber;}         // Get the name of the bit machine that we are going to place generated code into
 
-  void bitMachine(BitMachine...subMachines)                                     // Save machines this machine is dependent on
+  void bitMachines(BitMachine...subMachines)                                    // Save machines this machine is dependent on
    {for (BitMachine b : subMachines) machines.push(b);
+    bitMachine(this);                                                           // Mark this bit machine as the one that conatains all the others
    }
 
-  void bitMachines(BitMachine machine)                                          // Have the sub machines put their instructions into this machine
+  void bitMachine(BitMachine machine)                                           // Have the sub machines put their instructions into this machine
    {for (BitMachine b : machines)
-     {b.bitMachine = machine;                                                   // target this machine
-      b.bitMachines(machine);
+     {b.bitMachine = machine;                                                   // Target this machine
+      b.bitMachine(machine);
      }
    }
 
