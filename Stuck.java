@@ -227,6 +227,40 @@ class Stuck extends BitMachine implements LayoutAble                            
     copy(LastElement.asField(), element);                                       // Copy of top most element
    }
 
+//D1 Iteration                                                                  // Iterate over a stuck
+
+  class Up extends Index                                                        // Iterate upwards over a stuck
+   {Up()
+     {super("index");
+      first();
+      new Repeat()                                                              // Block of code for each iteration
+       {void code()
+         {returnIfOne(isPast());                                                // Past all the entries
+          get();                                                                // Get current entry
+          up();                                                                 // Process current entry
+          inc();                                                                // Move up
+         }
+       };
+     }
+    void up() {}                                                                // Action to perform on each iteration
+   }
+
+  class Down extends Index                                                      // Iterate downwards over a stuck
+   {Down()
+     {super("index");
+      past();
+      new Repeat()                                                              // Block of code for each iteration
+       {void code()
+         {returnIfOne(isFirst());                                               // No more entries
+          dec();                                                                // Move down
+          get();                                                                // Get the stuck entry at the current index
+          down();                                                               // Process the curent entry
+         }
+       };
+     }
+    void down() {}                                                              // Action to perform on each iteration
+   }
+
 //D1 Search                                                                     // Search a stuck.
 
   void indexOf                                                                  // Find the index of an element in the stuck and set the found flag to true else if no such element is found the found flag is set to false
@@ -1216,20 +1250,14 @@ B    7     1                  0     l3     l3
     l.layout(k);
 
     Stuck s = stuck("s", M, l), t = s.like();
-    s.bitMachines(t);
+    s.bitMachines(t);                                                           // generate code in this biot machoine, not the birmachine
 
     s.push(11);
     s.push(22);
 
-    Index i = s.new Index("path");
-
-    i.first();
-    s.new Repeat()
-     {void code()
-       {returnIfOne(i.isPast());
-        i.get();
-        t.push(i.value);
-        i.inc();
+    s.new Up()
+     {void up()
+       {t.push(value);
        }
      };
     s.execute();
@@ -1263,15 +1291,10 @@ V   25     5                  3     unary     unary
     s.push(11);
     s.push(22);
 
-    Index i = s.new Index("path");
-
     i.past();
-    s.new Repeat()
-     {void code()
-       {returnIfOne(i.isFirst());
-        i.dec();
-        i.get();
-        t.push(i.value);
+    s.new Down()
+     {void down()
+       {t.push(i.value);
        }
      };
     s.execute();
@@ -1306,11 +1329,11 @@ V   25     5                  3     unary     unary
     test_like();
     test_index();
     test_index_up();
+    test_index_down();
    }
 
   static void newTests()                                                        // Tests being worked on
    {oldTests();
-    test_index_down();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
