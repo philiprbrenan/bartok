@@ -1146,11 +1146,13 @@ V   20     5                  0       k     array.k
 V   25     5                  3     unary     unary
 """);
 
+    //stop(i);
     i.ok("""
 T   At  Wide  Index       Value   Field name
-S    0     6                  3   s
+S    0    11                  3   s
 V    0     5                  3     path     path
 B    5     1                  0     valid     valid
+V    6     5                  0     value     value
 """);
 
     s.reset();
@@ -1159,9 +1161,10 @@ B    5     1                  0     valid     valid
     ok(s.size(), 2);
     i.ok("""
 T   At  Wide  Index       Value   Field name
-S    0     6                  1   s
+S    0    11                  1   s
 V    0     5                  1     path     path
 B    5     1                  0     valid     valid
+V    6     5                  0     value     value
 """);
 
     s.reset();
@@ -1185,9 +1188,10 @@ B    5     1                  0     valid     valid
     //stop(i, r);
     i.ok("""
 T   At  Wide  Index       Value   Field name
-S    0     6                  7   s
+S    0    11                  7   s
 V    0     5                  7     path     path
 B    5     1                  0     valid     valid
+V    6     5                  0     value     value
 """);
 
     r.ok("""
@@ -1305,7 +1309,7 @@ V   25     5                  3     unary     unary
    }
 
   static void newTests()                                                        // Tests being worked on
-   {//oldTests();
+   {oldTests();
     test_index_down();
    }
 
