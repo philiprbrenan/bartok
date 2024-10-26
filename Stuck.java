@@ -233,32 +233,40 @@ class Stuck extends BitMachine implements LayoutAble                            
    {Up()
      {super("index");
       first();
+      before();                                                                 // Before the loop starts
       new Repeat()                                                              // Block of code for each iteration
        {void code()
          {returnIfOne(isPast());                                                // Past all the entries
           get();                                                                // Get current entry
-          up();                                                                 // Process current entry
+          up(this);                                                             // Process current entry
           inc();                                                                // Move up
          }
        };
+      after();                                                                  // After the loop ends
      }
-    void up() {}                                                                // Action to perform on each iteration
+    void up(Repeat r) {}                                                        // Action to perform on each iteration
+    void before()     {}                                                        // Called before starting the loop
+    void after ()     {}                                                        // Called after ending the loop
    }
 
   class Down extends Index                                                      // Iterate downwards over a stuck
    {Down()
      {super("index");
       past();
+      before();                                                                 // Before the loop starts
       new Repeat()                                                              // Block of code for each iteration
        {void code()
          {returnIfOne(isFirst());                                               // No more entries
           dec();                                                                // Move down
           get();                                                                // Get the stuck entry at the current index
-          down();                                                               // Process the curent entry
+          down(this);                                                           // Process the curent entry
          }
        };
+      after();                                                                  // After the loop ends
      }
-    void down() {}                                                              // Action to perform on each iteration
+    void down(Repeat r) {}                                                      // Action to perform on each iteration
+    void before()     {}                                                        // Called before starting the loop
+    void after ()     {}                                                        // Called after ending the loop
    }
 
 //D1 Search                                                                     // Search a stuck.
@@ -1243,17 +1251,18 @@ B    7     1                  0     l3     l3
    }
 
   static void test_index_up()                                                   // Read through the stuck upwards
-   {final int M = 5;
+   {final int M = 6;
 
     final Layout           l = new Layout();
     final Layout.Variable  k = l.variable("k",  M);
     l.layout(k);
 
     Stuck s = stuck("s", M, l), t = s.like();
-    s.bitMachines(t);                                                           // generate code in this biot machoine, not the birmachine
+    s.bitMachines(t);                                                           // Generate code in this bit machine
 
     s.push(11);
     s.push(22);
+    s.push(33);
 
     s.new Up()
      {void up()
@@ -1261,20 +1270,43 @@ B    7     1                  0     l3     l3
        }
      };
     s.execute();
-    t.ok("""
+
+    s.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    30          100664011   s
-A    0    25      0         715     array     array
-V    0     5                 11       k     array.k
-A    5    25      1         715     array     array
-V    5     5                 22       k     array.k
-A   10    25      2         715     array     array
-V   10     5                  0       k     array.k
-A   15    25      3         715     array     array
-V   15     5                  0       k     array.k
-A   20    25      4         715     array     array
-V   20     5                  0       k     array.k
-V   25     5                  3     unary     unary
+S    0    42                      s
+A    0    36      0      136587     array     array
+V    0     6                 11       k     array.k
+A    6    36      1      136587     array     array
+V    6     6                 22       k     array.k
+A   12    36      2      136587     array     array
+V   12     6                 33       k     array.k
+A   18    36      3      136587     array     array
+V   18     6                  0       k     array.k
+A   24    36      4      136587     array     array
+V   24     6                  0       k     array.k
+A   30    36      5      136587     array     array
+V   30     6                  0       k     array.k
+V   36     6                  7     unary     unary
+""");
+
+    s.reset();
+    final Stuck.Up u = s.new Up()
+     {void up(Repeat r)
+       {s.new If(s.equals(value,  22))
+         {void Then()
+           {setValid();
+            r.returnRegardless();
+           }
+         };
+       }
+     };
+    s.execute();
+    u.ok("""
+T   At  Wide  Index       Value   Field name
+S    0    13               2881   s
+V    0     6                  1     index     index
+B    6     1                  1     valid     valid
+V    7     6                 22     value     value
 """);
    }
 
@@ -1292,7 +1324,7 @@ V   25     5                  3     unary     unary
     s.push(22);
 
     s.new Down()
-     {void down()
+     {void down(Repeat r)
        {t.push(value);
        }
      };
@@ -1333,6 +1365,7 @@ V   25     5                  3     unary     unary
 
   static void newTests()                                                        // Tests being worked on
    {oldTests();
+    test_index_up();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
