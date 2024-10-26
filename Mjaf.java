@@ -5,6 +5,7 @@
 package com.AppaApps.Silicon;                                                   // Design, simulate and layout  a binary tree on a silicon chip.
 // Use derived classes to specialize Layouts used as parameters to supply typing
 // Assert Branch or Leaf for all parameters indexing a branch or a leaf
+// Use Stuck.Index everywhere possible
 import java.util.*;
 
 class Mjaf extends BitMachine                                                   // BTree algorithm but with data stored only in the leaves to facilitate deletion without complicating search or insertion. The branches (interior nodes) have an odd number of keys to make the size of a branch as close to that of a leaf as possible to simplify memory management.
@@ -921,7 +922,7 @@ class Mjaf extends BitMachine                                                   
     final Stuck       path = new Stuck("path", bitsPerKey, nodeIndex.v.asLayout()); // Guess a stuck that is big enough to hold the path
     final LI     leafIndex = new LI();                                          // Index of key, data pair in the leaf if found
 
-    Path(Key Key)                                                               // Find the path in the BTree to the key
+    Path(Key Key)                                                               // Find the path in the BTree from the root to the key
      {key = Key;
       bitMachines(path);
       new Repeat()
@@ -936,6 +937,30 @@ class Mjaf extends BitMachine                                                   
 
       leafFindIndexOf(nodeIndex, Key, found, leafIndex);                        // Find index of the specified key, data pair in the specified leaf
      }
+/*
+    Stuck.Index lastNotFull()                                                   // Find the index of the last not full branch in the path
+     {final Stuck.Index pi = path.new Index("pathIndex");                       // Path index
+      final NN branchIndex = new NN();                                          // Each branch index in the path
+      pi.setNotValid();                                                         // Assume that all the branches are full
+      pi.last();                                                                // Start at the top of stuck
+      new Block()                                                               // Jump out of this block of we find a non full branch
+       {void code()
+         {final Block outer = this;                                             // Record outer block in something other than this
+          new Repeat()                                                          // Each branch in thepath
+           {void code()                                                         // Check each entry in the path starting with the first one
+             {returnIfEqual(pi.athIndex, path,unary.value);                     // End of path so exit
+              path.elementAt(branchIndex, pathIndex);                           // Branch index in path
+              outer.returnIfOne(isLeaf(branchIndex));                           // Finished when we reach a leaf
+              returnIfZero(branchIsFull(nodeIndex));                            // Found ind next child
+              shiftLeftOneByOne(pathIndex);                                     // Child becomes parent
+             }
+           };
+         }
+       };
+
+      leafFindIndexOf(nodeIndex, Key, found, leafIndex);                        // Find index of the specified key, data pair in the specified leaf
+     }
+*/
    }
 
 //D1 Search                                                                     // Find a key, data pair
@@ -4540,7 +4565,7 @@ B    0     1                  0   found
 """);
    //say("Number of steps ", m.step);
    }
-
+/*
   static void test_path()                                                       // Locate the path from the root to the leaf which should contain the key
    {final int BitsPerKey = 5, BitsPerData = 6, MaxKeysPerLeaf = 4, size = 16;   // Dimensions of BTree
     final Mjaf m = mjaf(BitsPerKey, BitsPerData, MaxKeysPerLeaf, size);         // Create BTree
@@ -4720,7 +4745,7 @@ V    0     4                 15   leafIndex
 """);
      }
    }
-
+*/
   static void oldTests()                                                        // Tests thought to be in good shape
    {create_leaf_tree();                 create_branch_tree();
     test_leaf_make();                   test_branch_make();
@@ -4751,8 +4776,8 @@ V    0     4                 15   leafIndex
    }
 
   static void newTests()                                                        // Tests being worked on
-   {//oldTests();
-    test_path();
+   {oldTests();
+    //test_path();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
