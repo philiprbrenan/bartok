@@ -488,12 +488,12 @@ class Mjaf extends BitMachine                                                   
   void leafJoin(NN target, NN source)                                           // Join the specified leaf onto the end of this leaf
    {new Repeat()
      {void code()
-       {setIndex(nodes, source);
+       {setIndex(nodes, source);                                                // Address source
         returnIfAllZero(leaf.unary.value);                                      // Exit then the source leaf has been emptied
         final Layout kd = leafKeyData.duplicate();                              // Key data pair buffer
-        leaf.shift(kd);
-        setIndex(nodes, target);
-        leaf.push(kd);
+        leaf.shift(kd);                                                         // Remove from source
+        setIndex(nodes, target);                                                // Address target
+        leaf.push(kd);                                                          // Add to target
        }
      };
     free(source);                                                               // Free the leaf that was joined
