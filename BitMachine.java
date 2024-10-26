@@ -25,6 +25,7 @@ public class BitMachine extends Test implements LayoutAble                      
 
   public Layout.Field asField () {return layout.top;}                           // Top most field of the layout associated with this bit machine
   public Layout       asLayout() {return layout;}                               // Layout associated with this bit machine
+
   void                setLayout(Layout Layout) {layout = Layout;}               // Set the layout associated with this bit machine
 
   BitMachine(String Name)                                                       // Assign a name and number to the bit machine to assist debugging
@@ -52,7 +53,7 @@ public class BitMachine extends Test implements LayoutAble                      
   void reset() {printer.setLength(0); instructions.clear(); step = 0;}          // Reset the machine
   void trace() {}                                                               // Trace the execution
 
-  void codeOk(String expected) {Test.ok(toString(), expected);}                 // Check the code for this machine is as expected
+  void codeOk(String expected) {Test.ok(printProgram(), expected);}             // Check the code for this machine is as expected
 
   Layout.Variable getVariable(String name)                                      // Get a variable by name
    {final Layout.Field l = this.layout.get(name);
@@ -251,6 +252,12 @@ public class BitMachine extends Test implements LayoutAble                      
    }
 
   Layout.Bit equals(Layout.Field F1, int F2)                                    // Return a variable which will hold the result of comparing a field to an integer for equality
+   {final Layout.Bit result = Layout.createBit("equals");
+    new Equals(result, F1, F2);
+    return result;
+   }
+
+  Layout.Bit equals2(Layout.Field F1, int F2)                                    // Return a variable which will hold the result of comparing a field to an integer for equality
    {final Layout.Bit result = Layout.createBit("equals");
     new Equals(result, F1, F2);
     return result;
@@ -1106,7 +1113,8 @@ public class BitMachine extends Test implements LayoutAble                      
     return s.toString();
    }
 
-  public String toString() {return printProgram();}                             // Alternate name to make it easier to print a program
+//public String toString() {return printProgram();}                             // Alternate name to make it easier to print a program
+  public String toString() {return layout.toString();}                          // Alternate name to make it easier to print a program
 
   static boolean        debug = false;                                          // Debug if true
 
