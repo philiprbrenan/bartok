@@ -12,7 +12,6 @@ class Stuck extends BitMachine implements LayoutAble                            
   final Layout.Field    element;                                                // An element of the stuck
   final Layout.Array      array;                                                // The array holding the elements of the stuck
   final Layout.Structure  stuck;                                                // The stuck
-  final Layout           layout;                                                // Layout of the stuck
 
   public Layout.Field asField()  {return layout.top;}                           // Layout associated with this class
   public Layout       asLayout() {return layout;}                               // Layout associated with this class
@@ -62,6 +61,44 @@ class Stuck extends BitMachine implements LayoutAble                            
   public void ok(String expected) {ok(toString(), expected);}                   // Check the stuck
 
   int size() {return unary.value();}                                            // The current number of elements in the stuck as a binary integer
+
+//D1 Indexing                                                                   // Index the stuck
+
+  class Index                                                                   // A variable with which to index the stuck
+   {final Layout          layout = new Layout();                                // Layout of index
+    final Layout.Variable index;                                                // Index variable
+    final Layout.Variable value;                                                // Value of stuck at this index
+    final Layout.Bit      valid;                                                // Indicate whether the index is valid or not
+
+    Index(String Name)                                                          // Create the index variable
+     {index = layout.variable(Name, max);                                       // Index
+      valid = layout.bit     ("valid");                                         // Validity of index
+      value = layout.variable("value",  width);                                 // Value associated with index - but you have to request that it be set
+      final Layout.Structure s = layout.new Structure("s", index, valid, value);// Structure of index
+      layout.layout(s);                                                         // Layout index
+     }
+
+    void inc()         {shiftLeftOneByOne(index);}                              // Increment the index
+    void dec()         {shiftRightOneByZero(index);}                            // Decrement theindex
+
+    void first()       {zero(index);}                                           // Set the index to index the first element on the stuck
+    void past()        {copy(index, unary.value);}                              // Set the index to index one past the last element on the stuck.
+    void setValid()    {ones(valid);}                                           // Show that the index is valid
+    void setNotValid() {zero(valid);}                                           // Show that the index is not valid
+
+    void get()         {elementAt   (value, index);}                            // Get the value at this index from the stuck
+    void set()         {setElementAt(value, index);}                            // Set the value at this index in the stuck
+
+    Layout.Bit isFirst() {return Stuck.this.equals(index, 0);}                  // Return a variable indicating whether we are indexing the first element of the stuck
+    Layout.Bit isPast () {return Stuck.this.equals(index, unary.value);}        // Return a variable indicating whether we are indexing one past the last element of the stuck
+
+    void isFirst(Layout.Bit f) {Stuck.this.equals(f, index, 0);}                // Set a variable to indicate whether we are indexing the first element of the stuck
+    void isPast (Layout.Bit p) {Stuck.this.equals(p, index, unary.value);}      // Set a variable to indicate whether we are indexing one past the last element of the stuck
+
+
+    void ok(String expected) {Test.ok(toString(), expected);}                   // Check the index has the expected value
+    public String toString() {return layout.toString();}                        // Convert to string
+   }
 
 //D1 Characteristics                                                            // Characteristics of the stuck
 
@@ -1065,20 +1102,191 @@ A   12    16      3          33     array     array
 V   12     4                  0       k     array.k
 V   16     4                  3     unary     unary
 """);
+   }
 
+  static void test_index()
+   {final int M = 5;
 
-    Stuck S = s.like(2);
-    S.layout.ok("""
+    final Layout           l = new Layout();
+    final Layout.Variable  k = l.variable("k",  M);
+    l.layout(k);
+
+    final Layout           r = new Layout();
+    final Layout.Bit
+      f0 = r.bit("f0"),   l0 = r.bit("l0"),
+      f1 = r.bit("f1"),   l1 = r.bit("l1"),
+      f2 = r.bit("f2"),   l2 = r.bit("l2"),
+      f3 = r.bit("f3"),  l3 = r.bit("l3");
+    r.layout(r.structure("s", f0, l0, f1, l1, f2, l2, f3, l3));
+
+    Stuck s = stuck("s", M, l);
+
+    s.push(11);
+    s.push(22);
+
+    Index i = s.new Index("path");
+    i.past();
+    s.execute();
+
+    ok(s.size(), 2);
+
+    s.layout.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    10                  0   s
-A    0     8      0           0     array     array
-V    0     4                  0       k     array.k
-A    4     8      1           0     array     array
-V    4     4                  0       k     array.k
-V    8     2                  0     unary     unary
+S    0    30          100664011   s
+A    0    25      0         715     array     array
+V    0     5                 11       k     array.k
+A    5    25      1         715     array     array
+V    5     5                 22       k     array.k
+A   10    25      2         715     array     array
+V   10     5                  0       k     array.k
+A   15    25      3         715     array     array
+V   15     5                  0       k     array.k
+A   20    25      4         715     array     array
+V   20     5                  0       k     array.k
+V   25     5                  3     unary     unary
+""");
+
+    i.ok("""
+T   At  Wide  Index       Value   Field name
+S    0     6                  3   s
+V    0     5                  3     path     path
+B    5     1                  0     valid     valid
+""");
+
+    s.reset();
+    i.dec();
+    s.execute();
+    ok(s.size(), 2);
+    i.ok("""
+T   At  Wide  Index       Value   Field name
+S    0     6                  1   s
+V    0     5                  1     path     path
+B    5     1                  0     valid     valid
+""");
+
+    s.reset();
+    i.first();
+    i.isFirst(f0);
+    i.isPast (l0);
+
+    i.inc();
+    i.isFirst(f1);
+    i.isPast (l1);
+
+    i.inc();
+    i.isFirst(f2);
+    i.isPast (l2);
+
+    i.inc();
+    i.isFirst(f3);
+    i.isPast (l3);
+
+    s.execute();
+    //stop(i, r);
+    i.ok("""
+T   At  Wide  Index       Value   Field name
+S    0     6                  7   s
+V    0     5                  7     path     path
+B    5     1                  0     valid     valid
+""");
+
+    r.ok("""
+T   At  Wide  Index       Value   Field name
+S    0     8                 33   s
+B    0     1                  1     f0     f0
+B    1     1                  0     l0     l0
+B    2     1                  0     f1     f1
+B    3     1                  0     l1     l1
+B    4     1                  0     f2     f2
+B    5     1                  1     l2     l2
+B    6     1                  0     f3     f3
+B    7     1                  0     l3     l3
 """);
    }
 
+  static void test_index_up()                                                   // Read through the stuck upwards
+   {final int M = 5;
+
+    final Layout           l = new Layout();
+    final Layout.Variable  k = l.variable("k",  M);
+    l.layout(k);
+
+    Stuck s = stuck("s", M, l), t = s.like();
+    s.bitMachines(t);
+
+    s.push(11);
+    s.push(22);
+
+    Index i = s.new Index("path");
+
+    i.first();
+    s.new Repeat()
+     {void code()
+       {returnIfOne(i.isPast());
+        i.get();
+        t.push(i.value);
+        i.inc();
+       }
+     };
+    s.execute();
+    t.ok("""
+T   At  Wide  Index       Value   Field name
+S    0    30          100664011   s
+A    0    25      0         715     array     array
+V    0     5                 11       k     array.k
+A    5    25      1         715     array     array
+V    5     5                 22       k     array.k
+A   10    25      2         715     array     array
+V   10     5                  0       k     array.k
+A   15    25      3         715     array     array
+V   15     5                  0       k     array.k
+A   20    25      4         715     array     array
+V   20     5                  0       k     array.k
+V   25     5                  3     unary     unary
+""");
+   }
+
+  static void test_index_down()                                                 // Read through the stuck downwards
+   {final int M = 5;
+
+    final Layout           l = new Layout();
+    final Layout.Variable  k = l.variable("k",  M);
+    l.layout(k);
+
+    Stuck s = stuck("s", M, l), t = s.like();
+    s.bitMachines(t);
+
+    s.push(11);
+    s.push(22);
+
+    Index i = s.new Index("path");
+
+    i.past();
+    s.new Repeat()
+     {void code()
+       {returnIfOne(i.isFirst());
+        i.dec();
+        i.get();
+        t.push(i.value);
+       }
+     };
+    s.execute();
+    t.ok("""
+T   At  Wide  Index       Value   Field name
+S    0    30          100663670   s
+A    0    25      0         374     array     array
+V    0     5                 22       k     array.k
+A    5    25      1         374     array     array
+V    5     5                 11       k     array.k
+A   10    25      2         374     array     array
+V   10     5                  0       k     array.k
+A   15    25      3         374     array     array
+V   15     5                  0       k     array.k
+A   20    25      4         374     array     array
+V   20     5                  0       k     array.k
+V   25     5                  3     unary     unary
+""");
+   }
 
   static void oldTests()                                                        // Tests thought to be in good shape
    {test_push();
@@ -1092,10 +1300,13 @@ V    8     2                  0     unary     unary
     test_index_of();
     test_set_element_at();
     test_like();
+    test_index();
+    test_index_up();
    }
 
   static void newTests()                                                        // Tests being worked on
-   {oldTests();
+   {//oldTests();
+    test_index_down();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
