@@ -1291,10 +1291,9 @@ V   25     5                  3     unary     unary
     s.push(11);
     s.push(22);
 
-    i.past();
     s.new Down()
      {void down()
-       {t.push(i.value);
+       {t.push(value);
        }
      };
     s.execute();
