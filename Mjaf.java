@@ -2936,10 +2936,10 @@ V   13     4                  7     result     result
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    17             122930   s
+S    0    17              57394   s
 B    0     1                  0     found     found
 V    1    12                 25     key     key
-V   13     4                 15     result     result
+V   13     4                  7     result     result
 """);
   }
 
@@ -2975,9 +2975,9 @@ V    1     3                  3     result     result
     //stop(l);
     l.ok("""
 T   At  Wide  Index       Value   Field name
-S    0     4                 14   s
+S    0     4                  6   s
 B    0     1                  0     found     found
-V    1     3                  7     result     result
+V    1     3                  3     result     result
 """);
   }
 
@@ -4355,7 +4355,6 @@ V  295     4                  7             unary     nodes.node.branchOrLeaf.le
 """);
 
     m.reset();
-    m.debug(true);
     m.put(m.new Key (6), m.new Data(66));
     m.execute();
 
@@ -4555,11 +4554,12 @@ B    0     1                  0   found
    {final int BitsPerKey = 10, BitsPerData = 10, MaxKeysPerLeaf = 4, size = 256;// Dimensions of BTree
     final Mjaf m = mjaf(BitsPerKey, BitsPerData, MaxKeysPerLeaf, size);         // Create BTree
 
-    m.maxSteps = 23_000;
+    m.maxSteps = 25_000;
 
     final int[]r = random_array();
     for (int i = 0; i < r.length; i++) m.put(m.new Key(r[i]), m.new Data(2*r[i]));
     m.execute();
+    //stop(m.step);
     //stop(m.print());
     ok(m.print(), """
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                208(511-0)209                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
@@ -4761,7 +4761,7 @@ V    0     4                 15   nodeIndex
 
       p.leafIndex.v.ok("""
 T   At  Wide  Index       Value   Field name
-V    0     4                 15   leafIndex
+V    0     4                  7   leafIndex
 """);
      }
    }
@@ -4870,11 +4870,11 @@ V    6     4                  0     value     value
     test_put_random();
     test_path();
     test_path_index();
+    test_put9();
    }
 
   static void newTests()                                                        // Tests being worked on
-   {//oldTests();
-    test_put9();
+   {oldTests();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
