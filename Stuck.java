@@ -273,17 +273,15 @@ class Stuck extends BitMachine implements LayoutAble                            
 
   void indexOf                                                                  // Find the index of an element in the stuck and set the found flag to true else if no such element is found the found flag is set to false
    (LayoutAble elementToFind, int length,                                       // Check whether the stuck contains the specified element  comparing the first length bits
-    Layout.Bit found,         Layout.Variable index)                            // Whether the element was found and at what index
-   {zero(found);                                                                // Assume not found
-    zero(index);                                                                // Start at index 0
-    Branch[]equal = new Branch[max];
-    for (int i = 0; i < max; i++)                                               // Check each element in turn
-     {setIndexFromUnary(array, index);
-      equals(found, elementToFind.asField(), 0, element, 0, length);            // Test for the element to be found
-      equal[i] = branchIfOne(found);
-      shiftLeftOneByOne(index);
-     }
-    for (int i = 0; i < max; i++) comeFrom(equal[i]);
+    Layout.Bit elementFound,  Layout.Variable foundAtIndex)                     // Whether the element was found and at what index
+   {zero(elementFound);                                                         // Assume not found
+    new Up()                                                                    // Check each valid element in turn for a match
+     {void up(Repeat r)
+       {copy(foundAtIndex, index);
+        Stuck.this.equals(elementFound, elementToFind.asField(), 0, value, 0, length);// Check for the element to be found
+        r.returnIfOne(elementFound);                                            // Found the element being searched for
+       }
+     };
    }
 
 //D1 Print                                                                      // Print a stuck
@@ -960,14 +958,6 @@ V   40     4                  0     unary     unary
     k4.top.fromInt(44);
     ke.top.fromInt(45);
 
-    Stuck s = stuck("s", M, keyData);
-
-    s.array.zero();
-    s.array.setIndex(0); s.element.fromInt(11);
-    s.array.setIndex(1); s.element.fromInt(22);
-    s.array.setIndex(2); s.element.fromInt(33);
-    s.array.setIndex(3); s.element.fromInt(44);
-    s.unary.value.fromInt(15);
 
     final Layout           l  = new Layout();
     final Layout.Variable  ia = l.variable ("ia", M);
@@ -994,6 +984,14 @@ V   40     4                  0     unary     unary
 
     l.layout(S);
 
+    Stuck s = stuck("s", M, keyData);
+
+    s.array.zero();
+    s.push(11);
+    s.push(22);
+    s.push(33);
+    s.push(44);
+
     s.indexOf(ka, W, fa, ia);                                                   // The key is only M wide which is not quite enough to compare all of the element value, however W is so that is what is being used
     s.indexOf(k1, W, f1, i1);
     s.indexOf(kb, W, fb, ib);
@@ -1018,15 +1016,15 @@ B    5     1                  1     f3     f3
 B    6     1                  0     fd     fd
 B    7     1                  1     f4     f4
 B    8     1                  0     fe     fe
-V    9     4                 15     ia     ia
+V    9     4                  7     ia     ia
 V   13     4                  0     i1     i1
-V   17     4                 15     ib     ib
+V   17     4                  7     ib     ib
 V   21     4                  1     i2     i2
-V   25     4                 15     ic     ic
+V   25     4                  7     ic     ic
 V   29     4                  3     i3     i3
-V   33     4                 15     id     id
+V   33     4                  7     id     id
 V   37     4                  7     i4     i4
-V   41     4                 15     ie     ie
+V   41     4                  7     ie     ie
 """);
    }
 
