@@ -33,45 +33,44 @@ class MjafPut extends Mjaf                                                      
     final Stuck.Index i = p.lastNotFull();
     m.execute();
 
-    stop(m);
-    stop(m.print());
+    //stop(m.print());
     ok(m.print(), """
-      7(2-0)      6(4-0)      5(6-0)8          |
-1,2=7       3,4=6       5,6=5        6,7,8,9=8 |
+      3(2-0)      2(4-0)      1(6-0)4        |
+1,2=3       3,4=2       5,6=1        7,8,9=4 |
 """);
 
-    stop(p);
+    //stop(p);                                                                  // Path starts at root and then goes to leaf 4
     p.ok("""
 T   At  Wide  Index       Value   Field name
-V    0     5                 16   key
+V    0     5                  8   key
 T   At  Wide  Index       Value   Field name
 B    0     1                  1   found
 T   At  Wide  Index       Value   Field name
-S    0    25            3145904   path
-A    0    20      0         176     array     array
-V    0     4                  0       nodeIndex     array.nodeIndex
-A    4    20      1         176     array     array
-V    4     4                 11       nodeIndex     array.nodeIndex
-A    8    20      2         176     array     array
-V    8     4                  0       nodeIndex     array.nodeIndex
-A   12    20      3         176     array     array
-V   12     4                  0       nodeIndex     array.nodeIndex
-A   16    20      4         176     array     array
-V   16     4                  0       nodeIndex     array.nodeIndex
-V   20     5                  3     unary     unary
+S    0    20              32768   path
+A    0    15      0           0     array     array
+V    0     3                  0       nodeIndex     array.nodeIndex
+A    3    15      1           0     array     array
+V    3     3                  0       nodeIndex     array.nodeIndex
+A    6    15      2           0     array     array
+V    6     3                  0       nodeIndex     array.nodeIndex
+A    9    15      3           0     array     array
+V    9     3                  0       nodeIndex     array.nodeIndex
+A   12    15      4           0     array     array
+V   12     3                  0       nodeIndex     array.nodeIndex
+V   15     5                  1     unary     unary
 T   At  Wide  Index       Value   Field name
-V    0     4                 15   nodeIndex
+V    0     3                  4   nodeIndex
 T   At  Wide  Index       Value   Field name
-V    0     4                  7   leafIndex
+V    0     4                  1   leafIndex
 """);
 
-    stop(i);
+    //stop(i);                                                                  // The root is full so there is no last not full branch
     i.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    10                 33   s
-V    0     5                  1     pathIndex     pathIndex
-B    5     1                  1     valid     valid
-V    6     4                  0     value     value
+S    0     9                  0   s
+V    0     5                  0     pathIndex     pathIndex
+B    5     1                  0     valid     valid
+V    6     3                  0     value     value
 """);
    }
 
