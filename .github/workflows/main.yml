@@ -1,4 +1,4 @@
-# Test 2024-10-27 at 10:16:27
+# Test 2024-10-27 at 18:20:30
 
 name: Test
 run-name: bartok
@@ -20,7 +20,7 @@ jobs:
 
     strategy:
       matrix:
-        task: [BitMachine, Chip, Layout, Mjaf, Stuck, Test, Unary]
+        task: [BitMachine, Chip, Layout, Mjaf, MjafPut, Stuck, Test, Unary]
 
     steps:
     - uses: actions/checkout@v4
@@ -68,6 +68,11 @@ jobs:
       if: matrix.task == 'Mjaf'
       run: |
         java -cp Classes com/AppaApps/Silicon/Mjaf
+
+    - name: Test MjafPut
+      if: matrix.task == 'MjafPut'
+      run: |
+        java -cp Classes com/AppaApps/Silicon/MjafPut
 
     - name: Test Stuck
       if: matrix.task == 'Stuck'
