@@ -4598,16 +4598,16 @@ B    0     1                  1   found
 
       p.path.asLayout().ok("""
 T   At  Wide  Index       Value   Field name
-S    0    25            3145962   path
-A    0    20      0         234     array     array
-V    0     4                 10       nodeIndex     array.nodeIndex
-A    4    20      1         234     array     array
-V    4     4                 14       nodeIndex     array.nodeIndex
-A    8    20      2         234     array     array
+S    0    25            3145888   path
+A    0    20      0         160     array     array
+V    0     4                  0       nodeIndex     array.nodeIndex
+A    4    20      1         160     array     array
+V    4     4                 10       nodeIndex     array.nodeIndex
+A    8    20      2         160     array     array
 V    8     4                  0       nodeIndex     array.nodeIndex
-A   12    20      3         234     array     array
+A   12    20      3         160     array     array
 V   12     4                  0       nodeIndex     array.nodeIndex
-A   16    20      4         234     array     array
+A   16    20      4         160     array     array
 V   16     4                  0       nodeIndex     array.nodeIndex
 V   20     5                  3     unary     unary
 """);
@@ -4640,16 +4640,16 @@ B    0     1                  1   found
 
       p.path.asLayout().ok("""
 T   At  Wide  Index       Value   Field name
-S    0    25            3145962   path
-A    0    20      0         234     array     array
-V    0     4                 10       nodeIndex     array.nodeIndex
-A    4    20      1         234     array     array
-V    4     4                 14       nodeIndex     array.nodeIndex
-A    8    20      2         234     array     array
+S    0    25            3145888   path
+A    0    20      0         160     array     array
+V    0     4                  0       nodeIndex     array.nodeIndex
+A    4    20      1         160     array     array
+V    4     4                 10       nodeIndex     array.nodeIndex
+A    8    20      2         160     array     array
 V    8     4                  0       nodeIndex     array.nodeIndex
-A   12    20      3         234     array     array
+A   12    20      3         160     array     array
 V   12     4                  0       nodeIndex     array.nodeIndex
-A   16    20      4         234     array     array
+A   16    20      4         160     array     array
 V   16     4                  0       nodeIndex     array.nodeIndex
 V   20     5                  3     unary     unary
 """);
@@ -4682,16 +4682,16 @@ B    0     1                  1   found
 
       p.path.asLayout().ok("""
 T   At  Wide  Index       Value   Field name
-S    0    25            3145979   path
-A    0    20      0         251     array     array
-V    0     4                 11       nodeIndex     array.nodeIndex
-A    4    20      1         251     array     array
-V    4     4                 15       nodeIndex     array.nodeIndex
-A    8    20      2         251     array     array
+S    0    25            3145904   path
+A    0    20      0         176     array     array
+V    0     4                  0       nodeIndex     array.nodeIndex
+A    4    20      1         176     array     array
+V    4     4                 11       nodeIndex     array.nodeIndex
+A    8    20      2         176     array     array
 V    8     4                  0       nodeIndex     array.nodeIndex
-A   12    20      3         251     array     array
+A   12    20      3         176     array     array
 V   12     4                  0       nodeIndex     array.nodeIndex
-A   16    20      4         251     array     array
+A   16    20      4         176     array     array
 V   16     4                  0       nodeIndex     array.nodeIndex
 V   20     5                  3     unary     unary
 """);
@@ -4724,16 +4724,16 @@ B    0     1                  0   found
 
       p.path.asLayout().ok("""
 T   At  Wide  Index       Value   Field name
-S    0    25            3145979   path
-A    0    20      0         251     array     array
-V    0     4                 11       nodeIndex     array.nodeIndex
-A    4    20      1         251     array     array
-V    4     4                 15       nodeIndex     array.nodeIndex
-A    8    20      2         251     array     array
+S    0    25            3145904   path
+A    0    20      0         176     array     array
+V    0     4                  0       nodeIndex     array.nodeIndex
+A    4    20      1         176     array     array
+V    4     4                 11       nodeIndex     array.nodeIndex
+A    8    20      2         176     array     array
 V    8     4                  0       nodeIndex     array.nodeIndex
-A   12    20      3         251     array     array
+A   12    20      3         176     array     array
 V   12     4                  0       nodeIndex     array.nodeIndex
-A   16    20      4         251     array     array
+A   16    20      4         176     array     array
 V   16     4                  0       nodeIndex     array.nodeIndex
 V   20     5                  3     unary     unary
 """);
@@ -4832,12 +4832,11 @@ V    6     4                  0     value     value
     test_put();  test_put_ascending();  test_put_descending();
     test_put_random();
     test_path();
+    test_path_index();
    }
 
   static void newTests()                                                        // Tests being worked on
-   {//oldTests();
-    //test_path();
-    test_path_index();
+   {oldTests();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
