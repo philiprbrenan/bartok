@@ -254,7 +254,7 @@ class Stuck extends BitMachine implements LayoutAble                            
      {super("index");
       past();
       before();                                                                 // Before the loop starts
-      new Repeat()                                                              // Block of code for each iteration
+      Repeat r = new Repeat()                                                              // Block of code for each iteration
        {void code()
          {returnIfOne(isFirst());                                               // No more entries
           dec();                                                                // Move down
