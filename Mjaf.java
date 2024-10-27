@@ -4738,12 +4738,12 @@ V   16     4                  0       nodeIndex     array.nodeIndex
 V   20     5                  3     unary     unary
 """);
 
-      p.nodeIndex.v.asLayout().ok("""
+      p.nodeIndex.v.ok("""
 T   At  Wide  Index       Value   Field name
 V    0     4                 15   nodeIndex
 """);
 
-      p.leafIndex.v.asLayout().ok("""
+      p.leafIndex.v.ok("""
 T   At  Wide  Index       Value   Field name
 V    0     4                 15   leafIndex
 """);
