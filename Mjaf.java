@@ -1010,11 +1010,14 @@ class Mjaf extends BitMachine                                                   
    }
 
   void findAndInsert(Key Key, Data Data, Layout.Bit Inserted)                   // Find the leaf for a key and insert the indicated key, data pair into if possible, returning true if the insertion was possible else false.
-   {final NN nodeIndex = new NN();                                              // Node index variable
+   {final NN nodeIndex = new NN();                                              // Node index variable starting at the root
     final LI leafIndex = new LI();                                              // Leaf key, data index variable
+    copy(nodeIndex.v, root);                                                    // Start at the root
+
     new Repeat()                                                                // Step down through branches to a leaf into which it might be possible to insert the key
      {void code()
-       {returnIfOne(isLeaf(nodeIndex));                                         // Exit when we reach a leaf
+       {Layout.Bit il = isLeaf(nodeIndex);
+        returnIfOne(isLeaf(nodeIndex));                                         // Exit when we reach a leaf
         final NN child = branchFindFirstGreaterOrEqual(nodeIndex, Key);         // Step down to the next node
         copy(nodeIndex.v,  child.v);
        }
@@ -4817,29 +4820,24 @@ V    6     4                  0     value     value
 """);
    }
 
-  static void test_put9()                                                       // Wrong in MjafPut
+  static void test_put9()                                                       // Insert the same data twice to get the same result
    {final int BitsPerKey = 5, BitsPerData = 6, MaxKeysPerLeaf = 4, size = 9;
 
     final Mjaf m = mjaf(BitsPerKey, BitsPerData, MaxKeysPerLeaf, size);
-    m.debug = true;
+
     for (int i = 1; i <= size; i++) m.put(i, 2*i);
     m.execute();
-//say("AAAA", m.step);
-    //m.reset();
-    //for (int i = 1; i <= size; i++) m.put(i, 2*i);
     m.execute();
-//say("BBBB", m.step);
-stop(m);
 
     m.reset();
     final Path        p = m.new Path(8);
     final Stuck.Index i = p.lastNotFull();
     m.execute();
 
-    stop(m.print());
+    //stop(m.print());
     ok(m.print(), """
-      7(2-0)      6(4-0)      5(6-0)8          |
-1,2=7       3,4=6       5,6=5        6,7,8,9=8 |
+      7(2-0)      6(4-0)      5(6-0)8        |
+1,2=7       3,4=6       5,6=5        7,8,9=8 |
 """);
    }
 
