@@ -929,6 +929,16 @@ public class BitMachine extends Test implements LayoutAble                      
      {return new ReturnIfNotAllZero(field);
      }
 
+    class ReturnIfZero extends Branch                                           // Branch if a bit is zero
+     {ReturnIfZero(Layout.Bit Bit)                                              // Forward branch to a come from instruction
+       {super(Bit); name = "ReturnIfZero";
+       }
+      void action() {if (!bit.get(0)) setInstructionIndex(end.position);}       // Set instruction pointer to continue execution at the next instruction
+     }
+    ReturnIfZero returnIfZero(Layout.Bit bit)                                   // Jump forward to a come from instruction
+     {return new ReturnIfZero(bit);
+     }
+
     class ReturnIfOne extends Branch                                            // Branch if a bit is one
      {ReturnIfOne(Layout.Bit Bit)                                               // Forward branch to a come from instruction
        {super(Bit); name = "ReturnIfOne";
