@@ -6,6 +6,7 @@ package com.AppaApps.Silicon;                                                   
 // Use derived classes to specialize Layouts used as parameters to supply typing
 // Assert Branch or Leaf for all parameters indexing a branch or a leaf
 // Use Stuck.Index everywhere possible
+// Use put(int, int) where possible
 import java.util.*;
 
 class Mjaf extends BitMachine                                                   // BTree algorithm but with data stored only in the leaves to facilitate deletion without complicating search or insertion. The branches (interior nodes) have an odd number of keys to make the size of a branch as close to that of a leaf as possible to simplify memory management.
@@ -175,6 +176,7 @@ class Mjaf extends BitMachine                                                   
      {final Layout.Variable next = v = Layout.createVariable("next", bitsPerNext);
       copy(next, value);
      }
+    public String toString() {return v.toString();}                             // Print the wrapped layout variable
    }
 
   class BI                                                                      // An index within a branch
@@ -186,6 +188,7 @@ class Mjaf extends BitMachine                                                   
 
     BI(String name) {this(Layout.createVariable(name, maxKeysPerBranch));}      // Create a branch index with the specified name
     BI() {this("branchIndex");}                                                 // Create a branch index with a default name
+    public String toString() {return v.toString();}                             // Print the wrapped layout variable
    }
 
   class LI                                                                      // An index within a leaf
@@ -197,7 +200,8 @@ class Mjaf extends BitMachine                                                   
 
     LI(String name) {this(Layout.createVariable(name, maxKeysPerLeaf));}        // Create a leaf index with the specified name
     LI() {this("leafIndex");}                                                   // Create a leaf index with a default name
-   }
+    public String toString() {return v.toString();}                             // Print the wrapped layout variable
+  }
 
   class Key                                                                     // A as key represented by a layout variable
    {final Layout.Variable v;
@@ -209,6 +213,7 @@ class Mjaf extends BitMachine                                                   
      {v = Layout.createVariable("key", bitsPerKey);
       copy(v, value);
      }
+    public String toString() {return v.toString();}                             // Print the wrapped layout variable
    }
 
   class Data                                                                    // A datum as represented by a layout variable
@@ -224,7 +229,8 @@ class Mjaf extends BitMachine                                                   
      {v = Layout.createVariable("data", bitsPerData);
       copy(v, value);
      }
-    void ok(String expected) {Test.ok(v.toString(), expected);}                   // Check dat is as expected
+    void ok(String expected) {Test.ok(v.toString(), expected);}                 // Check data is as expected
+    public String toString() {return v.toString();}                             // Print the wrapped layout variable
    }
 
   class KeyData                                                                 // A key, data pair
@@ -247,6 +253,7 @@ class Mjaf extends BitMachine                                                   
 
     Key  key () {return new Key(v.asLayout().get("leafKey").toVariable());}     // Get the key from a key, data pair
     Data data() {return new Data(v.asLayout().get("leafData").toVariable());}   // Get the data from a key, data pair
+    public String toString() {return v.toString();}                             // Print the wrapped layout variable
    }
 
   class KeyNext                                                                 // A key, next pair
@@ -273,6 +280,7 @@ class Mjaf extends BitMachine                                                   
     KeyNext() {this(null, null);}                                               // Create a key, next  pair for insertion into a branch without loading the fields
     Key key() {return new Key(v.asLayout().get("branchKey").toVariable());}     // Get the key from a key, next pair
     NN next() {return new NN(v.asLayout().get("branchNext").toVariable());}     // Get the next node from a key, next pair
+    public String toString() {return v.toString();}                             // Print the wrapped layout variable
    }
 
 //D1 Leaf                                                                       // Process a leaf
@@ -464,6 +472,7 @@ class Mjaf extends BitMachine                                                   
   void leafFission(NN parent, NN source)                                        // Split a leaf that is one of children of its parent branch
    {KeyData kd = leafSplitKey(source);                                          // Leaf splitting key
     NN  target = leafSplit(source);                                             // Split leaf, the target leaf is on the left
+
     Key      k = kd.key();                                                      // Split key
     KeyNext kn = new KeyNext(k, target);                                        // Key, next pair for insertion into branch
     NN       t = branchGetTopNext(parent);                                      // Top next of parent
@@ -501,7 +510,7 @@ class Mjaf extends BitMachine                                                   
 
   void leafInsertPair(NN NodeIndex, Key Key, Data Data)                         // Insert a key and the corresponding data into a leaf at the correct position
    {final LI      leafIndex = new LI();
-    final Layout.Bit insert = Layout.createBit("insert");
+    final Layout.Bit insert = Layout.createBit("insert");                       // Insertion will be needed to palce the new key, data pair
     final KeyData        kd = new KeyData(Key, Data);                           // Key, data pair to insert
 
     leafFirstGreaterThanOrEqual(NodeIndex, Key, leafIndex, insert);             // Find key to insert before
@@ -547,7 +556,7 @@ class Mjaf extends BitMachine                                                   
     final StringBuilder s = new StringBuilder();                                // String builder
     final int K = leafSize(nodeIndex);
     for  (int i = 0; i < K; i++) s.append(""+leafGetKey(nodeIndex, i)+",");
-    s.setLength(s.length()-1);
+    if (s.length() > 0) s.setLength(s.length()-1);                              // Remove trailing comma if present
     s.append("="+nodeIndex+" ");
     S.elementAt(level).append(s.toString());
     padStrings(S, level);
@@ -949,9 +958,9 @@ class Mjaf extends BitMachine                                                   
            {void before() {pi.setValid();}                                      // Assume we will find a non full branch
             void down(Repeat r)                                                 // Check each entry in the path starting with the first one
              {copy(pi.index, index);                                            // Save indexof current branch
-              outer.returnIfZero(branchIsFull(new NN(value)));                      // Non full branch so we have found the first not full going from the top down
+              outer.returnIfZero(branchIsFull(new NN(value)));                  // Non full branch so we have found the first not full going from the top down
              }
-            void after() {pi.setNotValid();new Say() {void action() {say("HHHH");}};};                                   // Every branch is full
+            void after() {pi.setNotValid();};                                   // Every branch is full
            };
          }
        };
@@ -1088,6 +1097,8 @@ class Mjaf extends BitMachine                                                   
        } // code
      }; // block
    } // put
+
+  void put(int Key, int Data) {put(new Key(Key), new Data(Data));}              // Insert a new integer key, data pair into the BTree
 
 //D1 Deletion                                                                   // Delete a key from a BTre. If the key is present, return the associated data
 /*
@@ -1722,6 +1733,8 @@ class Mjaf extends BitMachine                                                   
     ok(m.size(), 24);
    }
 */
+
+//D0 Tests                                                                      // Testing
 
   static Mjaf create_leaf_tree()                                                // Create a pre loaded tree of leaves
    {final int B = 12, S = 4, N = 3;
@@ -4804,6 +4817,32 @@ V    6     4                  0     value     value
 """);
    }
 
+  static void test_put9()                                                       // Wrong in MjafPut
+   {final int BitsPerKey = 5, BitsPerData = 6, MaxKeysPerLeaf = 4, size = 9;
+
+    final Mjaf m = mjaf(BitsPerKey, BitsPerData, MaxKeysPerLeaf, size);
+    m.debug = true;
+    for (int i = 1; i <= size; i++) m.put(i, 2*i);
+    m.execute();
+//say("AAAA", m.step);
+    //m.reset();
+    //for (int i = 1; i <= size; i++) m.put(i, 2*i);
+    m.execute();
+//say("BBBB", m.step);
+stop(m);
+
+    m.reset();
+    final Path        p = m.new Path(8);
+    final Stuck.Index i = p.lastNotFull();
+    m.execute();
+
+    stop(m.print());
+    ok(m.print(), """
+      7(2-0)      6(4-0)      5(6-0)8          |
+1,2=7       3,4=6       5,6=5        6,7,8,9=8 |
+""");
+   }
+
   static void oldTests()                                                        // Tests thought to be in good shape
    {create_leaf_tree();                 create_branch_tree();
     test_leaf_make();                   test_branch_make();
@@ -4836,7 +4875,8 @@ V    6     4                  0     value     value
    }
 
   static void newTests()                                                        // Tests being worked on
-   {oldTests();
+   {//oldTests();
+    test_put9();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
