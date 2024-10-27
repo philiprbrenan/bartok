@@ -882,10 +882,10 @@ class Mjaf extends BitMachine                                                   
      {final int next = branchGetNext(nodeIndex, i);
       branchPrintLeafOrBranch(S, level, next);
       S.elementAt(level).append(""+branchGetNext(nodeIndex, i)+
-       "("+branchGetKey(nodeIndex, i)+")");
+       "("+branchGetKey(nodeIndex, i)+"-"+nodeIndex+")");
      }
     final int top = branchGetTopNext(nodeIndex);
-     S.elementAt(level).append(""+top+"-"+nodeIndex);
+    S.elementAt(level).append(top);
     if (isLeaf(top)) leafPrint (S, level+1, top);
     else             branchPrint(S, level+1, top);
     padStrings(S, level);
@@ -924,43 +924,43 @@ class Mjaf extends BitMachine                                                   
 
     Path(Key Key)                                                               // Find the path in the BTree from the root to the key
      {key = Key;
-      bitMachines(path);
+      bitMachines(path);                                                        // Generate code in our bit machine, not theirs
       new Repeat()
        {void code()
          {returnIfOne(isLeaf(nodeIndex));                                       // Exit when we reach a leaf
           final NN next = new NN("next");                                       // Next child down
           branchFindFirstGreaterOrEqual(nodeIndex, Key, next);                  // Find next child
-          copy(nodeIndex.v, next.v);                                            // Child becomes parent
           path.push(nodeIndex.v);                                               // Save child index
+          copy(nodeIndex.v, next.v);                                            // Child becomes parent
          }
        };
 
       leafFindIndexOf(nodeIndex, Key, found, leafIndex);                        // Find index of the specified key, data pair in the specified leaf
      }
-/*
+
+    Path(int Key) {this(new Key(Key));}                                         // Find the path in the BTree from the root to the indicated key
+
     Stuck.Index lastNotFull()                                                   // Find the index of the last not full branch in the path
      {final Stuck.Index pi = path.new Index("pathIndex");                       // Path index
-      final NN branchIndex = new NN();                                          // Each branch index in the path
-      pi.setNotValid();                                                         // Assume that all the branches are full
-      pi.last();                                                                // Start at the top of stuck
       new Block()                                                               // Jump out of this block of we find a non full branch
        {void code()
          {final Block outer = this;                                             // Record outer block in something other than this
-          new Repeat()                                                          // Each branch in thepath
-           {void code()                                                         // Check each entry in the path starting with the first one
-             {returnIfEqual(pi.athIndex, path,unary.value);                     // End of path so exit
-              path.elementAt(branchIndex, pathIndex);                           // Branch index in path
-              outer.returnIfOne(isLeaf(branchIndex));                           // Finished when we reach a leaf
-              returnIfZero(branchIsFull(nodeIndex));                            // Found ind next child
-              shiftLeftOneByOne(pathIndex);                                     // Child becomes parent
+          path.new Down()                                                       // Each branch in the path from the leaf to the root
+           {void before() {pi.setValid();}                                      // Assume we will find a non full branch
+            void down(Repeat r)                                                 // Check each entry in the path starting with the first one
+             {copy(pi.index, index);                                            // Save indexof current branch
+              outer.returnIfZero(branchIsFull(new NN(value)));                      // Non full branch so we have found the first not full going from the top down
              }
+            void after() {pi.setNotValid();new Say() {void action() {say("HHHH");}};};                                   // Every branch is full
            };
          }
        };
-
-      leafFindIndexOf(nodeIndex, Key, found, leafIndex);                        // Find index of the specified key, data pair in the specified leaf
+      return pi;
      }
-*/
+    public String toString()                                                    // Print path
+     {return ""+key.v+found+path+nodeIndex.v+leafIndex.v;
+     }
+    void ok(String expected) {Test.ok(toString(), expected);}                   // Check a path is as expected
    }
 
 //D1 Search                                                                     // Find a key, data pair
@@ -4469,8 +4469,8 @@ V  295     4                 15             unary     nodes.node.branchOrLeaf.le
 
     //stop(m.print());
     ok(m.print(), """
-      2(2)      1(4)3-0          |
-1,2=2     3,4=1        5,6,7,8=3 |
+      2(2-0)      1(4-0)3          |
+1,2=2       3,4=1        5,6,7,8=3 |
 """);
    }
 
@@ -4480,11 +4480,12 @@ V  295     4                 15             unary     nodes.node.branchOrLeaf.le
     final int N = 32;
     for (int i = 1; i <= N; i++) m.put(m.new Key (i), m.new Data(2*i));
     m.execute();
+    //stop(m.print());
     ok(m.print(), """
-                                                          17(8)                                                                    10(16)18-0                                                                                                                       |
-                        26(4)23-17                                                         20(12)15-10                                                                    12(20)                            8(24)27-18                                              |
-       30(2)29-26                        28(6)25-23                    24(10)22-20                             21(14)19-15                            16(18)14-12                        13(22)11-8                           9(26)        7(28)31-27               |
-1,2=30           3,4=29           5,6=28           7,8=25      9,10=24            11,12=22            13,14=21            15,16=19           17,18=16            19,20=14       21,22=13           23,24=11           25,26=9      27,28=7           29,30,31,32=31 |
+                                                          17(8-0)                                                                    10(16-0)18                                                                                                                             |
+                        26(4-17)23                                                           20(12-10)15                                                                    12(20-18)                            8(24-18)27                                                 |
+       30(2-26)29                        28(6-23)25                      24(10-20)22                             21(14-15)19                            16(18-12)14                           13(22-8)11                           9(26-27)        7(28-27)31               |
+1,2=30           3,4=29           5,6=28           7,8=25        9,10=24            11,12=22            13,14=21            15,16=19           17,18=16            19,20=14          21,22=13           23,24=11           25,26=9         27,28=7           29,30,31,32=31 |
 """);
    }
 
@@ -4494,11 +4495,12 @@ V  295     4                 15             unary     nodes.node.branchOrLeaf.le
     final int N = 32;
     for (int i = N; i > 0; i--) m.put(m.new Key (i), m.new Data(2*i));
     m.execute();
+    //stop(m.print());
     ok(m.print(), """
-                                                                                                           10(16)                                                                     17(24)18-0                                                                     |
-                                   8(8)                            12(12)15-10                                                                20(20)23-17                                                                    26(28)27-18                             |
-          7(4)      9(6)11-8                   13(10)14-12                             16(14)19-15                        21(18)22-20                             24(22)25-23                            28(26)29-26                             30(30)31-27         |
-1,2,3,4=7     5,6=9         7,8=11     9,10=13            11,12=14            13,14=16            15,16=19       17,18=21            19,20=22            21,22=24            23,24=25           25,26=28            27,28=29            29,30=30            31,32=31 |
+                                                                                                                10(16-0)                                                                     17(24-0)18                                                                     |
+                                     8(8-10)                            12(12-10)15                                                                  20(20-17)23                                                                    26(28-18)27                             |
+          7(4-8)      9(6-8)11                      13(10-12)14                             16(14-15)19                          21(18-20)22                             24(22-23)25                            28(26-26)29                             30(30-27)31         |
+1,2,3,4=7       5,6=9         7,8=11        9,10=13            11,12=14            13,14=16            15,16=19         17,18=21            19,20=22            21,22=24            23,24=25           25,26=28            27,28=29            29,30=30            31,32=31 |
 """);
 
     if (true)                                                                   // Find the data associated with a key
@@ -4542,12 +4544,13 @@ B    0     1                  0   found
     final int[]r = random_array();
     for (int i = 0; i < r.length; i++) m.put(m.new Key(r[i]), m.new Data(2*r[i]));
     m.execute();
+    //stop(m.print());
     ok(m.print(), """
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               208(511)209-0                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-                                                                                                                                           201(186)                                                                                                                                 226(317)240-208                                                                                                                                                                                                                                                                                                                                                                                              211(658)241-209                                                                                                                                                                                                                                                                           |
-                                                                             216(103)229-201                                                                                                      203(246)243-226                                                                                                                                                                     234(403)                                                                   225(472)250-240                                                                                                                                   214(578)245-211                                                                                                                             205(704)                                                                           236(858)                                               207(912)251-241                                                                   |
-            200(27)          232(39)             215(72)220-216                                         222(135)231-229                                                219(234)246-203                                       202(261)                228(279)254-243                                           223(344)            212(358)                242(391)237-234                                224(425)                    248(442)230-225                                               233(501)253-250                                         239(545)            213(560)252-214                                               218(611)                210(650)247-245                                               217(686)238-205                                        227(806)                204(830)249-236                                        244(903)221-207                                                   206(961)            235(987)255-251            |
-1,13,27=200        29,39=232        43,55,72=215               90,96,103=220                106,135=222                151,155,157,186=231         188,229,232,234=219                237,246=246                260,261=202         272,273,279=228                288,298,317=254                338,344=223         354,358=212         376,377,391=242                401,403=237         422,425=224         436,437,438,442=248                447,472=230                480,490,494,501=233                503,511=253              516,526,545=239         554,560=213                564,576,577,578=252                586,611=218         612,615,650=210                657,658=247                667,679,681,686=217                690,704=238         769,773,804,806=227         809,826,830=204                839,854,858=249         882,884,903=244                906,907,912=221                922,937,946,961=206         976,987=235                989,993=255 |
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               208(511-0)209                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+                                                                                                                                                   201(186-208)                                                                                                                                     226(317-208)240                                                                                                                                                                                                                                                                                                                                                                                                                      211(658-209)241                                                                                                                                                                                                                                                                                           |
+                                                                                     216(103-201)229                                                                                                          203(246-226)243                                                                                                                                                                                 234(403-240)                                                                       225(472-240)250                                                                                                                                       214(578-211)245                                                                                                                                 205(704-241)                                                                               236(858-241)                                               207(912-241)251                                                                       |
+            200(27-216)          232(39-216)             215(72-216)220                                         222(135-229)231                                                    219(234-203)246                                       202(261-243)                228(279-243)254                                           223(344-234)            212(358-234)                242(391-234)237                                    224(425-225)                    248(442-225)230                                               233(501-250)253                                         239(545-214)            213(560-214)252                                               218(611-245)                210(650-245)247                                               217(686-205)238                                            227(806-236)                204(830-236)249                                            244(903-207)221                                                   206(961-251)            235(987-251)255            |
+1,13,27=200            29,39=232            43,55,72=215               90,96,103=220                106,135=222                151,155,157,186=231             188,229,232,234=219                237,246=246                260,261=202             272,273,279=228                288,298,317=254                338,344=223             354,358=212             376,377,391=242                401,403=237             422,425=224             436,437,438,442=248                447,472=230                480,490,494,501=233                503,511=253              516,526,545=239             554,560=213                564,576,577,578=252                586,611=218             612,615,650=210                657,658=247                667,679,681,686=217                690,704=238             769,773,804,806=227             809,826,830=204                839,854,858=249             882,884,903=244                906,907,912=221                922,937,946,961=206             976,987=235                989,993=255 |
 """);
    //say("Number of steps ", m.step);
    }
@@ -4565,16 +4568,17 @@ B    0     1                  0   found
 """);
    //say("Number of steps ", m.step);
    }
-/*
+
   static void test_path()                                                       // Locate the path from the root to the leaf which should contain the key
    {final int BitsPerKey = 5, BitsPerData = 6, MaxKeysPerLeaf = 4, size = 16;   // Dimensions of BTree
     final Mjaf m = mjaf(BitsPerKey, BitsPerData, MaxKeysPerLeaf, size);         // Create BTree
     for (int i = 1; i <= size; i++) m.put(m.new Key(i), m.new Data(2*i));
     m.execute();
+    //stop(m.print());
     ok(m.print(), """
-                        10(4)                     7(8)11-0                                             |
-       14(2)13-10                   12(6)9-7                     8(10)        6(12)15-11               |
-1,2=14           3,4=13      5,6=12         7,8=9         9,10=8      11,12=6           13,14,15,16=15 |
+                        10(4-0)                     7(8-0)11                                                |
+       14(2-10)13                     12(6-7)9                     8(10-11)        6(12-11)15               |
+1,2=14           3,4=13        5,6=12         7,8=9         9,10=8         11,12=6           13,14,15,16=15 |
 """);
 
     if (true)                                                                   // Path to key 1
@@ -4745,7 +4749,61 @@ V    0     4                 15   leafIndex
 """);
      }
    }
-*/
+
+  static void test_path_index()                                                 // Locate the path from the root to the leaf which should contain the key
+   {final int BitsPerKey = 5, BitsPerData = 6, MaxKeysPerLeaf = 4, size = 16;   // Dimensions of BTree
+    final Mjaf m = mjaf(BitsPerKey, BitsPerData, MaxKeysPerLeaf, size);         // Create BTree
+    for (int i = 1; i <= size; i++) m.put(m.new Key(i), m.new Data(2*i));
+    m.execute();
+    //stop(m.print());
+    ok(m.print(), """
+                        10(4-0)                     7(8-0)11                                                |
+       14(2-10)13                     12(6-7)9                     8(10-11)        6(12-11)15               |
+1,2=14           3,4=13        5,6=12         7,8=9         9,10=8         11,12=6           13,14,15,16=15 |
+""");
+
+    m.reset();
+    final Path p = m.new Path(16);
+    m.execute();
+
+    //stop(p);
+    p.ok("""
+T   At  Wide  Index       Value   Field name
+V    0     5                 16   key
+T   At  Wide  Index       Value   Field name
+B    0     1                  1   found
+T   At  Wide  Index       Value   Field name
+S    0    25            3145904   path
+A    0    20      0         176     array     array
+V    0     4                  0       nodeIndex     array.nodeIndex
+A    4    20      1         176     array     array
+V    4     4                 11       nodeIndex     array.nodeIndex
+A    8    20      2         176     array     array
+V    8     4                  0       nodeIndex     array.nodeIndex
+A   12    20      3         176     array     array
+V   12     4                  0       nodeIndex     array.nodeIndex
+A   16    20      4         176     array     array
+V   16     4                  0       nodeIndex     array.nodeIndex
+V   20     5                  3     unary     unary
+T   At  Wide  Index       Value   Field name
+V    0     4                 15   nodeIndex
+T   At  Wide  Index       Value   Field name
+V    0     4                  7   leafIndex
+""");
+
+    m.reset();
+    final Stuck.Index i = p.lastNotFull();
+    m.execute();
+    //stop(i);
+    i.ok("""
+T   At  Wide  Index       Value   Field name
+S    0    10                 33   s
+V    0     5                  1     pathIndex     pathIndex
+B    5     1                  1     valid     valid
+V    6     4                  0     value     value
+""");
+   }
+
   static void oldTests()                                                        // Tests thought to be in good shape
    {create_leaf_tree();                 create_branch_tree();
     test_leaf_make();                   test_branch_make();
@@ -4773,11 +4831,13 @@ V    0     4                 15   leafIndex
 
     test_put();  test_put_ascending();  test_put_descending();
     test_put_random();
+    test_path();
    }
 
   static void newTests()                                                        // Tests being worked on
-   {oldTests();
+   {//oldTests();
     //test_path();
+    test_path_index();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
