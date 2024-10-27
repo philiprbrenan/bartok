@@ -53,7 +53,7 @@ public class BitMachine extends Test implements LayoutAble                      
   void reset() {printer.setLength(0); instructions.clear(); step = 0;}          // Reset the machine
   void trace() {}                                                               // Trace the execution
 
-  void codeOk(String expected) {Test.ok(printProgram(), expected);}             // Check the code for this machine is as expected
+  void codeOk(String expected) {Test.ok(printCode(), expected);}                // Check the code for this machine is as expected
 
   Layout.Variable getVariable(String name)                                      // Get a variable by name
    {final Layout.Field l = this.layout.get(name);
@@ -90,7 +90,8 @@ public class BitMachine extends Test implements LayoutAble                      
     step = 0;
     for(instructionIndex = 0; instructionIndex < N; ++instructionIndex)         // Instruction sequence
      {final Instruction i = instructions.elementAt(instructionIndex);
-      //if (debug) say("Debug:", step+1, instructionIndex, i.position, i.name);
+      //if (step == 251) say("AAAA", i.traceBack);
+      if (debug) say("Debug:", step+1, instructionIndex, i.position, i.name);
       i.action();
       trace();
       if (++step > maxSteps) stop("Terminating after", maxSteps, "steps");
@@ -257,15 +258,18 @@ public class BitMachine extends Test implements LayoutAble                      
     return result;
    }
 
-  Layout.Bit equals2(Layout.Field F1, int F2)                                    // Return a variable which will hold the result of comparing a field to an integer for equality
+  Layout.Bit equals(Layout.Field F1, Layout.Field F2)                           // Return a variable which will hold the result of comparing two fields for equality
    {final Layout.Bit result = Layout.createBit("equals");
     new Equals(result, F1, F2);
     return result;
    }
 
-  Layout.Bit equals(Layout.Field F1, Layout.Field F2)                           // Return a variable which will hold the result of comparing two fields for equality
+  Layout.Bit equals                                                             // Return a variable which will hold the result of comparing two fields for equality
+   (Layout.Field F1, int Off1,
+    Layout.Field F2, int Off2,
+    int          Length)
    {final Layout.Bit result = Layout.createBit("equals");
-    new Equals(result, F1, F2);
+    new Equals(result, F1, Off1, F2, Off2, Length);
     return result;
    }
 
@@ -1106,7 +1110,7 @@ public class BitMachine extends Test implements LayoutAble                      
 
 //D1 Debugging                                                                  // Print program
 
-  String printProgram()                                                         // Print the program
+  String printCode()                                                            // Print the program
    {final StringBuilder s = new StringBuilder();                                // Printed results
     s.append(String.format("%4s  %24s %6s\n", "Line", "OpCode", "Target"));     // Titles
     final int N = instructions.size();                                          // Number of instructions
