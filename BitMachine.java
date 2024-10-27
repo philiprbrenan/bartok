@@ -90,7 +90,6 @@ public class BitMachine extends Test implements LayoutAble                      
     step = 0;
     for(instructionIndex = 0; instructionIndex < N; ++instructionIndex)         // Instruction sequence
      {final Instruction i = instructions.elementAt(instructionIndex);
-      //if (step == 251) say("AAAA", i.traceBack);
       if (debug) say("Debug:", step+1, instructionIndex, i.position, i.name);
       i.action();
       trace();
