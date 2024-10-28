@@ -15,6 +15,8 @@ class MjafPut extends Mjaf                                                      
    {super(BitsPerKey, BitsPerData, MaxKeysPerLeaf, size);
    }
 
+//D1 Comparison
+
 //D0 Tests                                                                      // Testing
 
 //  ok(m.printHorizontally(), """
@@ -80,7 +82,8 @@ V    6     3                  0     value     value
 
   static void newTests()                                                        // Tests being worked on
    {oldTests();
-    test_split_reduction();
+    //test_split_reduction();
+    test_branch_might_contain_key();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
