@@ -469,7 +469,7 @@ class Mjaf extends BitMachine                                                   
     return target;
    }
 
-  void leafFission(NN parent, NN source)                                        // Split a leaf that is one of children of its parent branch
+  NN leafFission(NN parent, NN source)                                          // Split a leaf that is one of children of its parent branch
    {KeyData kd = leafSplitKey(source);                                          // Leaf splitting key
     NN  target = leafSplit(source);                                             // Split leaf, the target leaf is on the left
 
@@ -486,6 +486,7 @@ class Mjaf extends BitMachine                                                   
         branchInsert(parent, i, kn);
        }
      };
+    return target;                                                              // The split out leaf
    }
 
   void leafJoinable(NN target, NN source, Layout.Bit result)                    // Check that we can join two leaves
