@@ -795,7 +795,7 @@ class Mjaf extends BitMachine                                                   
     branchSplitRoot(F1, F2);
    }
 
-  void branchFission(NN parent, NN source)                                      // Split a branch that is one of the children of its parent branch
+  NN branchFission(NN parent, NN source)                                       // Split a branch that is one of the children of its parent branch
    {final KeyNext  kn = branchSplitKey(source);                                 // Branch splitting key
     final NN   target = branchSplit(source);                                    // Split branch, the target branch is on the left
     final Key       k = kn.key();                                               // Split key
@@ -811,6 +811,7 @@ class Mjaf extends BitMachine                                                   
         branchInsert(parent, i, pkn);                                           // Insert splitting key into branch
        }
      };
+    return target;                                                              // The split out branch
    }
 
   void branchJoinable(NN target, NN source, Layout.Bit result)                  // Check that we can join two branches
