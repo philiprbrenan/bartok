@@ -77,13 +77,12 @@ V    6     3                  0     value     value
    }
 
   static void oldTests()                                                        // Tests thought to be in good shape
-   {
+   {test_split_reduction();
    }
 
   static void newTests()                                                        // Tests being worked on
-   {oldTests();
-    //test_split_reduction();
-    test_branch_might_contain_key();
+   {//oldTests();
+    test_split_reduction();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
