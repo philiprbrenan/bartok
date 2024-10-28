@@ -70,9 +70,9 @@ class Mjaf extends BitMachine                                                   
     branchSplitPoint = (N-1) >> 1;                                              // Point at which to split a branch
 
     final Layout W   = work = new Layout();                                     // Layout of working memory
-    leafSplitIdx     = W.new Variable ("leafSplitIdx",   N);                    // Index of leaf splitting key
-    branchSplitIdx   = W.new Variable ("branchSplitIdx", N);                    // Index of branch splitting key
-    workStructure    = W.new Structure("workStructure",                         // An entry in a leaf node
+    leafSplitIdx     = W.variable ("leafSplitIdx",   N);                        // Index of leaf splitting key
+    branchSplitIdx   = W.variable ("branchSplitIdx", N);                        // Index of branch splitting key
+    workStructure    = W.structure("workStructure",                             // An entry in a leaf node
       leafSplitIdx, branchSplitIdx);
 
     W.layout(workStructure);                                                    // Layout of a leaf key data pair
@@ -81,18 +81,18 @@ class Mjaf extends BitMachine                                                   
     Layout.constants(leafSplitIdx, branchSplitIdx);                             // Mark as constants
 
     final Layout L   = layoutLeafKeyData = new Layout();                        // Layout of a leaf key data pair
-    leafKey          = L.new Variable ("leafKey",  bitsPerKey);                 // Key in a leaf
-    leafData         = L.new Variable ("leafData", bitsPerData);                // Data in a leaf
-    leafKeyData      = L.new Structure("leafKeyData", leafKey, leafData);       // An entry in a leaf node
+    leafKey          = L.variable ("leafKey",  bitsPerKey);                     // Key in a leaf
+    leafData         = L.variable ("leafData", bitsPerData);                    // Data in a leaf
+    leafKeyData      = L.structure("leafKeyData", leafKey, leafData);           // An entry in a leaf node
     layoutLeafKeyData.layout(leafKeyData);                                      // Layout of a leaf key data pair
 
     leaf             =   new Stuck("leaf",                                      // Leaf key, data pairs stuck
       maxKeysPerLeaf,layoutLeafKeyData);
 
     final Layout B   = layoutBranchKeyNext = new Layout();                      // An entry in a branch node
-    branchKey        = B.new Variable ("branchKey",  bitsPerKey);               // Key in a branch
-    branchNext       = B.new Variable ("branchNext", bitsPerNext);              // Next from a branch
-    branchKeyNext    = B.new Structure("branchKeyNext", branchKey, branchNext); // An entry in a branch node
+    branchKey        = B.variable ("branchKey",  bitsPerKey);                   // Key in a branch
+    branchNext       = B.variable ("branchNext", bitsPerNext);                  // Next from a branch
+    branchKeyNext    = B.structure("branchKeyNext", branchKey, branchNext);     // An entry in a branch node
     layoutBranchKeyNext.layout(branchKeyNext);                                  // Layout of a branch key next pair
 
     branchStuck    = new Stuck("branchStuck",                                   // Branch key, next pairs stuck
@@ -636,7 +636,17 @@ class Mjaf extends BitMachine                                                   
 
   void branchGet(NN iBranch, BI index, KeyNext kn)                              // Get the specified key, next pair in the specified branch
    {setIndex(nodes, iBranch.v);                                                 // Select the branch to process
-    branchStuck.elementAt(kn.v, index.v);                                       // Insert the key, next pair at the specified index in the specified branch
+    branchStuck.elementAt(kn.v, index.v);                                       // Get the key, next pair at the specified index in the specified branch
+   }
+
+  void branchGetFirst(NN iBranch, KeyNext kn)                                   // Get the first key, next pair in the specified branch
+   {setIndex(nodes, iBranch.v);                                                 // Select the branch to process
+    branchStuck.firstElement(kn.v);                                             // Get the first key, next pair in the specified branch
+   }
+
+  void branchGetLast(NN iBranch, KeyNext kn)                                    // Get the last key, next pair in the specified branch
+   {setIndex(nodes, iBranch.v);                                                 // Select the branch to process
+    branchStuck.lastElement(kn.v);                                              // Get the first key, next pair in the specified branch
    }
 
   void branchPut(NN iBranch, BI index, KeyNext kn)                              // Put the specified key, next pair from the specified branch
@@ -675,6 +685,23 @@ class Mjaf extends BitMachine                                                   
    {final Layout.Bit result = Layout.createBit("branchRootIsFull");
     branchIsFull(new NN(root), result);
     return result;
+   }
+
+  Layout.Bit branchMightContainKey(NN branchIndex, Key Key)                     // Whether the specified key is in the range of keys within the specified branc, i.e. it could be in the branch withoit teh nmeessity of actually confirming that it is.
+   {final KeyNext   kn = new KeyNext();                                         // Key, next from branch
+    final Layout.Bit r = Layout.createBit("result");                            // Result of test
+
+    zero(r);                                                                    // Assume that the test will fail
+    new Block()
+     {void code()
+       {branchGetFirst(branchIndex, kn);                                        // First key - we are asuming there is one
+        returnIfLessThan   (Key.v, kn.key().v);                                 // Less than the first key so return failure
+        branchGetLast(branchIndex, kn);                                         // Last key - we are asuming there is one
+        returnIfGreaterThan(Key.v, kn.key().v);                                 // Greater than the first key so return failure
+        ones(r);                                                                // Passed
+       }
+     };
+    return r;                                                                   // Return result
    }
 
   void branchSplitKey(NN index, KeyNext out)                                    // Splitting key in a branch
@@ -4841,6 +4868,83 @@ V    6     4                  0     value     value
 """);
    }
 
+  static void test_branch_get_first_last()                                      // Get the first and last key, next pairs in a branch
+   {final int BitsPerKey = 5, BitsPerData = 6, MaxKeysPerLeaf = 4, size = 9;
+
+    final Mjaf m = mjaf(BitsPerKey, BitsPerData, MaxKeysPerLeaf, size);
+    for (int i = 1; i <= size; i++) m.put(i, 2*i);
+
+    final NN      r = m.new NN(m.root);
+    final KeyNext f = m.new KeyNext(), l = m.new KeyNext();
+    m.branchGetFirst(r, f);
+    m.branchGetLast (r, l);
+    m.execute();
+
+    //stop(f, l);
+    f.v.asLayout().ok("""
+T   At  Wide  Index       Value   Field name
+S    0     9                226   branchKeyNext
+V    0     5                  2     branchKey     branchKey
+V    5     4                  7     branchNext     branchNext
+""");
+    l.v.asLayout().ok("""
+T   At  Wide  Index       Value   Field name
+S    0     9                166   branchKeyNext
+V    0     5                  6     branchKey     branchKey
+V    5     4                  5     branchNext     branchNext
+""");
+   }
+
+  static void test_branch_might_contain_key()                                   // Branch might contain a key
+   {final int BitsPerKey = 5, BitsPerData = 6, MaxKeysPerLeaf = 4, size = 5,
+      N = 9;
+
+    final Mjaf m = mjaf(BitsPerKey, BitsPerData, MaxKeysPerLeaf, size);
+    for (int i = 1; i <= N; i++) m.put(m.new Key(i), m.new Data(2*i));
+    Layout.Bit t1 = m.branchMightContainKey(m.new NN(0), m.new Key(1));
+    Layout.Bit t2 = m.branchMightContainKey(m.new NN(0), m.new Key(2));
+    Layout.Bit t3 = m.branchMightContainKey(m.new NN(0), m.new Key(3));
+    Layout.Bit t4 = m.branchMightContainKey(m.new NN(0), m.new Key(4));
+    Layout.Bit t5 = m.branchMightContainKey(m.new NN(0), m.new Key(5));
+    Layout.Bit t6 = m.branchMightContainKey(m.new NN(0), m.new Key(6));
+    Layout.Bit t7 = m.branchMightContainKey(m.new NN(0), m.new Key(7));
+    m.execute();
+
+    //stop(m.print(), t1, t2, t3, t4, t5, t6, t7);
+    ok(m.print(), """
+      3(2-0)      2(4-0)      1(6-0)4        |
+1,2=3       3,4=2       5,6=1        7,8,9=4 |
+""");
+    ok(t1, """
+T   At  Wide  Index       Value   Field name
+B    0     1                  0   result
+""");
+    ok(t2, """
+T   At  Wide  Index       Value   Field name
+B    0     1                  1   result
+""");
+    ok(t3, """
+T   At  Wide  Index       Value   Field name
+B    0     1                  1   result
+""");
+    ok(t4, """
+T   At  Wide  Index       Value   Field name
+B    0     1                  1   result
+""");
+    ok(t5, """
+T   At  Wide  Index       Value   Field name
+B    0     1                  1   result
+""");
+    ok(t6, """
+T   At  Wide  Index       Value   Field name
+B    0     1                  1   result
+""");
+    ok(t7, """
+T   At  Wide  Index       Value   Field name
+B    0     1                  0   result
+""");
+   }
+
   static void oldTests()                                                        // Tests thought to be in good shape
    {create_leaf_tree();                 create_branch_tree();
     test_leaf_make();                   test_branch_make();
@@ -4855,6 +4959,7 @@ V    6     4                  0     value     value
     test_branch_top_next();
     test_leaf_greater_than_or_equal();  test_branch_greater_than_or_equal();
     test_leaf_split_root();             test_branch_split_root();
+                                        test_branch_get_first_last();
 
     test_root_is_leaf_or_branch();
     test_find();
@@ -4871,10 +4976,11 @@ V    6     4                  0     value     value
     test_path();
     test_path_index();
     test_put9();
+    test_branch_might_contain_key();
    }
 
   static void newTests()                                                        // Tests being worked on
-   {oldTests();
+   {//oldTests();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
