@@ -3,7 +3,7 @@
 // Philip R Brenan at appaapps dot com, Appa Apps Ltd Inc., 2024
 //------------------------------------------------------------------------------
 package com.AppaApps.Silicon;                                                   // Simulate a silicon chip.
-
+// Make layout() create a structure if given multiple fields as this will reduce repetition
 import java.util.*;
 
 //D1 Construct                                                                  // Layout a description of the memory used by a chip
