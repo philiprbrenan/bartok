@@ -7,6 +7,8 @@ package com.AppaApps.Silicon;                                                   
 // Assert Branch or Leaf for all parameters indexing a branch or a leaf
 // Use Stuck.Index everywhere possible
 // Use put(int, int) where possible
+// Remove .v
+// add index 0.0, 0.1 etc to branch descriptions in print()
 import java.util.*;
 
 class Mjaf extends BitMachine                                                   // BTree algorithm but with data stored only in the leaves to facilitate deletion without complicating search or insertion. The branches (interior nodes) have an odd number of keys to make the size of a branch as close to that of a leaf as possible to simplify memory management.
@@ -124,7 +126,7 @@ class Mjaf extends BitMachine                                                   
      {nodesFree.array.setIndex(i);                                              // Index free node
       nodesFree.element.fromInt(i);                                             // Place the free node
      }
-    nodesFree.unary.value.ones();                                               // The stuck is initially full of free nodes
+    nodesFree.unary.value.ones();                                               // The stuck is initially full of free nodes - need immediate execution so cannot use currentSize() which executes when the bit machine is actually run.
     setRootToLeaf();
 
     bitMachines(nodesFree, branchStuck, leaf);                                  // Place all the instruction that would otherwise be generated in these machines into this machine instead
@@ -169,6 +171,7 @@ class Mjaf extends BitMachine                                                   
      {if (V.width != bitsPerNext) stop("Wrong sized node number", V);
       v = V;
      }
+
     NN(String name) {this(Layout.createVariable(name, bitsPerNext));}           // Create a node index with the specified name
     NN() {this("nodeIndex");}                                                   // Create a node index with a default name
 
@@ -176,16 +179,21 @@ class Mjaf extends BitMachine                                                   
      {final Layout.Variable next = v = Layout.createVariable("next", bitsPerNext);
       copy(next, value);
      }
+    NN duplicate() {return new NN(v.duplicate().asField().toVariable());}       // Duplicate a node index so we can safely modify it
     public String toString() {return v.toString();}                             // Print the wrapped layout variable
    }
 
   class BI                                                                      // An index within a branch
    {final Layout.Variable v;
-    BI(Layout.Variable V)
+    BI(Layout.Variable V)                                                       // Index via a variable
      {if (V.width != maxKeysPerBranch) stop("Wrong sized branch index", V);
       v = V;
      }
-
+    BI(int V)                                                                   // Index from a constant
+     {this("branchIndex");
+      v.fromInt(V);
+     }
+    BI duplicate() {return new BI(v.duplicate().asField().toVariable());}       // Duplicate a branch index so we can safely modify it
     BI(String name) {this(Layout.createVariable(name, maxKeysPerBranch));}      // Create a branch index with the specified name
     BI() {this("branchIndex");}                                                 // Create a branch index with a default name
     public String toString() {return v.toString();}                             // Print the wrapped layout variable
@@ -197,7 +205,7 @@ class Mjaf extends BitMachine                                                   
      {if (V.width != maxKeysPerLeaf) stop("Wrong sized leaf index", V);
       v = V;
      }
-
+    LI duplicate() {return new LI(v.duplicate().asField().toVariable());}       // Duplicate a leaf index so we can safely modify it
     LI(String name) {this(Layout.createVariable(name, maxKeysPerLeaf));}        // Create a leaf index with the specified name
     LI() {this("leafIndex");}                                                   // Create a leaf index with a default name
     public String toString() {return v.toString();}                             // Print the wrapped layout variable
@@ -490,16 +498,22 @@ class Mjaf extends BitMachine                                                   
    }
 
   void leafJoinable(NN target, NN source, Layout.Bit result)                    // Check that we can join two leaves
-   {setIndex(nodes, target); Layout.Variable t = leaf.unary.value;
-    setIndex(nodes, source); Layout.Variable s = leaf.unary.value;
+   {setIndex(nodes, target); Layout.Variable t = leaf.currentSize();
+    setIndex(nodes, source); Layout.Variable s = leaf.currentSize();
     unaryFilled(s, t, result);
    }
 
-  void leafJoin(NN target, NN source)                                           // Join the specified leaf onto the end of this leaf
+  Layout.Bit leafJoinable(NN target, NN source)                                 // Check that we can join the source leaf into the target leaf
+   {final Layout.Bit result = Layout.createBit("joinAbleLeaves");               // Whether the leaves can be joined
+    leafJoinable(target, source, result);
+    return result;
+   }
+
+  void leafJoin(NN target, NN source)                                           // Join the specified source leaf onto the end of the target leaf
    {new Repeat()
      {void code()
        {setIndex(nodes, source);                                                // Address source
-        returnIfAllZero(leaf.unary.value);                                      // Exit then the source leaf has been emptied
+        returnIfAllZero(leaf.currentSize());                                    // Exit then the source leaf has been emptied
         final Layout kd = leafKeyData.duplicate();                              // Key data pair buffer
         leaf.shift(kd);                                                         // Remove from source
         setIndex(nodes, target);                                                // Address target
@@ -538,7 +552,7 @@ class Mjaf extends BitMachine                                                   
             zero(Leaf.v);                                                       // Start with the first key, next pair in the leaf
             ones(Result);                                                       // Assume  success
             for (int i = 0; i < maxKeysPerLeaf; i++)                            // Check each key
-             {inner.returnIfEqual(Leaf.v, leaf.unary.value);                    // Passed all the valid keys - serach key is bigger than all keys
+             {inner.returnIfEqual(Leaf.v, leaf.currentSize());                  // Passed all the valid keys - serach key is bigger than all keys
               leafGet(NodeIndex, Leaf, kd);                                     // Retrieve key/data pair from leaf
               outer.returnIfLessThan(Key.v, kd.v.asLayout().get("leafKey"));    // Found a key greater than the serach key
               shiftLeftOneByOne(Leaf.v);                                        // Next key
@@ -628,11 +642,16 @@ class Mjaf extends BitMachine                                                   
     return layout.get(nbol+"branch.topNext").asInt();
    }
 
-  int branchGetSize(int iBranch)                                                // Get branch next so we can traverse the tree during printing
+  int branchGetSize(int iBranch)                                                // Get branch size as an integer
    {Layout.Array nodes  = layout.get("nodes").toArray();
     Layout.Array branch = layout.get(nbol+"branch.branchStuck.array").toArray();
-    nodes.setIndex(iBranch);                                                    // Select the leaf to process
+    nodes.setIndex(iBranch);                                                    // Select the branch to process
     return branch.get("branchKeyNext.branchNext").asInt();
+   }
+
+  Layout.Variable branchGetCurrentSize(NN iBranch)                              // Get branch size as a variable
+   {setIndex(nodes, iBranch.v);                                                 // Select the branch to process
+    return branchStuck.currentSize();                                           // Number of elements currently in this branch as a variable
    }
 
   void branchGet(NN iBranch, BI index, KeyNext kn)                              // Get the specified key, next pair in the specified branch
@@ -640,14 +659,32 @@ class Mjaf extends BitMachine                                                   
     branchStuck.elementAt(kn.v, index.v);                                       // Get the key, next pair at the specified index in the specified branch
    }
 
-  void branchGetFirst(NN iBranch, KeyNext kn)                                   // Get the first key, next pair in the specified branch
+  KeyNext branchGet(NN iBranch, BI index)                                       // Return the specified key, next pair in the specified branch
+   {final KeyNext kn = new KeyNext();
+    branchGet(iBranch, index, kn);
+    return kn;
+   }
+
+  void branchGetFirst(NN iBranch, KeyNext kn)                                   // Return the first key, next pair in the specified branch
    {setIndex(nodes, iBranch.v);                                                 // Select the branch to process
     branchStuck.firstElement(kn.v);                                             // Get the first key, next pair in the specified branch
+   }
+
+  KeyNext branchGetFirst(NN iBranch)                                            // Get the first key, next pair in the specified branch
+   {final KeyNext kn = new KeyNext();
+    branchGetFirst(iBranch, kn);
+    return kn;
    }
 
   void branchGetLast(NN iBranch, KeyNext kn)                                    // Get the last key, next pair in the specified branch
    {setIndex(nodes, iBranch.v);                                                 // Select the branch to process
     branchStuck.lastElement(kn.v);                                              // Get the first key, next pair in the specified branch
+   }
+
+  KeyNext branchGetLast(NN iBranch)                                             // Return the last key, next pair in the specified branch
+   {final KeyNext kn = new KeyNext();
+    branchGetLast(iBranch, kn);
+    return kn;
    }
 
   void branchPut(NN iBranch, BI index, KeyNext kn)                              // Put the specified key, next pair from the specified branch
@@ -796,7 +833,7 @@ class Mjaf extends BitMachine                                                   
     branchSplitRoot(F1, F2);
    }
 
-  NN branchFission(NN parent, NN source)                                       // Split a branch that is one of the children of its parent branch
+  NN branchFission(NN parent, NN source)                                        // Split a branch that is one of the children of its parent branch
    {final KeyNext  kn = branchSplitKey(source);                                 // Branch splitting key
     final NN   target = branchSplit(source);                                    // Split branch, the target branch is on the left
     final Key       k = kn.key();                                               // Split key
@@ -818,11 +855,11 @@ class Mjaf extends BitMachine                                                   
   void branchJoinable(NN target, NN source, Layout.Bit result)                  // Check that we can join two branches
    {setIndex(nodes, target);                                                    // Index the target branch
     final Layout.Variable t = branchStuck.unary.value.like();
-    copy(t, branchStuck.unary.value);
+    copy(t, branchStuck.currentSize());
 
     setIndex(nodes, source);
     final Layout.Variable s = branchStuck.unary.value.like();
-    copy(s, branchStuck.unary.value);
+    copy(s, branchStuck.currentSize());
     unaryFilledMinusOne(s, t, result);
    }
 
@@ -852,7 +889,7 @@ class Mjaf extends BitMachine                                                   
             zero(index.v);
             setIndex(nodes, NodeIndex);                                         // Index the node to search
             for (int i = 0; i < maxKeysPerBranch; i++)                          // Check each key
-             {inner.returnIfEqual(index.v, branchStuck.unary.value);            // Passed all the valid keys
+             {inner.returnIfEqual(index.v, branchStuck.currentSize());          // Passed all the valid keys
               branchGet(NodeIndex, index, kn);                                  // Retrieve key/next pair
               copy(Result.v, kn.next().v);
               outer.returnIfGreaterThanOrEqual(kn.key().v, Key.v);
@@ -887,7 +924,7 @@ class Mjaf extends BitMachine                                                   
             setIndex(nodes, NodeIndex);                                         // Index the node to search
 
             for (int i = 0; i < maxKeysPerBranch; i++)                          // Check each key
-             {inner.returnIfEqual(index.v, branchStuck.unary.value);            // Passed all the valid keys
+             {inner.returnIfEqual(index.v, branchStuck.currentSize());          // Passed all the valid keys
               branchGet(NodeIndex, index, kn);                                  // Retrieve key/next pair
               copy(result.v, index.v);
               outer.returnIfGreaterThanOrEqual(kn.key().v, Key.v);
@@ -3109,9 +3146,9 @@ V  318     4                  0             unary     nodes.node.branchOrLeaf.le
     //stop(t.lef);
     t.lef.ok("""
 T   At  Wide  Index       Value   Field name
-S    0     4                  1   lefs
+S    0     4                  3   lefs
 B    0     1                  1     le     le
-B    1     1                  0     lf     lf
+B    1     1                  1     lf     lf
 B    2     1                  0     lE     lE
 B    3     1                  0     lF     lF
 """);
@@ -4583,7 +4620,7 @@ B    0     1                  0   found
    {final int BitsPerKey = 10, BitsPerData = 10, MaxKeysPerLeaf = 4, size = 256;// Dimensions of BTree
     final Mjaf m = mjaf(BitsPerKey, BitsPerData, MaxKeysPerLeaf, size);         // Create BTree
 
-    m.maxSteps = 25_000;
+    m.maxSteps = 26_000;
 
     final int[]r = random_array();
     for (int i = 0; i < r.length; i++) m.put(m.new Key(r[i]), m.new Data(2*r[i]));
@@ -4877,9 +4914,8 @@ V    6     4                  0     value     value
     for (int i = 1; i <= size; i++) m.put(i, 2*i);
 
     final NN      r = m.new NN(m.root);
-    final KeyNext f = m.new KeyNext(), l = m.new KeyNext();
-    m.branchGetFirst(r, f);
-    m.branchGetLast (r, l);
+    final KeyNext f = m.branchGetFirst(r);
+    final KeyNext l = m.branchGetLast (r);
     m.execute();
 
     //stop(f, l);
@@ -4947,6 +4983,16 @@ B    0     1                  0   result
 """);
    }
 
+
+  static void test_unary()                                                      // unary.value versus currentSize() for a stuck
+   {final int BitsPerKey = 5, BitsPerData = 6, MaxKeysPerLeaf = 4, size = 9;
+
+    final Mjaf m = mjaf(BitsPerKey, BitsPerData, MaxKeysPerLeaf, size);
+    m.execute();
+   }
+
+
+
   static void oldTests()                                                        // Tests thought to be in good shape
    {create_leaf_tree();                 create_branch_tree();
     test_leaf_make();                   test_branch_make();
@@ -4982,7 +5028,8 @@ B    0     1                  0   result
    }
 
   static void newTests()                                                        // Tests being worked on
-   {//oldTests();
+   {oldTests();
+    test_unary();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
