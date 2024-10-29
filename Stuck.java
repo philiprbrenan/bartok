@@ -62,6 +62,12 @@ class Stuck extends BitMachine implements LayoutAble                            
 
   int size() {return unary.value();}                                            // The current number of elements in the stuck as a binary integer
 
+  Layout.Variable currentSize()                                                 // Return the current number of elements in the stuck as a unary integer
+   {final Layout.Variable s = Layout.createVariable("size", max);
+    copy(s, unary.value);
+    return s;
+   }
+
 //D1 Indexing                                                                   // Index the stuck
 
   class Index                                                                   // A variable with which to index the stuck
@@ -1344,6 +1350,47 @@ V   25     5                  3     unary     unary
 """);
    }
 
+  static void test_current_size()
+   {final int M = 5;
+
+    final Layout           l = new Layout();
+    final Layout.Variable  k = l.variable("k",  M);
+    l.layout(k);
+
+    Stuck s = stuck("s", M, l), t = s.like();
+    s.bitMachines(t);
+
+    Layout.Variable z0 = s.currentSize();
+    s.execute();
+    //stop(z);
+    z0.ok("""
+T   At  Wide  Index       Value   Field name
+V    0     5                  0   size
+""");
+
+    s.reset();
+    s.push(11);
+
+    Layout.Variable z1 = s.currentSize();
+    s.execute();
+    //stop(z);
+    z1.ok("""
+T   At  Wide  Index       Value   Field name
+V    0     5                  1   size
+""");
+
+    s.reset();
+    s.push(22);
+
+    Layout.Variable z2 = s.currentSize();                                       // Will be 0b11 in unary
+    s.execute();
+    //stop(z);
+    z2.ok("""
+T   At  Wide  Index       Value   Field name
+V    0     5                  3   size
+""");
+   }
+
   static void oldTests()                                                        // Tests thought to be in good shape
    {test_push();
     test_pop();
@@ -1359,6 +1406,7 @@ V   25     5                  3     unary     unary
     test_index();
     test_index_up();
     test_index_down();
+    test_current_size();
    }
 
   static void newTests()                                                        // Tests being worked on
