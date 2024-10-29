@@ -61,6 +61,7 @@ class Stuck extends BitMachine implements LayoutAble                            
   public void ok(String expected) {ok(toString(), expected);}                   // Check the stuck
 
   int size() {return unary.value();}                                            // The current number of elements in the stuck as a binary integer
+  void setSize(int size) {unary.value.fromUnary(size);}                         // Set the current size of a stuck
 
   Layout.Variable currentSize()                                                 // Return the current number of elements in the stuck as a unary integer
    {final Layout.Variable s = Layout.createVariable("size", max);
@@ -1391,6 +1392,22 @@ V    0     5                  3   size
 """);
    }
 
+  static void test_set_size()
+   {final int M = 5;
+
+    final Layout           l = new Layout();
+    final Layout.Variable  k = l.variable("k",  M);
+    l.layout(k);
+
+    Stuck s = stuck("s", M, l);
+    s.setSize(2);
+    //stop(s.unary.asLayout());
+    s.unary.asLayout().ok("""
+T   At  Wide  Index       Value   Field name
+V   25     5                  3     unary
+""");
+   }
+
   static void oldTests()                                                        // Tests thought to be in good shape
    {test_push();
     test_pop();
@@ -1407,11 +1424,11 @@ V    0     5                  3   size
     test_index_up();
     test_index_down();
     test_current_size();
+    test_set_size();
    }
 
   static void newTests()                                                        // Tests being worked on
    {oldTests();
-    test_index_up();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
