@@ -122,98 +122,13 @@ m.new Say() {void action() {say("DDDD");}};
 say("AAAA", m.print());
    }
 
-  void branchMergeLeaves(NN nodeIndex, BI IBranch)                              // Merge the leaves associated with the indexed key, next pair in the specified branch
-   {final BI     iBranch = IBranch.duplicate();                                 // Make a copy of this parameter so we can adjust it
-    final Layout.Variable z = branchGetCurrentSize(nodeIndex);                  // Size of branch
-
-    new IfElse(equals(z, iBranch.v))                                            // Merging the leaves associated with the last key, next pair is different from merging the leaves assocaited with any other key, next pair
-     {void Then()
-       {final KeyNext    lkn = branchGet(nodeIndex, iBranch);                   // Key next, pair describing left leaf
-new Say() {void action() {say("TTTT");}};
-        final NN    leftLeaf = new NN(lkn.next().v);                            // Address left leaf
-        shiftLeftOneByOne(iBranch.v);                                           // Get leaf associated with the next key Might have to use topNext instead
-        final NN   rightLeaf = branchGetTopNext(nodeIndex);                     // Address right leaf
-        final Layout.Bit   j = leafJoinable(rightLeaf, leftLeaf);
-        new If(j)                                                               // This order allows us to simply remove the key from the parent
-         {void Then()
-           {new Say() {void action() {say("CCCC");}};
-            leafJoin(leftLeaf, rightLeaf);
-            branchRemove(nodeIndex, iBranch);                                                                                 //
-           }
-         };
-       }
-      void Else()
-       {final KeyNext    lkn = branchGet(nodeIndex, iBranch);                   // Key next, pair describing left leaf
-new Say() {void action() {say("EEEE");}};
-        final NN    leftLeaf = new NN(lkn.next().v);                            // Address left leaf
-        shiftLeftOneByOne(iBranch.v);                                           // Get leaf associated with the next key Might have to use topNext instead
-        final KeyNext    rkn = branchGet(nodeIndex, iBranch);                   // Key next, pair describing right leaf
-        final NN   rightLeaf = new NN(rkn.next().v);                            // Address right leaf
-        final Layout.Bit   j = leafJoinable(rightLeaf, leftLeaf);
-        new If(j)                                                               // This order allows us to simply remove the key from the parent
-         {void Then()
-           {new Say() {void action() {say("CCCC", iBranch.v);}};
-            leafJoin(leftLeaf, rightLeaf);
-            branchRemove(nodeIndex, iBranch);                                   // Remove following key pair
-            copy(lkn.key().v, rkn.key().v);
-            branchPut(nodeIndex, IBranch, lkn);                                 // insert correct key
-           }
-         };
-       }
-     };
-   }
-
-  static void test_branch_merge_leaves()                                        // Merge the two leaves under a key at the specified index in branch
-   {final int BitsPerKey = 5, BitsPerData = 6, MaxKeysPerLeaf = 4, size = 10,
-      N = 8;
-
-    final MjafPut m = new MjafPut(BitsPerKey, BitsPerData, MaxKeysPerLeaf, size);
-    for (int i = 1; i <= N; i++) m.put(m.new Key(i), m.new Data(2*i));
-    m.execute();
-
-    //stop(m.print());
-    ok(m.print(), """
-      8(2-0)      7(4-0)9          |
-1,2=8       3,4=7        5,6,7,8=9 |
-""");
-
-    m.reset();
-    m.branchMergeLeaves(m.new NN(m.root), m.new BI(0));
-    m.execute();
-    //stop(m.print());
-    ok(m.print(), """
-          8(4-0)9          |
-1,2,3,4=8        5,6,7,8=9 |
-""");
-
-    m.reset();
-    for (int i = 1; i <= N; i++) m.put(9, 9);                                   // makeit possible to join the last two leaves
-    m.setIndex(m.nodes, m.new NN(9));
-    m.copy(m.leaf.unary.value, 3);                                              // Set leaf length
-    m.execute();
-
-    stop(m.print());
-    ok(m.print(), """
-          8(4-0)9          |
-1,2,3,4=8        5,6,7,8=9 |
-""");
-
-    m.branchMergeLeaves(m.new NN(m.root), m.new BI(3));
-    m.execute();
-    stop(m.print());
-
-    //stop(m.print());
-
-   }
-
   static void oldTests()                                                        // Tests thought to be in good shape
    {test_split_reduction();
    }
 
   static void newTests()                                                        // Tests being worked on
    {//oldTests();
-    //test_split_reduction();
-    test_branch_merge_leaves();
+    test_split_reduction();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
