@@ -441,7 +441,7 @@ public class BitMachine extends Test implements LayoutAble                      
 
   class UnaryFilled extends Instruction                                         // Check that two unary fields fill the maximum value allowed
    {final int N;                                                                // Width of fields to test
-    final Layout.Field f1, f2;                                                  // Unary fields, intermediate result
+    final Layout.Field f1, f2;                                                  // Unary fields
     final Layout.Bit   r;                                                       // Result
     UnaryFilled(Layout.Field F1, Layout.Field F2, Layout.Bit R)                 // Check that two unary fields fill the maximum value allowed
      {F1.sameSize(F2);
@@ -741,7 +741,7 @@ public class BitMachine extends Test implements LayoutAble                      
    }
 
   abstract class IfElse extends Instruction                                     // If condition then block else block
-   {Layout.Bit condition;                                                       // Condition deciding if
+   {Layout.Bit condition;                                                       // Deciding condition
     IfElse(Layout.Bit Condition)                                                // Right shift a field by one place fillng with a zero
      {name = "IfElse";
       condition = Condition;
@@ -754,6 +754,18 @@ public class BitMachine extends Test implements LayoutAble                      
      }
     abstract void Then();                                                       // Then block is required
     abstract void Else();                                                       // Else block is required
+   }
+
+  abstract class Unless extends Instruction                                     // If not condition then block
+   {Layout.Bit condition;                                                       // Deciding condition
+    Unless(Layout.Bit Condition)                                                // Right shift a field by one place fillng with a zero
+     {name = "unless";
+      condition = Condition;
+      final Branch test = branchIfOne(condition);                               // Jump over then if the condition is true
+      Then();
+      comeFrom(test);
+     }
+    abstract void Then();                                                       // Then block is required
    }
 
   abstract class DownTo extends Instruction                                     // Iterate a unary value from its maximum value  to a specified value
@@ -1490,6 +1502,33 @@ V    9     4                  0     e     e
 """);
    }
 
+  static void test_unless_then()
+   {Layout           l = new Layout();
+    Layout.Variable  s = l.variable ("s", 4);
+    Layout.Variable  t = l.variable ("t", 4);
+    Layout.Bit       i = l.bit      ("i");
+    Layout.Structure x = l.structure("x", i, s, t);
+    l.layout(x);
+
+    i.fromInt(0);
+    s.fromInt(7);
+    t.fromInt(0);
+
+    BitMachine m = new BitMachine();
+    m.new Unless(i)
+     {void Then() {m.copy(t, s);}
+     };
+    m.execute();
+    //stop(l);
+    l.ok("""
+T   At  Wide  Index       Value   Field name
+S    0     9                238   x
+B    0     1                  0     i     i
+V    1     4                  7     s     s
+V    5     4                  7     t     t
+""");
+   }
+
   static void test_if_else()
    {Layout           l = new Layout();
     Layout.Variable  s = l.variable ("s", 4);
@@ -1989,6 +2028,7 @@ B    2     1                  1     c     c
     test_less_than_equal();
     test_if_then();
     test_if_else();
+    test_unless_then();
     test_for();
     test_branchIfEqual();
     test_branchIfNotEqual();
@@ -2002,7 +2042,8 @@ B    2     1                  1     c     c
    }
 
   static void newTests()                                                        // Tests being worked on
-   {oldTests();
+   {//oldTests();
+    test_unless_then();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
