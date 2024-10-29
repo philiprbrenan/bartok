@@ -863,6 +863,12 @@ class Mjaf extends BitMachine                                                   
     unaryFilledMinusOne(s, t, result);
    }
 
+  Layout.Bit branchJoinable(NN target, NN source)                               // Check that we can join two branches
+   {final Layout.Bit result = Layout.createBit("result");
+    branchJoinable(target, source, result);
+    return result;
+   }
+
   void branchJoin(NN target, Key key, NN source)                                // Join the specified branch onto the end of this branch
    {final KeyNext kn = new KeyNext(branchKeyNext.duplicate());                  // Work area for transferring key data pairs from the source code to the target node
 
@@ -901,7 +907,6 @@ class Mjaf extends BitMachine                                                   
         final NN    leftLeaf = new NN(lkn.next().v);                            // Address left leaf
         final KeyNext    rkn = branchGet(NodeIndex, iBranch1);                  // Key next, pair describing right leaf
         final NN   rightLeaf = new NN(rkn.next().v);                            // Address right leaf
-        final Layout.Bit   j = leafJoinable(rightLeaf, leftLeaf);
         new If(leafJoinable(rightLeaf, leftLeaf))                               // Are the leaves joinable
          {void Then()                                                           // Join the leaves
            {leafJoin(leftLeaf, rightLeaf);                                      // Join right leaf into left leaf to get the order right
@@ -909,6 +914,43 @@ class Mjaf extends BitMachine                                                   
             copy(lkn.key().v, rkn.key().v);                                     // Update the key of the key, next pair for the left leaf to include the keys merged from the right leaf
             branchPut(NodeIndex, IBranch, lkn);                                 // Update the branch with the updated key, next pair whoing the new key for this key, next pair
             free(rightLeaf);                                                    // Free the right leaf as it is now empty
+           }
+         };
+       }
+     };
+   }
+
+  void branchMergeBranches(NN NodeIndex, BI IBranch)                            // Merge the branches associated with the indexed key, next pair in the specified branch
+   {final BI  iBranch1 = IBranch.duplicate();                                   // Make a copy of this parameter so we can adjust it
+    shiftLeftOneByOne(iBranch1.v);                                              // Get leaf associated with the next key up
+    final Layout.Variable z = branchGetCurrentSize(NodeIndex);                  // Size of branch
+
+    new IfElse(equals(z, iBranch1.v))                                           // Are we merging the branches associated with the last key, next pair
+     {void Then()                                                               // Merging the branches associated with the last key, next pair
+       {final KeyNext    lkn = branchGet(NodeIndex, IBranch);                   // Key next, pair describing left branch
+        final NN  leftBranch = new NN(lkn.next().v);                            // Address left branch
+        final NN rightBranch = branchGetTopNext(NodeIndex);                     // Address right branch which is located via top next
+        new If(branchJoinable(rightBranch, leftBranch))                         // Are the branches joinable?
+         {void Then()                                                           // Join the branches
+           {branchJoin(leftBranch, lkn.key(), rightBranch);                     // Join right branch into left branch to get the order right
+            branchRemove(NodeIndex, IBranch);                                   // Remove key, next pair associated with left branch
+            branchSetTopNext(NodeIndex, lkn.next());                            // Set the top next to left branch
+            free(rightBranch);                                                  // Free the right branch as it is now empty
+           }
+         };
+       }
+      void Else()                                                               // Merging  the branches associated with a key, next pair other than the last one
+       {final KeyNext    lkn = branchGet(NodeIndex, IBranch);                   // Key next, pair describing left branch
+        final NN    leftBranch = new NN(lkn.next().v);                          // Address left branch
+        final KeyNext    rkn = branchGet(NodeIndex, iBranch1);                  // Key next, pair describing right branch
+        final NN   rightBranch = new NN(rkn.next().v);                          // Address right branch
+        new If(branchJoinable(rightBranch, leftBranch))                         // Are the branches joinable
+         {void Then()                                                           // Join the branches
+           {branchJoin(leftBranch, lkn.key(), rightBranch);                     // Join right branch into left branch to get the order right
+            branchRemove(NodeIndex, iBranch1);                                  // Remove key, next pair associated with right branch
+            copy(lkn.key().v, rkn.key().v);                                     // Update the key of the key, next pair for the left branch to include the keys merged from the right branch
+            branchPut(NodeIndex, IBranch, lkn);                                 // Update the branch with the updated key, next pair whoing the new key for this key, next pair
+            free(rightBranch);                                                  // Free the right branch as it is now empty
            }
          };
        }
@@ -5052,8 +5094,44 @@ B    0     1                  0   result
 """);
 
     m.reset();
-    for (int i = 1; i <= N; i++) m.put(9, 9);                                   // makeit possible to join the last two leaves
+    for (int i = 1; i <= N; i++) m.put(9, 9);                                   // Make it possible to join the last two leaves
     m.setIndex(m.nodes, m.new NN(9));
+    m.copy(m.leaf.unary.value, 3);                                              // Set leaf length
+    m.execute();
+
+    //stop(m.print());
+    ok(m.print(), """
+          8(4-0)      7(6-0)9      |
+1,2,3,4=8       5,6=7        7,8=9 |
+""");
+
+    m.branchMergeLeaves(m.new NN(m.root), m.new BI(1));
+    m.execute();
+
+    //stop(m.print());
+    ok(m.print(), """
+          8(4-0)7          |
+1,2,3,4=8        5,6,7,8=7 |
+""");
+   }
+
+  static void test_branch_merge_branches()                                      // Merge the two branches under a key at the specified index in branch
+   {final int BitsPerKey = 5, BitsPerData = 6, MaxKeysPerLeaf = 4, size = 32,
+      N = 32;
+
+    final Mjaf m = new Mjaf(BitsPerKey, BitsPerData, MaxKeysPerLeaf, size);
+    for (int i = 1; i <= N; i++) m.put(m.new Key(i), m.new Data(2*i));
+    m.execute();
+
+    stop(m.print());
+    ok(m.print(), """
+                                                            17(8-0)                                                                    10(16-0)18                                                                                                                          |
+                          26(4-17)23                                                           20(12-10)15                                                                    12(20-18)                            8(24-18)27                                              |
+         30(2-26)29                        28(6-23)25                      24(10-20)22                             21(14-15)19                            16(18-12)14                           13(22-8)11                           9(26-27)        7(28-27)31            |
+0,1,2=30           3,4=29           5,6=28           7,8=25        9,10=24            11,12=22            13,14=21            15,16=19           17,18=16            19,20=14          21,22=13           23,24=11           25,26=9         27,28=7           29,30,31=31 |
+""");
+
+    m.reset();
     m.copy(m.leaf.unary.value, 3);                                              // Set leaf length
     m.execute();
 
@@ -5106,12 +5184,12 @@ B    0     1                  0   result
     test_put9();
     test_branch_might_contain_key();
     test_unary();
-    test_branch_merge_leaves();
+    test_branch_merge_leaves(); test_branch_merge_branches();
    }
 
   static void newTests()                                                        // Tests being worked on
-   {oldTests();
-    test_branch_merge_leaves();
+   {//oldTests();
+    test_branch_merge_branches();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
