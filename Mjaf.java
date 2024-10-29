@@ -642,6 +642,11 @@ class Mjaf extends BitMachine                                                   
     return layout.get(nbol+"branch.topNext").asInt();
    }
 
+  void branchSetTopNext(int parent, int child )                                 // Set the branch top next of the specified branch to the specified child branch or leaf
+   {nodes.setIndex(parent);                                                     // Select the leaf to process
+    layout.get(nbol+"branch.topNext").fromInt(child);
+   }
+
   int branchGetSize(int iBranch)                                                // Get branch size as an integer
    {Layout.Array nodes  = layout.get("nodes").toArray();
     Layout.Array branch = layout.get(nbol+"branch.branchStuck.array").toArray();
@@ -652,6 +657,11 @@ class Mjaf extends BitMachine                                                   
   Layout.Variable branchGetCurrentSize(NN iBranch)                              // Get branch size as a variable
    {setIndex(nodes, iBranch.v);                                                 // Select the branch to process
     return branchStuck.currentSize();                                           // Number of elements currently in this branch as a variable
+   }
+
+  void branchSetCurrentSize(int iBranch, int size)                              // Set branch size
+   {nodes.setIndex(iBranch);                                                         // Select the branch to process
+    branchStuck.unary.value.fromUnary(size);
    }
 
   void branchGet(NN iBranch, BI index, KeyNext kn)                              // Get the specified key, next pair in the specified branch
@@ -5123,7 +5133,7 @@ B    0     1                  0   result
     for (int i = 1; i <= N; i++) m.put(m.new Key(i), m.new Data(2*i));
     m.execute();
 
-    stop(m.print());
+    //stop(m.print());
     ok(m.print(), """
                                                             17(8-0)                                                                    10(16-0)18                                                                                                                          |
                           26(4-17)23                                                           20(12-10)15                                                                    12(20-18)                            8(24-18)27                                              |
@@ -5131,23 +5141,27 @@ B    0     1                  0   result
 0,1,2=30           3,4=29           5,6=28           7,8=25        9,10=24            11,12=22            13,14=21            15,16=19           17,18=16            19,20=14          21,22=13           23,24=11           25,26=9         27,28=7           29,30,31=31 |
 """);
 
-    m.reset();
-    m.copy(m.leaf.unary.value, 3);                                              // Set leaf length
-    m.execute();
-
+    m.branchSetCurrentSize(27, 1);                                              // Make a pair of branches we can join
+    m.branchSetTopNext(27, 7);
+    //stop(m.layout);
     //stop(m.print());
     ok(m.print(), """
-          8(4-0)      7(6-0)9      |
-1,2,3,4=8       5,6=7        7,8=9 |
+                                                            17(8-0)                                                                    10(16-0)18                                                                                                     |
+                          26(4-17)23                                                           20(12-10)15                                                                    12(20-18)                            8(24-18)27                         |
+         30(2-26)29                        28(6-23)25                      24(10-20)22                             21(14-15)19                            16(18-12)14                           13(22-8)11                           9(26-27)7        |
+0,1,2=30           3,4=29           5,6=28           7,8=25        9,10=24            11,12=22            13,14=21            15,16=19           17,18=16            19,20=14          21,22=13           23,24=11           25,26=9          27,28=7 |
 """);
 
-    m.branchMergeLeaves(m.new NN(m.root), m.new BI(1));
+    m.reset();
+    m.branchMergeBranches(m.new NN(18), m.new BI(1));                           // Merge branches
     m.execute();
 
     //stop(m.print());
     ok(m.print(), """
-          8(4-0)7          |
-1,2,3,4=8        5,6,7,8=7 |
+                                                            17(8-0)                                                                    10(16-0)18                                                                                                 |
+                          26(4-17)23                                                           20(12-10)15                                                                    12(20-18)8                                                          |
+         30(2-26)29                        28(6-23)25                      24(10-20)22                             21(14-15)19                            16(18-12)14                            13(22-8)        7(24-8)        9(26-8)11         |
+0,1,2=30           3,4=29           5,6=28           7,8=25        9,10=24            11,12=22            13,14=21            15,16=19           17,18=16            19,20=14           21,22=13         27,28=7        25,26=9          23,24=11 |
 """);
    }
 
