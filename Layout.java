@@ -13,11 +13,20 @@ public class Layout extends Test implements LayoutAble                          
   Memory                memory = new Memory();                                  // A sample memory that can be freed if not wanted by assigning null to this non final field.
   final Stack<Layout> layouts  = new Stack<>();                                 // All the sub layouts added to this layout so we can unify their memory
 
-  void layout(Field field)                                                      // Create a new Layout loaded from a set of definitions
+  void layout(Field field)                                                      // Create a new Layout from a single field
    {top  = field;                                                               // Record layout
-    field.layout(0, 0);                                                         // Locate field positions
+    top.layout(0, 0);                                                           // Locate field positions
     //memory = new Memory();                                                    // Create a matching memory.
-    field.indexNames();                                                         // Index the names of the fields
+    top.indexNames();                                                           // Index the names of the fields
+    memory = new Memory();                                                      // New memory encompassing all the unified memories
+    unifyMemory(memory);                                                        // Unify the memory of all declared layouts with the memory of this layout
+   }
+
+  void layout(String name, Field...fields)                                      // Create a new Layout loaded from an implied structure of fields
+   {top = structure(name, fields);                                              // Create a structire to hold the fields
+    top.layout(0, 0);                                                           // Locate field positions
+    //memory = new Memory();                                                    // Create a matching memory.
+    top.indexNames();                                                           // Index the names of the fields
     memory = new Memory();                                                      // New memory encompassing all the unified memories
     unifyMemory(memory);                                                        // Unify the memory of all declared layouts with the memory of this layout
    }
@@ -35,9 +44,9 @@ public class Layout extends Test implements LayoutAble                          
     return d;
    }
 
-  LayoutAble duplicate()                                                        // Duplicate a layout and create a new memeory
-   {final LayoutAble d = copy();                                                // New layout
-    d.asLayout().memory = d.asLayout().new Memory();                            // New memory
+  LayoutAble duplicate()                                                        // Duplicate a layout and create a new memory initialized to the contents of the memory associated with the layout
+   {final LayoutAble d = copy();                                                // New layout copied from old layout
+    d.asLayout().memory = new Memory(memory);                                   // Copy memory of old layout
     return d;                                                                   // Duplicate
    }
 
@@ -92,12 +101,15 @@ public class Layout extends Test implements LayoutAble                          
   void    set(int i, Boolean b) {memory.setElementAt(b, i);}                    // Set a bit in the sample memory. This method should be overridden to drive a more useful memory that captures more information about its bits than just their values.
   Boolean get(int i)            {return memory.elementAt(i);}                   // Get a bit from the sample memory
 
-  class Memory extends Stack<Boolean>                                           // A sample memory that can be freed if not wanted by assigning null to this non final field.
+  class Memory extends Stack<Boolean>                                           // Mmeory associated with a layout
    {private static final long serialVersionUID = 1L;
     static int memories = 0;
     final int memoryNumber = ++memories;                                        // Number the memory to make assist debugging
     Memory()                                                                    // A memory large enough to hold the layout
      {if (top != null) for (int i = 0; i < top.width; i++) push(false);         // Initialize memory to zeros as this simplifies debugging
+     }
+    Memory(Memory source)                                                       // Make a copy of a memory
+     {for(Boolean b: source) push(b);
      }
     public String toString()                                                    // Print memory
      {final StringBuilder s = new StringBuilder();
@@ -318,6 +330,10 @@ public class Layout extends Test implements LayoutAble                          
      {final Layout d = copy();                                                  // New layout
       d.top.layout(0, 0);                                                       // Locate field positions relative to new top
       d.memory = d.new Memory();                                                // New memory
+      final int N = min(memory.size(), width);                                  // Amount of memory we can safely copy
+      for(int i = 0; i < N; ++i)
+       {d.memory.setElementAt(memory.elementAt(at+i), i);                       // Copy memory from source to target
+       }
       return d;                                                                 // Duplicate
      }
 
@@ -1000,7 +1016,7 @@ V   16     4                 15     e     e
 """);
    }
 
-  static void test_duplicate()
+  static void test_copy()
    {Layout l = new Layout();
     var a = l.variable ("a", 4);
     var b = l.variable ("b", 4);
@@ -1024,11 +1040,53 @@ V   16     4                 15     e     e
     D.get("d").ok(7);
     D.get("e").ok(15);
 
+    D.get("a").fromInt(1);
+    a.ok(1);
+
     //stop(D.top);
     D.ok("""
 T   At  Wide  Index       Value   Field name
-S    0    20            1012496   s
-V    0     4                  0     a     a
+S    0    20            1012497   s
+V    0     4                  1     a     a
+V    4     4                  1     b     b
+V    8     4                  3     c     c
+V   12     4                  7     d     d
+V   16     4                 15     e     e
+""");
+   }
+
+  static void test_duplicate()
+   {Layout l = new Layout();
+    var a = l.variable ("a", 4);
+    var b = l.variable ("b", 4);
+    var c = l.variable ("c", 4);
+    var d = l.variable ("d", 4);
+    var e = l.variable ("e", 4);
+    var s = l.structure("s", a, b, c, d, e);
+    l.layout(s);
+
+    a.fromUnary(0);
+    b.fromUnary(1);
+    c.fromUnary(2);
+    d.fromUnary(3);
+    e.fromUnary(4);
+
+    Layout D = l.duplicate().asLayout();
+
+    D.get("a").ok(0);
+    D.get("b").ok(1);
+    D.get("c").ok(3);
+    D.get("d").ok(7);
+    D.get("e").ok(15);
+
+    D.get("a").fromInt(1);
+    a.ok(0);
+
+    //stop(D.top);
+    D.ok("""
+T   At  Wide  Index       Value   Field name
+S    0    20            1012497   s
+V    0     4                  1     a     a
 V    4     4                  1     b     b
 V    8     4                  3     c     c
 V   12     4                  7     d     d
@@ -1045,8 +1103,7 @@ V   16     4                 15     e     e
     var d = l.variable ("d", 4);
     var t = l.structure("t", c, d);
     var e = l.variable ("e", 4);
-    var S = l.structure("S", e, s, t);
-    l.layout(S);
+    l.layout("S", e, s, t);
     a.fromInt(1);
     b.fromInt(2);
     c.fromInt(3);
@@ -1067,14 +1124,14 @@ V   16     4                  4       d     t.d
 """);
 
     final Layout j = t.duplicate();
-    j.get("c").ok(0);
-    j.get("d").ok(0);
+    j.get("c").ok(3);
+    j.get("d").ok(4);
     //stop(j);
     j.ok("""
 T   At  Wide  Index       Value   Field name
-S    0     8                  0   t
-V    0     4                  0     c     c
-V    4     4                  0     d     d
+S    0     8                 67   t
+V    0     4                  3     c     c
+V    4     4                  4     d     d
 """);
 
     final Layout k = t.copy();
@@ -1203,6 +1260,26 @@ V    4     4                  0     c     c
     ok(unary(5), 31);
    }
 
+  static void test_structure_implicit()
+   {Layout    l = new Layout();
+    Variable  a = l.variable ("a", 2);
+    Variable  b = l.variable ("b", 2);
+    Variable  c = l.variable ("c", 4);
+    l.layout("s", a, b, c);
+    a.fromInt(1);
+    b.fromInt(2);
+    c.fromInt(3);
+    //stop(l);
+    l.ok("""
+T   At  Wide  Index       Value   Field name
+S    0     8                 57   s
+V    0     2                  1     a     a
+V    2     2                  2     b     b
+V    4     4                  3     c     c
+""");
+   }
+
+
   static void oldTests()                                                        // Tests thought to be in good shape
    {test_1();
     test_memory();
@@ -1211,6 +1288,7 @@ V    4     4                  0     c     c
     test_sub_layout();
     test_union();
     test_unary();
+    test_copy();
     test_duplicate();
     test_duplicate_sub_layout();
     test_single_variable();
@@ -1219,10 +1297,12 @@ V    4     4                  0     c     c
     test_classes();
     test_binary_to_unary();
     test_like();
+    test_structure_implicit();
    }
 
   static void newTests()                                                        // Tests being worked on
    {oldTests();
+    test_duplicate();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
