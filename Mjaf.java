@@ -163,6 +163,31 @@ class Mjaf extends BitMachine                                                   
    {nodes.setIndex(0); isBranch.ones(); isLeaf.zero();
    }
 
+  void rootIsEmpty(Layout.Bit result) {branchIsEmpty(new NN(root), result);}    // Check whether the root is empty
+
+  Layout.Bit rootIsEmpty()                                                      // Check whether the root is empty
+   {final Layout.Bit result = Layout.createBit("rootIsEmpty");                  // Result bit
+    rootIsEmpty(result);                                                        // Check whether the root is empty
+    return result;
+   }
+
+  void mergeIntoRoot()                                                          // Merge the only child below an empty root into the root and free the now redundant child
+   {new If(rootIsEmpty())                                                       // Check whether the root branch is empty
+     {void Then()                                                               // Empty root branch
+       {final NN r = new NN(root), n = branchGetTopNext(r);                     // Child node
+        setIndex(nodes, n); copySetSource(branch);                              // Source of the copy is the child
+        setIndex(nodes, r); copySetTarget(branch);                              // Target of the copy is the root
+        copyLong(branchOrLeaf.width);                                           // Copy data from child to root
+        new If(isLeaf(n))                                                       // Check whether the child is a leaf
+         {void Then()                                                           // The child is a leaf
+           {leafMark(r);                                                        // The tree now consists of just the root node which is a leaf
+           }
+         };
+        free(n);                                                                // Free the redundant child as it is no longer needed
+       }
+     };
+   }
+
 //D1 Components                                                                 // The components of leaves and branches used to construct a tree
 
   class NN                                                                      // A node number
@@ -5188,6 +5213,40 @@ B    0     1                  0   result
 """);
    }
 
+  static void test_merge_into_root()
+   {final int BitsPerKey = 5, BitsPerData = 6, MaxKeysPerLeaf = 4, size = 3, N = 5;
+
+    final Mjaf m = mjaf(BitsPerKey, BitsPerData, MaxKeysPerLeaf, size);
+    for (int i = 1; i <= N; i++) m.put(m.new Key(i), m.new Data(2*i));
+    m.execute();
+    m.leafSetCurrentSize(2,2);
+
+    //stop(m.print());
+    ok(m.print(), """
+      1(2-0)2      |
+1,2=1        3,4=2 |
+""");
+
+    m.reset();
+    m.branchMergeLeaves(0, 0);
+    m.execute();
+    //stop(m.print());
+    ok(m.print(), """
+0-1          |
+   1,2,3,4=1 |
+""");
+
+    m.reset();
+    m.mergeIntoRoot();
+    m.execute();
+
+    //stop(m.print());
+    ok(m.print(), """
+1,2,3,4=0 |
+""");
+   }
+
+
   static void oldTests()                                                        // Tests thought to be in good shape
    {create_leaf_tree();                 create_branch_tree();
     test_leaf_make();                   test_branch_make();
@@ -5222,11 +5281,12 @@ B    0     1                  0   result
     test_branch_might_contain_key();
     test_unary();
     test_branch_merge_leaves(); test_branch_merge_branches();
+    test_merge_into_root();
    }
 
   static void newTests()                                                        // Tests being worked on
    {oldTests();
-    test_branch_merge_branches();
+    test_merge_into_root();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
