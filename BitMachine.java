@@ -23,6 +23,9 @@ public class BitMachine extends Test implements LayoutAble                      
   int                    step = 0;                                              // The number of the currently executing step
   static int BitMachineNumber = 0;                                              // Bit machine enumerator
 
+  int       copySourceAddress = 0;                                              // Source of a long copy
+  int       copyTargetAddress = 0;                                              // Target iof a long copy
+
   public Layout.Field asField () {return layout.top;}                           // Top most field of the layout associated with this bit machine
   public Layout       asLayout() {return layout;}                               // Layout associated with this bit machine
 
@@ -165,6 +168,48 @@ public class BitMachine extends Test implements LayoutAble                      
   Copy copy(Layout.Field Target, int TOff,                                      // Copy some bits from source plus offset to target plus offset
             Layout.Field Source, int SOff, int Length)
    {return new Copy(Target, TOff, Source, SOff, Length);
+   }
+
+  class CopyLong extends Instruction                                            // Copy bits from the source address set by copySetSource to the target address set by copySetTarget
+   {final int length;                                                           // Length of copy
+    CopyLong(int Length)                                                        // Specify length of copy
+     {length = Length;
+     }
+    void action()                                                               // Perform instruction
+     {for(int i = 0; i < length; ++i)                                           // Copy each bit assuming no overlap
+       {final Boolean b = layout.memory.get(copySourceAddress+i);
+        layout.memory.set(copyTargetAddress+i, b);
+       }
+     }
+   }
+  CopyLong copyLong(int Length)                                                 // Copy bits from source location to target location
+   {return new CopyLong(Length);
+   }
+
+  class CopySetSource extends Instruction                                       // Set the source address for a long copy
+   {final Layout.Field source;                                                  // Variable whose location is the source of the long copy
+    CopySetSource(Layout.Field Source)                                          // Specify length of copy
+     {source = Source;
+     }
+    void action()                                                               // Perform instruction
+     {copySourceAddress = source.at;                                            // Source address
+     }
+   }
+  CopySetSource copySetSource(Layout.Field source)                              // Set the source address for a long copy
+   {return new CopySetSource(source);
+   }
+
+  class CopySetTarget extends Instruction                                       // Set the target address for a long copy
+   {final Layout.Field target;                                                  // Variable whose location is the target of the long copy
+    CopySetTarget(Layout.Field Target)                                          // Specify length of copy
+     {target = Target;
+     }
+    void action()                                                               // Perform instruction
+     {copyTargetAddress = target.at;                                            // Target address
+     }
+   }
+  CopySetTarget copySetTarget(Layout.Field target)                              // Set the target address for a long copy
+   {return new CopySetTarget(target);
    }
 
 //D2 Arithmetic                                                                 // Integer arithmetic
@@ -804,8 +849,7 @@ public class BitMachine extends Test implements LayoutAble                      
       counter = layout.variable ("counter", array.size);
       limit   = layout.variable ("limit",   array.size);
       atEnd   = layout.bit      ("atEnd");
-      struct  = layout.structure("struct",  counter, limit, atEnd);
-      layout.layout(struct);
+      layout.layout("struct", counter, limit, atEnd);
       limit.ones();
 
       start = lessThan(atEnd, counter, limit);
@@ -1165,8 +1209,7 @@ public class BitMachine extends Test implements LayoutAble                      
    {Layout           l = new Layout();
     Layout.Variable  a = l.variable ("a", 4);
     Layout.Variable  b = l.variable ("b", 4);
-    Layout.Structure s = l.structure("s", a, b);
-    l.layout(s);
+    l.layout("s", a, b);
 
     BitMachine m = new BitMachine();
     m.zero(a);
@@ -1236,9 +1279,7 @@ V    4     4                 15     b     b
     Layout.Bit      a1 = l.bit      ("a1");
     Layout.Bit      b1 = l.bit      ("b1");
     Layout.Bit      b2 = l.bit      ("b2");
-    Layout.Structure s = l.structure("s", a, b, c,
-      aa, ab, ac, ba, bb, bc, ca, cb, cc, a0, a1, b1, b2);
-    l.layout(s);
+    l.layout("s", a, b, c, aa, ab, ac, ba, bb, bc, ca, cb, cc, a0, a1, b1, b2);
 
     a.fromInt(1);
     b.fromInt(2);
@@ -1311,9 +1352,7 @@ B   24     1                  0     b2     b2
     Layout.Bit      a0 = l.bit      ("a0");
     Layout.Bit      a1 = l.bit      ("a1");
     Layout.Bit      a2 = l.bit      ("a2");
-    Layout.Structure s = l.structure("s", a, b, c,
-      aa, ab, ac, ba, bb, bc, ca, cb, cc, a0, a1, a2);
-    l.layout(s);
+    l.layout("s", a, b, c, aa, ab, ac, ba, bb, bc, ca, cb, cc, a0, a1, a2);
 
     a.fromInt(1);
     b.fromInt(2);
@@ -1372,9 +1411,7 @@ B   23     1                  1     a2     a2
     Layout.Bit      a0 = l.bit      ("a0");
     Layout.Bit      a1 = l.bit      ("a1");
     Layout.Bit      a2 = l.bit      ("a2");
-    Layout.Structure s = l.structure("s", a, b, c,
-      aa, ab, ac, ba, bb, bc, ca, cb, cc, a0, a1, a2);
-    l.layout(s);
+    l.layout("s", a, b, c, aa, ab, ac, ba, bb, bc, ca, cb, cc, a0, a1, a2);
 
     a.fromInt(1);
     b.fromInt(2);
@@ -1421,8 +1458,7 @@ B   23     1                  1     a2     a2
     Layout.Variable  a = l.variable ("a", 4);
     Layout.Variable  b = l.variable ("b", 4);
     Layout.Variable  c = l.variable ("c", 4);
-    Layout.Structure s = l.structure("s", a, b, c);
-    l.layout(s);
+    l.layout("s", a, b, c);
 
     a.fromInt(7);
     b.fromInt(0);
@@ -1450,8 +1486,7 @@ V    8     4                  7     c     c
     Layout.Variable  a = l.variable ("a", 4);
     Layout.Bit       b = l.bit      ("b");
     Layout.Bit       c = l.bit      ("c");
-    Layout.Structure s = l.structure("s", a, b, c);
-    l.layout(s);
+    l.layout("s", a, b, c);
 
     a.fromInt(7);
     b.ones();
@@ -1477,8 +1512,7 @@ B    5     1                  0     c     c
     Layout.Variable  t = l.variable ("t", 4);
     Layout.Variable  e = l.variable ("e", 4);
     Layout.Bit       i = l.bit      ("i");
-    Layout.Structure x = l.structure("x", i, s, t, e);
-    l.layout(x);
+    l.layout("x", i, s, t, e);
 
     i.fromInt(1);
     s.fromInt(7);
@@ -1507,8 +1541,7 @@ V    9     4                  0     e     e
     Layout.Variable  s = l.variable ("s", 4);
     Layout.Variable  t = l.variable ("t", 4);
     Layout.Bit       i = l.bit      ("i");
-    Layout.Structure x = l.structure("x", i, s, t);
-    l.layout(x);
+    l.layout("x", i, s, t);
 
     i.fromInt(0);
     s.fromInt(7);
@@ -1535,8 +1568,7 @@ V    5     4                  7     t     t
     Layout.Variable  t = l.variable ("t", 4);
     Layout.Variable  e = l.variable ("e", 4);
     Layout.Bit       i = l.bit      ("i");
-    Layout.Structure x = l.structure("x", i, s, t, e);
-    l.layout(x);
+    l.layout("x", i, s, t, e);
 
     i.fromInt(0);
     s.fromInt(7);
@@ -1651,8 +1683,7 @@ V   88     8                 18       c     s.c
     Layout.Variable  a = l.variable ("a", 4);
     Layout.Variable  b = l.variable ("b", 4);
     Layout.Variable  c = l.variable ("c", 4);
-    Layout.Structure s = l.structure("s", a, b, c);
-    l.layout(s);
+    l.layout("s", a, b, c);
 
     a.fromInt(3);
     b.fromInt(3);
@@ -1822,8 +1853,7 @@ V   18     1                  0     NotAllOnes_f11     NotAllOnes_f11
    {Layout           l = new Layout();
     Layout.Variable  a = l.variable("a", 4);
     Layout.Variable  b = l.variable("b", 4);
-    Layout.Structure s = l.structure("s", a, b);
-    l.layout(s);
+    l.layout("s", a, b);
     a.fromInt(2); b.fromInt(2);
 
     BitMachine m = new BitMachine();
@@ -1845,8 +1875,7 @@ V    4     4                  1     b     b
     Layout.Variable  a = l.variable ("a", 4);
     Layout.Variable  b = l.variable ("b", 4);
     Layout.Variable  c = l.variable ("c", 4);
-    Layout.Structure s = l.structure("s", a, b, c);
-    l.layout(s);
+    l.layout("s", a, b, c);
 
     a.fromInt(3);
     b.fromInt(3);
@@ -1872,8 +1901,7 @@ V    8     4                  3     c     c
     Layout.Variable  a = l.variable ("a", 4);
     Layout.Variable  b = l.variable ("b", 4);
     Layout.Variable  c = l.variable ("c", 4);
-    Layout.Structure s = l.structure("s", a, b, c);
-    l.layout(s);
+    l.layout("s", a, b, c);
 
     b.fromUnary(4);
 
@@ -1914,8 +1942,7 @@ V    8     4                  7     c     c
     Layout.Variable  c = l.variable("c", 4);
     Layout.Bit      r1 = l.bit("r1");
     Layout.Bit      r2 = l.bit("r2");
-    Layout.Structure s = l.structure("s", a, b, c, r1, r2);
-    l.layout(s);
+    l.layout("s", a, b, c, r1, r2);
 
     a.fromUnary(1); b.fromUnary(1); c.fromUnary(3);
 
@@ -1944,8 +1971,7 @@ B   13     1                  1     r2     r2
     Layout.Structure s = l.structure("s", a, b, c);
     Layout.Array     A = l.array    ("A", s, N);
     Layout.Variable  d = l.variable ("d", N);
-    Layout.Structure S = l.structure("S", A, d);
-    l.layout(S);
+    l.layout("S", A, d);
 
     BitMachine m = new BitMachine();
     for(int i = 0; i < N; ++i)
@@ -1993,8 +2019,7 @@ V   48     4                  0     d     d
     Layout.Bit       a = l.bit      ("a");
     Layout.Bit       b = l.bit      ("b");
     Layout.Bit       c = l.bit      ("c");
-    Layout.Structure S = l.structure("S", a, b, c);
-    l.layout(S);
+    l.layout("S", a, b, c);
 
     BitMachine m = new BitMachine();
     m.new Block()
@@ -2015,6 +2040,83 @@ B    1     1                  0     b     b
 B    2     1                  1     c     c
 """);
    }
+
+  static void test_copy_long()
+   {final int N = 4;
+    Layout           l = new Layout();
+    Layout.Variable  a = l.variable ("a", 8);
+    Layout.Variable  b = l.variable ("b", 8);
+    Layout.Variable  c = l.variable ("c", 8);
+    Layout.Structure s = l.structure("s", a, b, c);
+    Layout.Array     A = l.array    ("A", s, N);
+    l.layout(A);
+
+    for (int i = 0; i < N; i++)
+     {A.setIndex(i);
+      a.fromInt(1*(i+1));
+      b.fromInt(2*(i+2));
+      c.fromInt(3*(i+3));
+     }
+    //stop(l);
+    l.ok("""
+T   At  Wide  Index       Value   Field name
+A    0    96      0               A
+S    0    24             590849     s     s
+V    0     8                  1       a     s.a
+V    8     8                  4       b     s.b
+V   16     8                  9       c     s.c
+A   24    96      1               A
+S   24    24             787970     s     s
+V   24     8                  2       a     s.a
+V   32     8                  6       b     s.b
+V   40     8                 12       c     s.c
+A   48    96      2               A
+S   48    24             985091     s     s
+V   48     8                  3       a     s.a
+V   56     8                  8       b     s.b
+V   64     8                 15       c     s.c
+A   72    96      3               A
+S   72    24            1182212     s     s
+V   72     8                  4       a     s.a
+V   80     8                 10       b     s.b
+V   88     8                 18       c     s.c
+""");
+
+    final Layout.Variable i = Layout.createVariable("index", 4);
+
+    BitMachine m = new BitMachine();
+    m.setLayout(l);                                                             // Memory to be manipulated by copyLong
+    m.copy(i, 1); m.setIndex(A, i); m.copySetSource(c);
+    m.copy(i, 2); m.setIndex(A, i); m.copySetTarget(b);
+    m.copyLong(c.width);
+    m.execute();
+
+    A.setIndex(2); b.ok(12);
+    //stop(l);
+    l.ok("""
+T   At  Wide  Index       Value   Field name
+A    0    96      0               A
+S    0    24             590849     s     s
+V    0     8                  1       a     s.a
+V    8     8                  4       b     s.b
+V   16     8                  9       c     s.c
+A   24    96      1               A
+S   24    24             787970     s     s
+V   24     8                  2       a     s.a
+V   32     8                  6       b     s.b
+V   40     8                 12       c     s.c
+A   48    96      2               A
+S   48    24             986115     s     s
+V   48     8                  3       a     s.a
+V   56     8                 12       b     s.b
+V   64     8                 15       c     s.c
+A   72    96      3               A
+S   72    24            1182212     s     s
+V   72     8                  4       a     s.a
+V   80     8                 10       b     s.b
+V   88     8                 18       c     s.c
+""");
+  }
 
   static void oldTests()                                                        // Tests thought to be in good shape
    {test_zero_and_ones();
@@ -2039,11 +2141,11 @@ B    2     1                  1     c     c
     test_unary_filled();
     test_set_index();
     test_return_regardless();
+    test_copy_long();
    }
 
   static void newTests()                                                        // Tests being worked on
-   {//oldTests();
-    test_unless_then();
+   {oldTests();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
