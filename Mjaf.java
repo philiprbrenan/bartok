@@ -5111,7 +5111,7 @@ B    0     1                  0   result
     for (int i = 1; i <= N; i++) m.put(m.new Key(i), m.new Data(2*i));
     m.execute();
 
-    stop(m.print());
+    //stop(m.print());
     ok(m.print(), """
       8(2-0)      7(4-0.1)9          |
 1,2=8       3,4=7          5,6,7,8=9 |
@@ -5122,8 +5122,8 @@ B    0     1                  0   result
     m.execute();
     //stop(m.print());
     ok(m.print(), """
-      8(2-0)      7(4-0.1)9          |
-1,2=8       3,4=7          5,6,7,8=9 |
+          8(4-0)9          |
+1,2,3,4=8        5,6,7,8=9 |
 """);
 
     m.reset();
@@ -5134,8 +5134,8 @@ B    0     1                  0   result
 
     //stop(m.print());
     ok(m.print(), """
-          8(4-0)      7(6-0)9      |
-1,2,3,4=8       5,6=7        7,8=9 |
+          8(4-0)      7(6-0.1)9      |
+1,2,3,4=8       5,6=7          7,8=9 |
 """);
 
     m.branchMergeLeaves(m.new NN(m.root), m.new BI(1));
