@@ -37,8 +37,8 @@ class MjafPut extends Mjaf                                                      
 
     //stop(m.print());
     ok(m.print(), """
-      8(2-0)      7(4-0)      6(6-0)9        |
-1,2=8       3,4=7       5,6=6        7,8,9=9 |
+      8(2-0)      7(4-0.1)      6(6-0.2)9        |
+1,2=8       3,4=7         5,6=6          7,8,9=9 |
 """);
 
     //stop(p);                                                                  // Path starts at root and then goes to leaf 4
@@ -167,8 +167,8 @@ say("AAAA", m.print());
    }
 
   static void newTests()                                                        // Tests being worked on
-   {//oldTests();
-    //test_split_reduction();
+   {oldTests();
+    test_split_reduction();
     test_merge_leaves_into_root();
    }
 
