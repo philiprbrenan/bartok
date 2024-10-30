@@ -177,7 +177,8 @@ public class BitMachine extends Test implements LayoutAble                      
      }
     void action()                                                               // Perform instruction
      {for(int i = 0; i < length; ++i)                                           // Copy each bit assuming no overlap
-       {final Boolean b = layout.memory.get(copySourceAddress+i);
+       {final int I  = i;
+        final Boolean b = layout.memory.get(copySourceAddress+i);
         layout.memory.set(copyTargetAddress+i, b);
        }
      }
