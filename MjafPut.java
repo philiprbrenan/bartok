@@ -122,13 +122,54 @@ m.new Say() {void action() {say("DDDD");}};
 say("AAAA", m.print());
    }
 
+  static void test_merge_leaves_into_root()                                     // Merge leaves into root
+   {final int BitsPerKey = 5, BitsPerData = 6, MaxKeysPerLeaf = 4, size = 3,
+      N = 5;
+
+    final Mjaf m = mjaf(BitsPerKey, BitsPerData, MaxKeysPerLeaf, size);
+    for (int i = 1; i <= N; i++) m.put(m.new Key(i), m.new Data(2*i));
+    m.execute();
+    m.leafSetCurrentSize(2,2);
+
+    //stop(m.print());
+    ok(m.print(), """
+      1(2-0)2      |
+1,2=1        3,4=2 |
+""");
+
+    m.reset();
+    m.branchMergeLeaves(0,0);
+    m.execute();
+    //stop(m.print());
+    ok(m.print(), """
+0-1          |
+   1,2,3,4=1 |
+""");
+
+    m.new If(m.branchIsEmpty(m.new NN(0)))
+     {void Then()
+       {m.new Say() {void action() {say("AAAA");}};
+        final Layout.Variable v = Layout.createVariable("leaf", m.leaf.width);
+       }
+     };
+
+    m.execute();
+
+    //stop(m.print());
+    ok(m.print(), """
+0-1          |
+   1,2,3,4=1 |
+""");
+   }
+
   static void oldTests()                                                        // Tests thought to be in good shape
    {test_split_reduction();
    }
 
   static void newTests()                                                        // Tests being worked on
    {//oldTests();
-    test_split_reduction();
+    //test_split_reduction();
+    test_merge_leaves_into_root();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
