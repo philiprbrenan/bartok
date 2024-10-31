@@ -41,7 +41,7 @@ class MjafPut extends Mjaf                                                      
 1,2=8       3,4=7         5,6=6          7,8,9=9 |
 """);
 
-    //stop(p);                                                                  // Path starts at root and then goes to leaf 4
+    //stop(p);                                                                  // Path starts at root and then goes to leaf 9
     p.ok("""
 T   At  Wide  Index       Value   Field name
 V    0     5                  8   key
@@ -97,21 +97,74 @@ the key as the parent.
 
 The advanatage of this technique is that it minimizes the nmber of expensive
 splits performed while keeping the tree dense.  Splitting all the branches in
-the path startingat the root can split branches unnecessarily, and failing to
+the path starting at the root can split branches unnecessarily, and failing to
 recombine them afterwards leaves the tree more open than necessary.
  */
 
     m.reset();
-
-    m.new Unless(i.valid)                                                       // Root is the first branch to be split
-     {void Then()                                                               //
+    m.new Unless(i.valid)                                                       // Do we need to split the root?
+     {void Then()                                                               // Root is the first branch to be split
        {final NN root = m.new NN(m.root);
         m.branchSplitRoot();
-        final KeyNext left  = m.branchGetFirst(root);
-        final KeyNext right = m.branchGetLast (root);
+        final KeyNext left  = m.branchGetFirst(root);                           // Key, next pair dscribing the left child of the root
+        final NN         ln = left.next();                                      // Index of left child
+        final NN         rn = m.branchGetTopNext(root);                         // Index of right child
         final NN      child = m.branchFindFirstGreaterOrEqual(root, k);         // Step down from root
 
-        final Layout.Bit keyInLeft = m.equals(left.next().v, child.v);          // Stepped to left hand child
+        m.new IfElse (m.equals(ln.v, child.v))                                  // Did we descend to the left child?
+         {void Then()                                                           // Stepped to left hand child so put it in the path and leave the right child alone as there is no other child to combine it with
+           {p.path.setElementAt(ln.v, root.v);                                  // Place the left child back in the path because the leaf we are seeking is under it
+           }
+          void Else()                                                           // Stepped to right hand child so put it in the path and leave the left child alone as there is no other child to combine it with
+           {p.path.setElementAt(rn.v, root.v);                                  // Place the left child back in the path becuae the leaf we are seeking is under it
+           }
+         };
+       }
+     };
+    m.execute();
+
+    //stop(m.print());                                                            // Path starts at root and then goes to leaf 4
+    ok(m.print(), """
+                   4(4-0)5                     |
+      8(2-4)7                   6(6-5)9        |
+1,2=8        3,4=7        5,6=6        7,8,9=9 |
+""");
+
+    //stop(p);
+    p.ok("""
+T   At  Wide  Index       Value   Field name
+V    0     5                  8   key
+T   At  Wide  Index       Value   Field name
+B    0     1                  1   found
+T   At  Wide  Index       Value   Field name
+S    0    25            1048581   path
+A    0    20      0           5     array     array
+V    0     4                  5       nodeIndex     array.nodeIndex
+A    4    20      1           5     array     array
+V    4     4                  0       nodeIndex     array.nodeIndex
+A    8    20      2           5     array     array
+V    8     4                  0       nodeIndex     array.nodeIndex
+A   12    20      3           5     array     array
+V   12     4                  0       nodeIndex     array.nodeIndex
+A   16    20      4           5     array     array
+V   16     4                  0       nodeIndex     array.nodeIndex
+V   20     5                  1     unary     unary
+T   At  Wide  Index       Value   Field name
+V    0     4                  9   nodeIndex
+T   At  Wide  Index       Value   Field name
+V    0     4                  1   leafIndex
+""");
+
+// The index position i now shows the position of the last not full branch, either because it actually found one correctly or because we split the root to make one - and - in this case the index was already zero so it now shows the correct result for this outcome as well.
+
+say("AAAA---------------------------------------------------");
+    m.reset();
+    p.path.new Up()                                                             // Iterate through the path
+     {void before() {m.copy(index, i.index);}                                   // Start at the index of the last not full branch
+      void up(Repeat r)
+       {final Layout.Variable parent = p.nodeIndex.v.like();                    // Current last not full branch will be the parent
+        p.path.elementAt(parent, index);                                        // Index of parent node
+        m.new Say() {void action() {say("AAAA");}};
        }
      };
     m.execute();
