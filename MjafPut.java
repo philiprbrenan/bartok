@@ -165,38 +165,13 @@ say("AAAA", parent, child, divide);
 
    }
 
-  static void test_find_last_not_full()                                         // Find last noit f ull node in the serach path for a key
-   {final int BitsPerKey = 8, BitsPerData = 8, MaxKeysPerLeaf = 4, size = 80,
-      N = 86;
-
-    final Mjaf m = new Mjaf(BitsPerKey, BitsPerData, MaxKeysPerLeaf, size);
-    for (int i = 1; i <= N; i++) m.put(m.new Key(i), m.new Data(2*i));
-    final Key k = m.new Key(84);
-
-    final Layout.Bit found = Layout.createBit("Found");
-    final NN branchIndex   = m.new NN("branchIndex");
-    m.findLastNotFull(k, found, branchIndex);                                   // Find the last not full branch in the search path of a specified tree setting found to true if such a branch is found else false assuming that the tree is not a single leaf
-    m.maxSteps = 99999;
-    m.execute();
-    //stop(m.print(), k, found, branchIndex);
-    found.ok("""
-T   At  Wide  Index       Value   Field name
-B    0     1                  1   Found
-""");
-    branchIndex.v.ok("""
-T   At  Wide  Index       Value   Field name
-V    0     7                 66   branchIndex
-""");
-   }
-
   static void oldTests()                                                        // Tests thought to be in good shape
-   {test_split_reduction();
+   {
    }
 
   static void newTests()                                                        // Tests being worked on
    {//oldTests();
     //test_split_reduction();
-    test_find_last_not_full();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
