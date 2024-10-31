@@ -17,7 +17,7 @@ class MjafPut extends Mjaf                                                      
 
 //D1 Find last not full
 
-  void findLastNotFull(Key Key, Layout.Bit Found, NN branchIndex)               // Find the last not full branch in the search path of a specified tree setting found to true if such a branch is found else false assuming that the tree is not a single leaf
+  void findLastNotFull(Key Key, Layout.Bit Found, NN branchIndex)               // Find the last not full branch in the search path of a key over a specified tree setting found to true if such a branch is found else false assuming that the tree is not a single leaf
    {final NN nodeIndex  = new NN();                                             // Node index variable
     final NN childIndex = new NN("child");                                      // Next child down
 
