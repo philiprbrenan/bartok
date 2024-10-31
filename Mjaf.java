@@ -180,18 +180,23 @@ class Mjaf extends BitMachine                                                   
    }
 
   void mergeIntoRoot()                                                          // Merge the only child below an empty root into the root and free the now redundant child
-   {new If(rootIsEmpty())                                                       // Check whether the root branch is empty
+   {final NN r = new NN(root);                                                  // Index the root
+    new Unless(isLeaf(r))                                                       // Require the root to be a branch
      {void Then()                                                               // Empty root branch
-       {final NN r = new NN(root), n = branchGetTopNext(r);                     // Child node
-        setIndex(nodes, n); copySetSource(branch);                              // Source of the copy is the child
-        setIndex(nodes, r); copySetTarget(branch);                              // Target of the copy is the root
-        copyLong(branchOrLeaf.width);                                           // Copy data from child to root
-        new If(isLeaf(n))                                                       // Check whether the child is a leaf
-         {void Then()                                                           // The child is a leaf
-           {leafMark(r);                                                        // The tree now consists of just the root node which is a leaf
+       {new If(rootIsEmpty())                                                   // Check whether the root branch is empty
+         {void Then()                                                           // Empty root branch
+           {final NN n = branchGetTopNext(r);                                   // Child node
+            setIndex(nodes, n); copySetSource(branch);                          // Source of the copy is the child
+            setIndex(nodes, r); copySetTarget(branch);                          // Target of the copy is the root
+            copyLong(branchOrLeaf.width);                                       // Copy data from child to root
+            new If(isLeaf(n))                                                   // Check whether the child is a leaf
+             {void Then()                                                       // The child is a leaf
+               {leafMark(r);                                                    // The tree now consists of just the root node which is a leaf
+               }
+             };
+            free(n);                                                            // Free the redundant child as it is no longer needed
            }
          };
-        free(n);                                                                // Free the redundant child as it is no longer needed
        }
      };
    }
