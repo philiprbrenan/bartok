@@ -171,6 +171,14 @@ class Mjaf extends BitMachine                                                   
     return result;
    }
 
+  void rootIsFull(Layout.Bit result) {branchIsFull(new NN(root), result);}      // Check whether the root is full
+
+  Layout.Bit rootIsFull()                                                       // Check whether the root is full
+   {final Layout.Bit result = Layout.createBit("rootIsFull");                   // Result bit
+    rootIsFull(result);                                                         // Check whether the root is empty
+    return result;
+   }
+
   void mergeIntoRoot()                                                          // Merge the only child below an empty root into the root and free the now redundant child
    {new If(rootIsEmpty())                                                       // Check whether the root branch is empty
      {void Then()                                                               // Empty root branch
