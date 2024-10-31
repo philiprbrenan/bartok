@@ -261,7 +261,7 @@ class Stuck extends BitMachine implements LayoutAble                            
      {super("index");
       past();
       before();                                                                 // Before the loop starts
-      Repeat r = new Repeat()                                                              // Block of code for each iteration
+      Repeat r = new Repeat()                                                  // Block of code for each iteration
        {void code()
          {returnIfOne(isFirst());                                               // No more entries
           dec();                                                                // Move down
@@ -1270,13 +1270,13 @@ B    7     1                  0     l3     l3
     s.push(33);
 
     s.new Up()
-     {void up()
+     {void up(Repeat r)
        {t.push(value);
        }
      };
     s.execute();
 
-    s.ok("""
+    t.ok("""
 T   At  Wide  Index       Value   Field name
 S    0    42                      s
 A    0    36      0      136587     array     array
