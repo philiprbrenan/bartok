@@ -7,7 +7,7 @@ package com.AppaApps.Silicon;                                                   
 // Assert Branch or Leaf for all parameters indexing a branch or a leaf
 // Use Stuck.Index everywhere possible
 // Use put(int, int) where possible
-// Remove .v
+// Improve .v by implementing Layoutable so that, although on occasion, we are forced to retrieve this value, it is at least done in a more consistent and elegant manner
 // add index 0.0, 0.1 etc to branch descriptions in print()
 import java.util.*;
 
@@ -1009,15 +1009,15 @@ class Mjaf extends BitMachine                                                   
      };
    }
 
-  void branchFindFirstGreaterOrEqual(NN NodeIndex, Key Key, NN Result)          // Find the 'next' for the first key in a branch that is greater than or equal to the specified key or else return the top node if no such key exists.
-   {new Block()
+  BI branchFindFirstGreaterOrEqual(NN NodeIndex, Key Key, NN Result)            // Find the 'next' for the first key in a branch that is greater than or equal to the specified key or else the top node if no such key exists.
+   {final BI index = new BI();                                                  // Index of the first key, next pairs in the branch where the key is greater than or equal to the serach key, or if there is no such key, the last key making it impossible to distinguish the case between the last key, next pair being the answer or not when process a full branch.
+    new Block()
      {void code()
        {final Block outer = this;
         new Block()
          {void code()
            {final Block inner = this;
             final KeyNext  kn = new KeyNext();                                  // Work area for transferring key data pairs from the source code to the target node
-            final BI    index = new BI();                                       // Index the key, next pairs in the branch
             zero(index.v);
             setIndex(nodes, NodeIndex);                                         // Index the node to search
             for (int i = 0; i < maxKeysPerBranch; i++)                          // Check each key
@@ -1033,7 +1033,7 @@ class Mjaf extends BitMachine                                                   
         copy(Result.v, topNext);                                                // The search key is greater than all the keys in the branch so return the top node
        }
      }; // Outer block to exit when we have found the key
-
+    return index;                                                               // Index of the first key, next pairs in the branch where the key is greater than or equal to the serach key, or if there is no such key, the last key making it impossible to distinguish the case between the last key, next pair being the answer or not when process a full branch.
    }
 
   NN branchFindFirstGreaterOrEqual(NN NodeIndex, Key Key)                       // Return the 'next' for the first key in a branch that is greater than or equal to the specified key or else return the top node if no such key exists.
