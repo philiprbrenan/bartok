@@ -15,37 +15,6 @@ class MjafPut extends Mjaf                                                      
    {super(BitsPerKey, BitsPerData, MaxKeysPerLeaf, size);
    }
 
-//D1 Find last not full
-
-  void findLastNotFull(Key Key, Layout.Bit Found, NN branchIndex)               // Find the last not full branch in the search path of a key over a specified tree setting found to true if such a branch is found else false assuming that the tree is not a single leaf
-   {final NN nodeIndex  = new NN();                                             // Node index variable
-    final NN childIndex = new NN("child");                                      // Next child down
-
-    new IfElse(rootIsFull())                                                    // Check the root
-     {void Then()                                                               // The root is full
-       {zero(Found);                                                            // So far we cannot cannot find such a branch
-       }
-      void Else()                                                               // The root is a possibility
-       {ones(Found);                                                            // Flag as possible
-        copy(branchIndex.v, root);                                              // Save index of possibility
-       }
-     };
-
-    new Repeat()
-     {void code()
-       {branchFindFirstGreaterOrEqual(nodeIndex, Key, childIndex);              // Step down to child
-        returnIfOne(isLeaf(childIndex));                                        // Exit when we reach a leaf
-        new Unless(branchIsFull(childIndex))                                    // Is the child full?
-         {void Then()                                                           // Theis branch is  better possibility
-           {ones(Found);                                                        // Flag as possible
-            copy(branchIndex.v, childIndex.v);                                  // Save index of possibility
-           }
-         };
-        copy(nodeIndex.v, childIndex.v);
-       }
-     };
-   }
-
 //D0 Tests                                                                      // Testing
 
 //  ok(m.printHorizontally(), """
@@ -200,7 +169,7 @@ say("AAAA", parent, child, divide);
    {final int BitsPerKey = 8, BitsPerData = 8, MaxKeysPerLeaf = 4, size = 80,
       N = 86;
 
-    final MjafPut m = new MjafPut(BitsPerKey, BitsPerData, MaxKeysPerLeaf, size);
+    final Mjaf m = new Mjaf(BitsPerKey, BitsPerData, MaxKeysPerLeaf, size);
     for (int i = 1; i <= N; i++) m.put(m.new Key(i), m.new Data(2*i));
     final Key k = m.new Key(84);
 
