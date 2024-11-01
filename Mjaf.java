@@ -3,12 +3,11 @@
 // Philip R Brenan at appaapps dot com, Appa Apps Ltd Inc., 2024
 //------------------------------------------------------------------------------
 package com.AppaApps.Silicon;                                                   // Design, simulate and layout  a binary tree on a silicon chip.
-// Use derived classes to specialize Layouts used as parameters to supply typing
 // Assert Branch or Leaf for all parameters indexing a branch or a leaf
 // Use Stuck.Index everywhere possible
 // Use put(int, int) where possible
 // Improve .v by implementing Layoutable so that, although on occasion, we are forced to retrieve this value, it is at least done in a more consistent and elegant manner
-// add index 0.0, 0.1 etc to branch descriptions in print()
+// have execute() clear the instruction stack via reset each time
 import java.util.*;
 
 class Mjaf extends BitMachine                                                   // BTree algorithm but with data stored only in the leaves to facilitate deletion without complicating search or insertion. The branches (interior nodes) have an odd number of keys to make the size of a branch as close to that of a leaf as possible to simplify memory management.
@@ -520,21 +519,51 @@ class Mjaf extends BitMachine                                                   
     return target;
    }
 
-  NN leafFission(NN parent, NN source)                                          // Split a leaf that is one of children of its parent branch
-   {KeyData kd = leafSplitKey(source);                                          // Leaf splitting key
-    NN  target = leafSplit(source);                                             // Split leaf, the target leaf is on the left
+  NN leafFission(NN parent, NN source, Key Search)                              // Split a leaf that is one of children of its parent branch assuming the parent is not full
+   {final KeyData   kd = leafSplitKey(source);                                  // Leaf splitting key
+    final NN    target = leafSplit(source);                                     // Split leaf, the target leaf is on the left because it contains the lower keys
 
-    Key      k = kd.key();                                                      // Split key
-    KeyNext kn = new KeyNext(k, target);                                        // Key, next pair for insertion into branch
-    NN       t = branchGetTopNext(parent);                                      // Top next of parent
+    final Key        k = kd.key();                                              // Split key
+    final KeyNext   kn = new KeyNext(k, target);                                // Key, next pair for insertion into branch
+    final NN         t = branchGetTopNext(parent);                              // Top next of parent
 
-    new IfElse(equals(t.v, source.v))                                           // Source is top next of parent
+    final Layout.Bit f = Layout.createBit("foundKey");                          // Whether a dividing key, next pair was found in the branch for the search key
+    final Layout.Bit e = Layout.createBit("equals");                            // Whether two fields are equal
+
+    new IfElse(equals(t.v, source.v))                                           // Source is top next
      {void Then()
        {branchPush(parent, kn);                                                 // Append split out leaf as last key, next pair.
+        final BranchFirstGreaterThanOrEqual eq =                                // Find the position of the search key in the parent now that the splitting key has been inserted
+              branchFirstGreaterOrEqual(parent, Search);
+        new Unless(eq.found)                                                    // Source leaf is top next so target, which is on the left might be mergable with its left sibling
+         {void Then()                                                           // Try to merge target with a lefthand sibling
+           {final Layout.Bit lte = Layout.createBit("lessThanEqual");
+            lessThanOrEqual(lte, eq.branchIndex.v, 1);                          // Is there room for a left hand sibling ?
+            new Unless(lte)                                                     // Is there room for a left hand sibling ?
+             {void Then()                                                       // Try to merge target with a lefthand sibling
+               {shiftRightOneByZero(eq.branchIndex.v);                          // Address target
+                shiftRightOneByZero(eq.branchIndex.v);                          // Address left sibling of target
+                branchMergeLeaves(parent, eq.branchIndex);                      // Try and merge the target with its left sibling as the search went through source which happens to be top next
+               }
+             };
+           }
+         };
        }
-      void Else()
-       {BI i = branchFindFirstGreaterOrEqualIndex(parent, k);                   // Position to insert into branch
-        branchInsert(parent, i, kn);
+      void Else()                                                               // Source is not top next
+       {final BranchFirstGreaterThanOrEqual eq =                                // Find the position of the search key in the parent branch now that the splitting key has been inserted
+          branchFirstGreaterOrEqual(parent, Search);
+        final KeyNext lkn = branchGetLast(parent);                              // Last key, next entry in parent branch
+        final Layout.Bit e = Layout.createBit("equals");
+        Mjaf.this.equals(e, lkn.next().v, source.v);                            // Is source referenced by the last key, next pair in the parent branch?
+        new IfElse(e)                                                           // Is source referenced by the last key, next pair in the parent branch?
+         {void Then()                                                           // Source is referenced by the last key, next pair in the parent branch
+           {branchMergeTopLeaves(parent);                                       // Merge top two leaves becuase the left one is the source that is being split
+           }
+          void Else()                                                           // Source is not referenced by the last key, next pair in the parent branch
+           {branchMergeLeaves(parent, eq.branchIndex);                          // Merge source with right sibling
+           }
+         };
+        branchInsert(parent, eq.branchIndex, kn);                               // Insert the target in the parent branch where the source is moving source up one in the process
        }
      };
     return target;                                                              // The split out leaf
@@ -553,7 +582,8 @@ class Mjaf extends BitMachine                                                   
    }
 
   void leafJoin(NN target, NN source)                                           // Join the specified source leaf onto the end of the target leaf
-   {new Repeat()
+   {new Say() {void action() {say("AAAA", target, source);}};
+    new Repeat()
      {void code()
        {setIndex(nodes, source);                                                // Address source
         returnIfAllZero(leaf.currentSize());                                    // Exit then the source leaf has been emptied
@@ -595,9 +625,9 @@ class Mjaf extends BitMachine                                                   
             zero(Leaf.v);                                                       // Start with the first key, next pair in the leaf
             ones(Result);                                                       // Assume  success
             for (int i = 0; i < maxKeysPerLeaf; i++)                            // Check each key
-             {inner.returnIfEqual(Leaf.v, leaf.currentSize());                  // Passed all the valid keys - serach key is bigger than all keys
+             {inner.returnIfEqual(Leaf.v, leaf.currentSize());                  // Passed all the valid keys - search key is bigger than all keys
               leafGet(NodeIndex, Leaf, kd);                                     // Retrieve key/data pair from leaf
-              outer.returnIfLessThan(Key.v, kd.v.asLayout().get("leafKey"));    // Found a key greater than the serach key
+              outer.returnIfLessThan(Key.v, kd.v.asLayout().get("leafKey"));    // Found a key greater than the search key
               shiftLeftOneByOne(Leaf.v);                                        // Next key
              }
            }
@@ -892,20 +922,52 @@ class Mjaf extends BitMachine                                                   
     branchSplitRoot(F1, F2);
    }
 
-  NN branchFission(NN parent, NN source)                                        // Split a branch that is one of the children of its parent branch
-   {final KeyNext  kn = branchSplitKey(source);                                 // Branch splitting key
-    final NN   target = branchSplit(source);                                    // Split branch, the target branch is on the left
-    final Key       k = kn.key();                                               // Split key
-    final KeyNext pkn = new KeyNext(k, target);                                 // Key, next pair for insertion into branch
-    final NN        t = branchGetTopNext(parent);                               // Top next of parent
+  NN branchFission(NN parent, NN source, Key Search)                            // Split a branch that is one of the children of its parent branch while looking for the indicated key
+   {final KeyNext   kn = branchSplitKey(source);                                // Child banch splitting key
+    final NN    target = branchSplit(source);                                   // Split child branch, the target branch is on the left
+    final Key        k = kn.key();                                              // Split key
+    final KeyNext  pkn = new KeyNext(k, target);                                // Key, next pair for insertion into branch
+    final NN         t = branchGetTopNext(parent);                              // Top next of parent
+    final Layout.Bit f = Layout.createBit("foundKey");                          // Whether a dividing key, next pair was found in the branch for the search key
+    final Layout.Bit e = Layout.createBit("equals");                            // Whether two fields are equal
 
-    new IfElse(equals(t.v, source.v))                                           // Source is top next of parent
-     {void Then()
+    new IfElse(equals(t.v, source.v))                                           // Is source the top next of parent?
+     {void Then()                                                               // Source is top next of parent
        {branchPush(parent, pkn);                                                // Append split out branch as last key, next pair.
+        final BI i = branchFindFirstGreaterOrEqualIndex(parent, Search, f);     // Find the position of the search key in the parent now that the splitting key has been inserted
+        new Unless(f)                                                           // If we could not find the search key, next pair then the search key would go via the source which is top next meaning we can try a merge on the left with the target
+         {void Then()                                                           // Try to merge target with a lefthand sibling
+           {final Layout.Variable z = branchGetCurrentSize(parent);             // Size of parent tells us where the target child is that we are going to try to merge with its left child
+            Mjaf.this.equals(e, z, 0);                                          // Is there a child that we can merge the target with?
+            new Unless(e)                                                       // Is there a child that we can merge the target with?
+             {void Then()                                                       // Merge target which does not lead to the leaf that will contain the search key with iots left sibling
+               {shiftRightOneByZero(z);                                         // Address child to left of target
+                branchMergeBranches(parent, new BI(z));                         // The children of the parent are assumed to be branches so we might be able to merge them
+               }
+             };
+           }
+         };
        }
-      void Else()
-       {final BI i = branchFindFirstGreaterOrEqualIndex(parent, k);             // Position to insert into branch
+      void Else()                                                               // Source child is not the top next of the parent
+       {final BI i = branchFindFirstGreaterOrEqualIndex(parent, k, f);          // Position of splitting key as inserted into the parent some where other than top next
         branchInsert(parent, i, pkn);                                           // Insert splitting key into branch
+        final NN j = branchFindFirstGreaterOrEqual     (parent, Search);        // Child containing search key
+        final BI J = branchFindFirstGreaterOrEqualIndex(parent, Search, f);     // Child containing search key
+        Mjaf.this.equals(e, j.v, source.v);                                     // Is there a child that we can merge the target with?
+        new If(e)                                                               // Search key is in source on right so try merging target left
+         {void Then()                                                           // Merge target, on the left, with its sibling on the left as the search wen through te source branch on the right
+           {Mjaf.this.equals(e, J.v, 0);                                        // Is there a left sibling of the target?
+            new Unless(e)                                                       // Is there a left sibling of the target?
+             {void Then()                                                       // Merge target, on left, with left sibling as search wen through the source branch on the right
+               {shiftRightOneByZero(J.v);                                       // Address left sibling
+                branchMergeBranches(parent, J);                                 // The children of the parent are assumed to be branches so we might be able to merge them
+               }
+             };
+           }
+          void Else()                                                           // Merge source, on the right, with its right sibling as the search went through the target on the left
+           {branchMergeBranches(parent, J);                                   // The children of the parent are assumed to be branches so we might be able to merge them
+           }
+         };
        }
      };
     return target;                                                              // The split out branch
@@ -946,50 +1008,62 @@ class Mjaf extends BitMachine                                                   
     free(source);                                                               // Free the branch that was joined
    }
 
-  void branchMergeLeaves(NN NodeIndex, BI IBranch)                              // Merge the leaves associated with the indexed key, next pair in the specified branch
-   {final BI  iBranch1 = IBranch.duplicate();                                   // Make a copy of this parameter so we can adjust it
-    shiftLeftOneByOne(iBranch1.v);                                              // Get leaf associated with the next key up
-    final Layout.Variable z = branchGetCurrentSize(NodeIndex);                  // Size of branch
-
-    new IfElse(equals(z, iBranch1.v))                                           // Are we merging the leaves associated with the last key, next pair
-     {void Then()                                                               // Merging the leaves associated with the last key, next pair
-       {final KeyNext    lkn = branchGet(NodeIndex, IBranch);                   // Key next, pair describing left leaf
-        final NN    leftLeaf = new NN(lkn.next().v);                            // Address left leaf
-        final NN   rightLeaf = branchGetTopNext(NodeIndex);                     // Address right leaf which is located via top next
-        new If(leafJoinable(rightLeaf, leftLeaf))                               // Are the leaves joinable?
-         {void Then()                                                           // Join the leaves
-           {leafJoin(leftLeaf, rightLeaf);                                      // Join right leaf into left leaf to get the order right
-            branchRemove(NodeIndex, IBranch);                                   // Remove key, next pair associated with left leaf
-            branchSetTopNext(NodeIndex, lkn.next());                            // Set the top next to left leaf
-            free(rightLeaf);                                                    // Free the right leaf as it is now empty
-           }
-         };
-       }
-      void Else()                                                               // Merging  the leaves associated with a key, next pair other than the last one
-       {final KeyNext    lkn = branchGet(NodeIndex, IBranch);                   // Key next, pair describing left leaf
-        final NN    leftLeaf = new NN(lkn.next().v);                            // Address left leaf
-        final KeyNext    rkn = branchGet(NodeIndex, iBranch1);                  // Key next, pair describing right leaf
-        final NN   rightLeaf = new NN(rkn.next().v);                            // Address right leaf
-        new If(leafJoinable(rightLeaf, leftLeaf))                               // Are the leaves joinable
-         {void Then()                                                           // Join the leaves
-           {leafJoin(leftLeaf, rightLeaf);                                      // Join right leaf into left leaf to get the order right
-            branchRemove(NodeIndex, iBranch1);                                  // Remove key, next pair associated with right leaf
-            copy(lkn.key().v, rkn.key().v);                                     // Update the key of the key, next pair for the left leaf to include the keys merged from the right leaf
-            branchPut(NodeIndex, IBranch, lkn);                                 // Update the branch with the updated key, next pair whoing the new key for this key, next pair
-            free(rightLeaf);                                                    // Free the right leaf as it is now empty
+  void branchMergeTopLeaves(NN NodeIndex)                                       // Merge the top two leaves of a branch if possible. We assume that the children of the parent are leaves without checking that this is true.
+   {new Block()
+     {void code()
+       {final BI size = new BI(branchGetCurrentSize(NodeIndex));                // Size of branch
+        returnIfAllZero(size.v);                                                // Cannot merge an empty branch
+        final KeyNext tkn = branchGetLast(NodeIndex);                           // Get last key, next of branch
+        final NN     left = tkn.next();                                         // Last key, next pair indicates the left child leaf
+        final NN    right = branchGetTopNext(NodeIndex);                        // Top node indicates the right child leaf
+        new If(leafJoinable(left, right))                                       // Can we join the two leaves?
+         {void Then()                                                           // Join the two leaves
+           {leafJoin(left, right);                                              // Merge the right leaf into the left leaf
+            branchSetTopNext(NodeIndex, left);                                  // Make the left leaf inot the new top next
+            branchStuck.pop(tkn.v.asLayout());                                  // Remove the last key, next pair
+            free(right);                                                        // free the right leaf as its content is now all merged into the left leaf forming the new top next of the branch
            }
          };
        }
      };
    }
 
-  void branchMergeLeaves(int NodeIndex, int IBranch)                            // Merge the leaves associated with the indexed key, next pair in the specified branch
+  void branchMergeLeaves(NN NodeIndex, BI Left)                                 // Merge the two leaves of a branch on either side of the indicated key, next pair if possible. We assume that the children of the parent are leaves without checking that this is true.
+   {new Block()
+     {void code()
+       {final BI size = new BI(branchGetCurrentSize(NodeIndex));                // Size of branch
+        returnIfAllZero(size.v);                                                // Cannot merge an empty branch
+        shiftRightOneByZero(size.v);                                            // Index of last key, next pair
+        returnIfAllZero(size.v);                                                // Cannot merge a branch that only has only one key, next pair - use branchMergeTopLeaves() instead
+        returnIfGreaterThanOrEqual(Left.v, size.v);                             // Cannot merge beyond end of branch. We are comparing unary but lessThanOrEqual works correctly on unary as well as binary
+        final BI right = new BI(Left.v.like());                                 // Storage for index of right leaf
+        copy(right.v, Left.v);                                                  // Start at left leaf
+        shiftLeftOneByOne(right.v);                                             // Go one step right to right leaf
+        returnIfGreaterThan(right.v, size.v);                                   // Cannot merge beyond end of branch
+
+        final KeyNext lkn = branchGet(NodeIndex, Left);                         // Left leaf key, next pair
+        final KeyNext rkn = branchGet(NodeIndex, right);                        // Right leaf key, next pair
+        final NN        l = lkn.next();                                         // Left leaf index
+        final NN        r = rkn.next();                                         // Right leaf index
+        new If(leafJoinable(l, r))                                              // Can we join the two leaves?
+         {void Then()                                                           // Join the two leaves
+           {leafJoin(l, r);                                                     // Merge the right leaf into the left leaf
+            copy(rkn.next().v, l.v);                                            // Point the right key, net pair at the merged leaf
+            branchPut(NodeIndex, right, rkn);                                   // Make the branch refer to the merged leaf
+            branchRemove(NodeIndex, Left);                                      // Remove the key, next pair describing the left leaf because the left lef has had the righ leaf merged into it and then been reused as the right leaf
+           }
+         };
+       }
+     };
+   }
+
+  void branchMergeLeaves(int NodeIndex, int IBranch)                            // Merge the leaves on either side of the indexed key, next pair in the specified branch
    {final NN nodeIndex = new NN(NodeIndex);
     final BI iBranch   = new BI(IBranch);
     branchMergeLeaves(nodeIndex, iBranch);
    }
 
-  void branchMergeBranches(NN NodeIndex, BI IBranch)                            // Merge the branches associated with the indexed key, next pair in the specified branch
+  void branchMergeBranches(NN NodeIndex, BI IBranch)                            // Merge the branches on either side of the indexed key, next pair in the specified branch
    {final BI  iBranch1 = IBranch.duplicate();                                   // Make a copy of this parameter so we can adjust it
     shiftLeftOneByOne(iBranch1.v);                                              // Get leaf associated with the next key up
     final Layout.Variable z = branchGetCurrentSize(NodeIndex);                  // Size of branch
@@ -1027,7 +1101,7 @@ class Mjaf extends BitMachine                                                   
    }
 
   BI branchFindFirstGreaterOrEqual(NN NodeIndex, Key Key, NN Result)            // Find the 'next' for the first key in a branch that is greater than or equal to the specified key or else the top node if no such key exists.
-   {final BI index = new BI();                                                  // Index of the first key, next pairs in the branch where the key is greater than or equal to the serach key, or if there is no such key, the last key making it impossible to distinguish the case between the last key, next pair being the answer or not when process a full branch.
+   {final BI index = new BI();                                                  // Index of the first key, next pairs in the branch where the key is greater than or equal to the search key, or if there is no such key, the last key making it impossible to distinguish the case between the last key, next pair being the answer or not when process a full branch.
     new Block()
      {void code()
        {final Block outer = this;
@@ -1050,7 +1124,7 @@ class Mjaf extends BitMachine                                                   
         copy(Result.v, topNext);                                                // The search key is greater than all the keys in the branch so return the top node
        }
      }; // Outer block to exit when we have found the key
-    return index;                                                               // Index of the first key, next pairs in the branch where the key is greater than or equal to the serach key, or if there is no such key, the last key making it impossible to distinguish the case between the last key, next pair being the answer or not when process a full branch.
+    return index;                                                               // Index of the first key, next pairs in the branch where the key is greater than or equal to the search key, or if there is no such key, the last key making it impossible to distinguish the case between the last key, next pair being the answer or not when process a full branch.
    }
 
   NN branchFindFirstGreaterOrEqual(NN NodeIndex, Key Key)                       // Return the 'next' for the first key in a branch that is greater than or equal to the specified key or else return the top node if no such key exists.
@@ -1059,8 +1133,9 @@ class Mjaf extends BitMachine                                                   
     return Result;
    }
 
-  BI branchFindFirstGreaterOrEqualIndex(NN NodeIndex, Key Key)                  // Assuming the branch is not full, find the index for the first key in a branch that is greater than or equal to the specified key or else return all ones if no such key exists.
+  BI branchFindFirstGreaterOrEqualIndex(NN NodeIndex, Key Key, Layout.Bit Found)// Find the index for the first key in a branch that is greater than or equal to the specified key and set found to true, else set found to false
    {final BI result = new BI();
+    ones(Found);                                                                // Assume we will suceed in finding a key, next pair greater than or equal to the search key
     new Block()
      {void code()
        {final Block outer = this;
@@ -1075,16 +1150,64 @@ class Mjaf extends BitMachine                                                   
             for (int i = 0; i < maxKeysPerBranch; i++)                          // Check each key
              {inner.returnIfEqual(index.v, branchStuck.currentSize());          // Passed all the valid keys
               branchGet(NodeIndex, index, kn);                                  // Retrieve key/next pair
-              copy(result.v, index.v);
-              outer.returnIfGreaterThanOrEqual(kn.key().v, Key.v);
+              copy(result.v, index.v);                                          // Save index of latest key
+              outer.returnIfGreaterThanOrEqual(kn.key().v, Key.v);              // Matching key so exit
               shiftLeftOneByOne(index.v);
              }
            }
          }; // Inner block in which we search for the key
-        ones(result.v);
+        zero(Found);                                                            // Failed to find a key in the branch greater than or equal to the search key
        }
      }; // Outer block to exit when we have found the key
     return result;
+   }
+
+  class BranchFirstGreaterThanOrEqual                                           // Find the the first key, next pair in a branch whose key is greater than or equal to the search key.
+   {final NN        parent;                                                     // Parent branch to search
+    final Key       search;                                                     // Search key
+    final Layout.Bit found;                                                     // Whether a key, next pair in the branch whose key is greater than or equal to the search key was found
+    final BI   branchIndex;                                                     // The  index in the branch of a key, next pair in the branch whose key is greater than or equal to the search key if such a key was found otherwise the size of the branch
+    final NN         child;                                                     // The child this search would step to
+    final Layout.Variable size;                                                 // Current size of branch
+
+    BranchFirstGreaterThanOrEqual(NN Parent, Key Search)                        // Find the index for the first key in a branch that is greater than or equal to the specified key and set found to true, else set found to false
+     {branchIndex = new BI("branchIndex");
+            child = new NN("child");
+           found  = Layout.createBit("found");
+           parent = Parent;
+           search = Search;
+
+      zero(branchIndex.v);                                                      // Assume we will succeed in finding a key, next pair greater than or equal to the search key
+      ones(found);                                                              // Assume we will succeed in finding a key, next pair greater than or equal to the search key
+      size = branchStuck.currentSize();                                         // Current size of branch
+
+      new Block()
+       {void code()
+         {final Block outer = this;
+          new Block()
+           {void code()
+             {final Block inner = this;                                         // The inner code block in which we hope to find the matching key, next pair
+              final KeyNext  kn = new KeyNext();                                // Work area for transferring key data pairs from the source code to the target node
+
+              setIndex(nodes, parent);                                          // Index the node to search
+
+              for (int i = 0; i < maxKeysPerBranch; i++)                        // Check each key
+               {inner.returnIfEqual(branchIndex.v, size);                       // Passed all the valid keys
+                branchGet(parent, branchIndex, kn);                             // Retrieve key/next pair
+                outer.returnIfGreaterThanOrEqual(kn.key().v, search.v);         // Matching key so exit
+                shiftLeftOneByOne(branchIndex.v);
+               }
+             }
+           }; // Inner block in which we search for the key
+          zero(found);                                                          // Failed to find a key in the branch greater than or equal to the search key
+          copy(child.v,  branchGetTopNext(parent).v);                             // Child is  top next becuase we failed to find a key in the branch greater than or equal to the search key
+         }
+       }; // Outer block to exit when we have found the key
+     }
+   }
+
+  BranchFirstGreaterThanOrEqual branchFirstGreaterOrEqual(NN Parent, Key Search)// Find the index for the first key in a branch that is greater than or equal to the specified key and set found to true, else set found to false
+   {return new BranchFirstGreaterThanOrEqual(Parent, Search);
    }
 
   int branchSize(int nodeIndex)                                                 // Number of key, data pairs in a branch
@@ -1362,7 +1485,7 @@ class Mjaf extends BitMachine                                                   
 
             new IfElse (branchIsFull(q))                                        // Split the child branch because it is full and we might need to insert below it requiring a slot in this branch
              {void Then()                                                       // Branch is full
-               {branchFission(p, q);                                            // Split full branch
+               {branchFission(p, q, Key);                                       // Split full branch
                }
               void Else()                                                       // Branch was not full
                {copy(p.v, q.v);                                                 // Step down
@@ -1371,7 +1494,7 @@ class Mjaf extends BitMachine                                                   
            }
          };
 
-        leafFission(p, q);                                                      // If the leaf did not need splitting findAndInsert() would have suceeded
+        leafFission(p, q, Key);                                                      // If the leaf did not need splitting findAndInsert() would have suceeded
         branchFindFirstGreaterOrEqual(p, Key, q);                               // Step down to next child which will be a leaf that has just ben split or split out
         leafInsertPair(q, Key, Data);
        } // code
@@ -3610,7 +3733,7 @@ B    3     1                  1     bF     bF
   static void test_leaf_greater_than_or_equal()                                 // Find index of first key in aa leaf greater than or equal to a test key
    {TestLeafTree    t = new TestLeafTree();                                     // Create a test tree
     Mjaf            m = t.mjaf;                                                 // Bit machine to process the tree
-    Layout.Variable k = m.leafKey.like();                                       // Key to serach for
+    Layout.Variable k = m.leafKey.like();                                       // Key to search for
     Layout.Variable i = m.leaf.unary.value.like();                              // Index of key sought
     Layout.Bit      f = Layout.createBit("found");                              // Whether such a key was found or not
 
@@ -3716,40 +3839,81 @@ V  264     3                  7               unary     nodes.node.branchOrLeaf.
 """);
 
     m.copy(t.nodeIndex, 2);
-    Key k = m.new Key (6);                                                       // Key to locate
-    BI  i = m.branchFindFirstGreaterOrEqualIndex(m.new NN(t.nodeIndex), k);     // Find index of key
+    Key        k = m.new Key (6);                                               // Key to locate
+    Layout.Bit f = Layout.createBit("found");
+    BI  i = m.branchFindFirstGreaterOrEqualIndex(m.new NN(t.nodeIndex), k, f);  // Find index of key
     m.execute();
-    //stop(i);
+    //stop(i,f);
     i.v.ok("""
 T   At  Wide  Index       Value   Field name
 V    0     3                  0   branchIndex
+""");
+    f.ok("""
+T   At  Wide  Index       Value   Field name
+B    0     1                  1   found
 """);
 
     m.reset();
     m.copy(k.v, 7);
-    i = m.branchFindFirstGreaterOrEqualIndex(m.new NN(t.nodeIndex), k);         // Find index of key
+    i = m.branchFindFirstGreaterOrEqualIndex(m.new NN(t.nodeIndex), k, f);      // Find index of key
     m.execute();
     //stop(i);
     i.v.ok("""
 T   At  Wide  Index       Value   Field name
 V    0     3                  0   branchIndex
 """);
+    f.ok("""
+T   At  Wide  Index       Value   Field name
+B    0     1                  1   found
+""");
 
     m.reset();
     m.copy(k.v, 8);
-    i = m.branchFindFirstGreaterOrEqualIndex(m.new NN(t.nodeIndex), k);         // Find index of key
+    i = m.branchFindFirstGreaterOrEqualIndex(m.new NN(t.nodeIndex), k, f);      // Find index of key
     m.execute();
     //stop(i);
     i.v.ok("""
 T   At  Wide  Index       Value   Field name
 V    0     3                  1   branchIndex
 """);
+    f.ok("""
+T   At  Wide  Index       Value   Field name
+B    0     1                  1   found
+""");
+
+    m.reset();
+    m.copy(k.v, 9);
+    i = m.branchFindFirstGreaterOrEqualIndex(m.new NN(t.nodeIndex), k, f);      // Find index of key
+    m.execute();
+    //stop(i);
+    i.v.ok("""
+T   At  Wide  Index       Value   Field name
+V    0     3                  3   branchIndex
+""");
+    f.ok("""
+T   At  Wide  Index       Value   Field name
+B    0     1                  1   found
+""");
+
+    m.reset();
+    m.copy(k.v, 10);
+    i = m.branchFindFirstGreaterOrEqualIndex(m.new NN(t.nodeIndex), k, f);      // Find index of key
+    m.execute();
+    //stop(i);
+    i.v.ok("""
+T   At  Wide  Index       Value   Field name
+V    0     3                  3   branchIndex
+""");
+    f.ok("""
+T   At  Wide  Index       Value   Field name
+B    0     1                  0   found
+""");
    }
 
   static void test_branch_top_next()                                            // Get and set the top next field in a branch
    {TestBranchTree  t = new TestBranchTree();                                   // Create a test tree
     Mjaf            m = t.mjaf;                                                 // Bit machine to process the tree
-    NN              n = m.new NN(0);                                              // Located next node index
+    NN              n = m.new NN(0);                                            // Located next node index
 
     m.copy(t.nodeIndex, 2);
     m.branchGetTopNext(m.new NN(t.nodeIndex), n);
@@ -4317,7 +4481,7 @@ V  318     4                 15             unary     nodes.node.branchOrLeaf.le
 """);
 
     m.reset();
-    m.leafFission(b, l);
+    m.leafFission(b, l, m.new Key(0));  // Key(0 added but  will need fixing
     m.execute();
 
     //stop(m.layout);
@@ -4432,7 +4596,7 @@ V  264     3                  7               unary     nodes.node.branchOrLeaf.
 """);
 
     m.reset();
-    m.branchFission(B, b);
+    m.branchFission(B, b, m.new Key(0)); // Thhis will need improving now we are trying to recompress the tree afte spliting a branch
     m.execute();
 
    // stop(m.layout);
@@ -5202,18 +5366,39 @@ B    0     1                  0   result
     m.execute();
    }
 
-  static void test_branch_merge_leaves()                                        // Merge the two leaves under a key at the specified index in branch
-   {final int BitsPerKey = 5, BitsPerData = 6, MaxKeysPerLeaf = 4, size = 10,
-      N = 8;
+  static void test_branch_merge_top_leaves()
+   {final int BitsPerKey = 4, BitsPerData = 4, MaxKeysPerLeaf = 4, size = 4, N = 5;
+
+    final MjafPut m = new MjafPut(BitsPerKey, BitsPerData, MaxKeysPerLeaf, size);
+    for (int i = 1; i <= N; i++) m.put(i, i);
+    m.execute();
+
+    m.leafSetCurrentSize(3, 2);
+    //stop(m.print());
+    ok(m.print(), """
+      2(2-0)3      |
+1,2=2        3,4=3 |
+""");
+    m.reset();
+    m.branchMergeTopLeaves(m.new NN(m.root));
+    m.execute();
+    ok(m.print(), """
+0-2          |
+   1,2,3,4=2 |
+""");
+   }
+
+  static void test_branch_merge_leaves1()                                       // Merge the two leaves under a key at the specified index in branch
+   {final int BitsPerKey = 5, BitsPerData = 6, MaxKeysPerLeaf = 4, size = 20, N = 20;
 
     final Mjaf m = new Mjaf(BitsPerKey, BitsPerData, MaxKeysPerLeaf, size);
     for (int i = 1; i <= N; i++) m.put(m.new Key(i), m.new Data(2*i));
     m.execute();
 
-    //stop(m.print());
+    stop(m.print());
     ok(m.print(), """
-      8(2-0)      7(4-0.1)9          |
-1,2=8       3,4=7          5,6,7,8=9 |
+          3(4-0)      2(6-0.1)4           |
+1,2,3,4=3       5,6=2          7,8,9,10=4 |
 """);
 
     m.reset();
@@ -5244,6 +5429,29 @@ B    0     1                  0   result
     ok(m.print(), """
           8(4-0)7          |
 1,2,3,4=8        5,6,7,8=7 |
+""");
+   }
+
+  static void test_branch_merge_leaves2()
+   {final int BitsPerKey = 4, BitsPerData = 4, MaxKeysPerLeaf = 4, size = 8, N = 7;
+
+    final MjafPut m = new MjafPut(BitsPerKey, BitsPerData, MaxKeysPerLeaf, size);
+    for (int i = 1; i <= N; i++) m.put(i, i);
+    m.execute();
+
+    //stop(m.print());
+    ok(m.print(), """
+      6(2-0)      5(4-0.1)7        |
+1,2=6       3,4=5          5,6,7=7 |
+""");
+    m.reset();
+    m.branchMergeLeaves(m.new NN(m.root), m.new BI(0));
+    m.execute();
+
+    //stop(m.print());
+    ok(m.print(), """
+          6(4-0)7        |
+1,2,3,4=6        5,6,7=7 |
 """);
    }
 
@@ -5320,7 +5528,7 @@ B    0     1                  0   result
 """);
    }
 
-  static void test_find_last_not_full()                                         // Find last noit f ull node in the serach path for a key
+  static void test_find_last_not_full()                                         // Find last not full node in the search path for a key
    {final int BitsPerKey = 8, BitsPerData = 8, MaxKeysPerLeaf = 4, size = 80,
       N = 86;
 
@@ -5334,6 +5542,20 @@ B    0     1                  0   result
     m.execute();
     //stop(m.print(), k, branchIndex, m.step);
     branchIndex.v.ok("""
+T   At  Wide  Index       Value   Field name
+V    0     7                 47   lastNotFull
+""");
+   }
+
+  static void test_compressed()
+   {final int BitsPerKey = 8, BitsPerData = 8, MaxKeysPerLeaf = 4, size = 4,
+      N = 8;
+
+    final Mjaf m = new Mjaf(BitsPerKey, BitsPerData, MaxKeysPerLeaf, size);
+    for (int i = 1; i <= N; i++) m.put(i, 2*i);
+    m.execute();
+    stop(m.print());
+    m.layout.ok("""
 T   At  Wide  Index       Value   Field name
 V    0     7                 47   lastNotFull
 """);
@@ -5375,15 +5597,19 @@ V    0     7                 47   lastNotFull
     test_put9();
     test_branch_might_contain_key();
     test_unary();
-    test_branch_merge_leaves();
+    test_branch_merge_top_leaves();
+    test_branch_merge_leaves1();
+    test_branch_merge_leaves2();
     test_branch_merge_branches();
     test_merge_into_root();
     test_find_last_not_full();
    }
 
   static void newTests()                                                        // Tests being worked on
-   {oldTests();
-    //test_find_last_not_full();
+   {//oldTests();
+    test_branch_merge_top_leaves();
+    test_branch_merge_leaves1();
+    test_branch_merge_leaves2();
     //test_branch_merge_branches();
    }
 
