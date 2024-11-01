@@ -165,9 +165,98 @@ say("AAAA", parent, child, divide);
 
    }
 
+  void branchMergeTopLeaves(NN NodeIndex)                                       // Merge the top two leaves of a branch if possible. We assume that the children of the parent are leaves without checking that this is true.
+   {new Block()
+     {void code()
+       {final BI size = new BI(branchGetCurrentSize(NodeIndex));                // Size of branch
+        returnIfAllZero(size.v);                                                // Cannot merge an empty branch
+        final KeyNext tkn = branchGetLast(NodeIndex);                           // Get last key, next of branch
+        final NN     left = tkn.next();                                         // Last key, next pair indicates the left child leaf
+        final NN    right = branchGetTopNext(NodeIndex);                        // Top node indicates the right child leaf
+        new If(leafJoinable(left, right))                                       // Can we join the two leaves?
+         {void Then()                                                           // Join the two leaves
+           {leafJoin(left, right);                                              // Merge the right leaf into the left leaf
+            branchSetTopNext(NodeIndex, left);                                  // Make the left leaf inot the new top next
+            branchStuck.pop(tkn.v.asLayout());                                  // Remove the last key, next pair
+            free(right);                                                        // free the right leaf as its content is now all merged into the left leaf forming the new top next of the branch
+           }
+         };
+       }
+     };
+   }
 
+  static void test_branch_merge_top_leaves()
+   {final int BitsPerKey = 4, BitsPerData = 4, MaxKeysPerLeaf = 4, size = 4, N = 5;
 
+    final MjafPut m = new MjafPut(BitsPerKey, BitsPerData, MaxKeysPerLeaf, size);
+    for (int i = 1; i <= N; i++) m.put(i, i);
+    m.execute();
 
+    m.leafSetCurrentSize(3, 2);
+    //stop(m.print());
+    ok(m.print(), """
+      2(2-0)3      |
+1,2=2        3,4=3 |
+""");
+    m.reset();
+    m.branchMergeTopLeaves(m.new NN(m.root));
+    m.execute();
+    ok(m.print(), """
+0-2          |
+   1,2,3,4=2 |
+""");
+   }
+
+  void branchMergeLeaves(NN NodeIndex, BI Left)                                 // Merge the two leaves of a branch on either side of the indicated key, next pair if possible. We assume that the children of the parent are leaves without checking that this is true.
+   {new Block()
+     {void code()
+       {final BI size = new BI(branchGetCurrentSize(NodeIndex));                // Size of branch
+        returnIfAllZero(size.v);                                                // Cannot merge an empty branch
+        shiftRightOneByZero(size.v);                                            // Index of last key, next pair
+        returnIfAllZero(size.v);                                                // Cannot merge a branch that only has only one key, next pair - use branchMergeTopLeaves() instead
+        returnIfGreaterThanOrEqual(Left.v, size.v);                             // Cannot merge beyond end of branch. We are comapring inunary but lessThanOrEqual works correctly on unary as well as binary
+        final BI right = new BI(Left.v.like());                                 // Storage for index of right leaf
+        shiftLeftOneByOne(right.v);                                             // Index of right leaf
+        returnIfGreaterThan(right.v, size.v);                                   // Cannot merge beyond end of branch
+
+        final KeyNext lkn = branchGet(NodeIndex, Left);                         // Left leaf key, next pair
+        final KeyNext rkn = branchGet(NodeIndex, right);                        // Right leaf key, next pair
+        final NN        l = lkn.next();                                         // Left leaf index
+        final NN        r = rkn.next();                                         // Right leaf index
+        new If(leafJoinable(l, r))                                              // Can we join the two leaves?
+         {void Then()                                                           // Join the two leaves
+           {leafJoin(l, r);                                                     // Merge the right leaf into the left leaf
+            copy(rkn.next().v, l.v);                                            // Point the right key, net pair at the merged leaf
+            branchPut(NodeIndex, right, rkn);                                   // Make the branch refer to the merged leaf
+            branchRemove(NodeIndex, Left);                                      // Remove the key, next pair describing the left leaf because the left lef has had the righ leaf merged into it and then been reused as the right leaf
+           }
+         };
+       }
+     };
+   }
+
+  static void test_branch_merge_leaves()
+   {final int BitsPerKey = 4, BitsPerData = 4, MaxKeysPerLeaf = 4, size = 8, N = 7;
+
+    final MjafPut m = new MjafPut(BitsPerKey, BitsPerData, MaxKeysPerLeaf, size);
+    for (int i = 1; i <= N; i++) m.put(i, i);
+    m.execute();
+
+    //stop(m.print());
+    ok(m.print(), """
+      6(2-0)      5(4-0.1)7        |
+1,2=6       3,4=5          5,6,7=7 |
+""");
+    m.reset();
+    m.branchMergeLeaves(m.new NN(m.root), m.new BI(0));
+    m.execute();
+
+    //stop(m.print());
+    ok(m.print(), """
+          6(4-0)7        |
+1,2,3,4=6        5,6,7=7 |
+""");
+   }
 
   static void oldTests()                                                        // Tests thought to be in good shape
    {
@@ -176,6 +265,7 @@ say("AAAA", parent, child, divide);
   static void newTests()                                                        // Tests being worked on
    {//oldTests();
     //test_split_reduction();
+    test_branch_merge_leaves();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
