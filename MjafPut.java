@@ -265,7 +265,7 @@ say("AAAA", parent, child, divide);
   static void newTests()                                                        // Tests being worked on
    {//oldTests();
     //test_split_reduction();
-    test_branch_merge_leaves();
+    //test_branch_merge_leaves();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
