@@ -922,52 +922,51 @@ class Mjaf extends BitMachine                                                   
     branchSplitRoot(F1, F2);
    }
 
-  NN branchFission(NN parent, NN source, Key Search)                            // Split a branch that is one of the children of its parent branch while looking for the indicated key
-   {final KeyNext   kn = branchSplitKey(source);                                // Child banch splitting key
-    final NN    target = branchSplit(source);                                   // Split child branch, the target branch is on the left
+  NN branchFission(NN parent, NN source, Key Search)                            // Split a branch that is one of children of its parent branch assuming the parent is not full
+   {final KeyNext   kn = branchSplitKey(source);                                // Branch splitting key
+    final NN    target = branchSplit(source);                                   // Split branch, the target branch is on the left because it contains the lower keys
+
     final Key        k = kn.key();                                              // Split key
     final KeyNext  pkn = new KeyNext(k, target);                                // Key, next pair for insertion into branch
     final NN         t = branchGetTopNext(parent);                              // Top next of parent
+
     final Layout.Bit f = Layout.createBit("foundKey");                          // Whether a dividing key, next pair was found in the branch for the search key
     final Layout.Bit e = Layout.createBit("equals");                            // Whether two fields are equal
 
-    new IfElse(equals(t.v, source.v))                                           // Is source the top next of parent?
-     {void Then()                                                               // Source is top next of parent
+    new IfElse(equals(t.v, source.v))                                           // Source is top next
+     {void Then()
        {branchPush(parent, pkn);                                                // Append split out branch as last key, next pair.
-        final BI i = branchFindFirstGreaterOrEqualIndex(parent, Search, f);     // Find the position of the search key in the parent now that the splitting key has been inserted
-        new Unless(f)                                                           // If we could not find the search key, next pair then the search key would go via the source which is top next meaning we can try a merge on the left with the target
+        final BranchFirstGreaterThanOrEqual eq =                                // Find the position of the search key in the parent now that the splitting key has been inserted
+              branchFirstGreaterOrEqual(parent, Search);
+        new Unless(eq.found)                                                    // Source branch is top next so target, which is on the left might be mergable with its left sibling
          {void Then()                                                           // Try to merge target with a lefthand sibling
-           {final Layout.Variable z = branchGetCurrentSize(parent);             // Size of parent tells us where the target child is that we are going to try to merge with its left child
-            Mjaf.this.equals(e, z, 0);                                          // Is there a child that we can merge the target with?
-            new Unless(e)                                                       // Is there a child that we can merge the target with?
-             {void Then()                                                       // Merge target which does not lead to the leaf that will contain the search key with iots left sibling
-               {shiftRightOneByZero(z);                                         // Address child to left of target
-                branchMergeBranches(parent, new BI(z));                         // The children of the parent are assumed to be branches so we might be able to merge them
+           {final Layout.Bit lte = Layout.createBit("lessThanEqual");
+            lessThanOrEqual(lte, eq.branchIndex.v, 1);                          // Is there room for a left hand sibling ?
+            new Unless(lte)                                                     // Is there room for a left hand sibling ?
+             {void Then()                                                       // Try to merge target with a lefthand sibling
+               {shiftRightOneByZero(eq.branchIndex.v);                          // Address target
+                shiftRightOneByZero(eq.branchIndex.v);                          // Address left sibling of target
+                branchMergeLeaves(parent, eq.branchIndex);                      // Try and merge the target with its left sibling as the search went through source which happens to be top next
                }
              };
            }
          };
        }
-      void Else()                                                               // Source child is not the top next of the parent
-       {final BI i = branchFindFirstGreaterOrEqualIndex(parent, k, f);          // Position of splitting key as inserted into the parent some where other than top next
-        branchInsert(parent, i, pkn);                                           // Insert splitting key into branch
-        final NN j = branchFindFirstGreaterOrEqual     (parent, Search);        // Child containing search key
-        final BI J = branchFindFirstGreaterOrEqualIndex(parent, Search, f);     // Child containing search key
-        Mjaf.this.equals(e, j.v, source.v);                                     // Is there a child that we can merge the target with?
-        new If(e)                                                               // Search key is in source on right so try merging target left
-         {void Then()                                                           // Merge target, on the left, with its sibling on the left as the search wen through te source branch on the right
-           {Mjaf.this.equals(e, J.v, 0);                                        // Is there a left sibling of the target?
-            new Unless(e)                                                       // Is there a left sibling of the target?
-             {void Then()                                                       // Merge target, on left, with left sibling as search wen through the source branch on the right
-               {shiftRightOneByZero(J.v);                                       // Address left sibling
-                branchMergeBranches(parent, J);                                 // The children of the parent are assumed to be branches so we might be able to merge them
-               }
-             };
+      void Else()                                                               // Source is not top next
+       {final BranchFirstGreaterThanOrEqual eq =                                // Find the position of the search key in the parent branch now that the splitting key has been inserted
+          branchFirstGreaterOrEqual(parent, Search);
+        final KeyNext lkn = branchGetLast(parent);                              // Last key, next entry in parent branch
+        final Layout.Bit e = Layout.createBit("equals");
+        Mjaf.this.equals(e, lkn.next().v, source.v);                            // Is source referenced by the last key, next pair in the parent branch?
+        new IfElse(e)                                                           // Is source referenced by the last key, next pair in the parent branch?
+         {void Then()                                                           // Source is referenced by the last key, next pair in the parent branch
+           {branchMergeTopLeaves(parent);                                       // Merge top two leaves becuase the left one is the source that is being split
            }
-          void Else()                                                           // Merge source, on the right, with its right sibling as the search went through the target on the left
-           {branchMergeBranches(parent, J);                                   // The children of the parent are assumed to be branches so we might be able to merge them
+          void Else()                                                           // Source is not referenced by the last key, next pair in the parent branch
+           {branchMergeLeaves(parent, eq.branchIndex);                          // Merge source with right sibling
            }
          };
+        branchInsert(parent, eq.branchIndex, pkn);                              // Insert the target in the parent branch where the source is moving source up one in the process
        }
      };
     return target;                                                              // The split out branch
@@ -1008,7 +1007,7 @@ class Mjaf extends BitMachine                                                   
     free(source);                                                               // Free the branch that was joined
    }
 
-  void branchMergeTopLeaves(NN NodeIndex)                                       // Merge the top two leaves of a branch if possible. We assume that the children of the parent are leaves without checking that this is true.
+  void branchMergeTopLeaves(NN NodeIndex)                                       // Merge the top two child leaves of a branch if possible. We assume that the children of the parent are leaves without checking that this is true.
    {new Block()
      {void code()
        {final BI size = new BI(branchGetCurrentSize(NodeIndex));                // Size of branch
@@ -1019,9 +1018,29 @@ class Mjaf extends BitMachine                                                   
         new If(leafJoinable(left, right))                                       // Can we join the two leaves?
          {void Then()                                                           // Join the two leaves
            {leafJoin(left, right);                                              // Merge the right leaf into the left leaf
-            branchSetTopNext(NodeIndex, left);                                  // Make the left leaf inot the new top next
+            branchSetTopNext(NodeIndex, left);                                  // Make the left leaf into the new top next
             branchStuck.pop(tkn.v.asLayout());                                  // Remove the last key, next pair
-            free(right);                                                        // free the right leaf as its content is now all merged into the left leaf forming the new top next of the branch
+            free(right);                                                        // Free the right leaf as its content is now all merged into the left leaf forming the new top next of the parent branch
+           }
+         };
+       }
+     };
+   }
+
+  void branchMergeTopBranches(NN NodeIndex)                                     // Merge the top two child branches of a branch if possible. We assume that the children of the parent are branches without checking that this is true.
+   {new Block()
+     {void code()
+       {final BI size = new BI(branchGetCurrentSize(NodeIndex));                // Size of branch
+        returnIfAllZero(size.v);                                                // Cannot merge an empty branch
+        final KeyNext tkn = branchGetLast(NodeIndex);                           // Get last key, next of branch
+        final NN     left = tkn.next();                                         // Last key, next pair indicates the left child leaf
+        final NN    right = branchGetTopNext(NodeIndex);                        // Top node indicates the right child leaf
+        new If(branchJoinable(left, right))                                     // Can we join the two branches?
+         {void Then()                                                           // Join the two branches
+           {branchJoin(left, tkn.key(), right);                                 // Merge the right branch into the left branch
+            branchSetTopNext(NodeIndex, left);                                  // Make the left branch into the new top next
+            branchStuck.pop(tkn.v.asLayout());                                  // Remove the last key, next pair
+            free(right);                                                        // Free the right branch as its content is now all merged into the left branch forming the new top next of the parent branch
            }
          };
        }
@@ -1063,6 +1082,45 @@ class Mjaf extends BitMachine                                                   
     branchMergeLeaves(nodeIndex, iBranch);
    }
 
+  void branchMergeBranches(NN NodeIndex, BI Left)                               // Merge the two child branches of a branch on either side of the indicated key, next pair if possible. We assume that the children of the parent are branches without checking that this is true.
+   {new Block()
+     {void code()
+       {final BI size = new BI(branchGetCurrentSize(NodeIndex));                // Size of branch
+        returnIfAllZero(size.v);                                                // Cannot merge an empty branch
+        shiftRightOneByZero(size.v);                                            // Index of last key, next pair
+        returnIfAllZero(size.v);                                                // Cannot merge a branch that only has only one key, next pair - use branchMergeTopLeaves() instead
+        returnIfGreaterThanOrEqual(Left.v, size.v);                             // Cannot merge beyond end of branch. We are comparing unary but lessThanOrEqual works correctly on unary as well as binary
+        final BI right = new BI(Left.v.like());                                 // Storage for index of right leaf
+        copy(right.v, Left.v);                                                  // Start at left leaf
+        shiftLeftOneByOne(right.v);                                             // Go one step right to right leaf
+        returnIfGreaterThan(right.v, size.v);                                   // Cannot merge beyond end of branch
+
+        final KeyNext lkn = branchGet(NodeIndex, Left);                         // Left leaf key, next pair
+        final KeyNext rkn = branchGet(NodeIndex, right);                        // Right leaf key, next pair
+        final NN        l = lkn.next();                                         // Left leaf index
+        final NN        r = rkn.next();                                         // Right leaf index
+        new If(branchJoinable(l, r))                                            // Can we join the two leaves?
+         {void Then()                                                           // Join the two leaves
+           {branchJoin(l, lkn.key(), r);                                        // Merge the right leaf into the left leaf
+            copy(rkn.next().v, l.v);                                            // Point the right key, net pair at the merged leaf
+            branchPut(NodeIndex, right, rkn);                                   // Make the branch refer to the merged leaf
+            branchRemove(NodeIndex, Left);                                      // Remove the key, next pair describing the left leaf because the left lef has had the righ leaf merged into it and then been reused as the right leaf
+           }
+         };
+       }
+     };
+   }
+
+  void branchMergeBranches(int NodeIndex, int IBranch)                          // Merge the two child branches of a branch on either side of the indicated key, next pair if possible. We assume that the children of the parent are branches without checking that this is true.
+   {final NN nodeIndex = new NN(NodeIndex);
+    final BI iBranch   = new BI(IBranch);
+    branchMergeBranches(nodeIndex, iBranch);
+   }
+
+
+/*
+
+
   void branchMergeBranches(NN NodeIndex, BI IBranch)                            // Merge the branches on either side of the indexed key, next pair in the specified branch
    {final BI  iBranch1 = IBranch.duplicate();                                   // Make a copy of this parameter so we can adjust it
     shiftLeftOneByOne(iBranch1.v);                                              // Get leaf associated with the next key up
@@ -1099,6 +1157,7 @@ class Mjaf extends BitMachine                                                   
        }
      };
    }
+*/
 
   BI branchFindFirstGreaterOrEqual(NN NodeIndex, Key Key, NN Result)            // Find the 'next' for the first key in a branch that is greater than or equal to the specified key or else the top node if no such key exists.
    {final BI index = new BI();                                                  // Index of the first key, next pairs in the branch where the key is greater than or equal to the search key, or if there is no such key, the last key making it impossible to distinguish the case between the last key, next pair being the answer or not when process a full branch.
@@ -5389,10 +5448,12 @@ B    0     1                  0   result
    }
 
   static void test_branch_merge_leaves1()                                       // Merge the two leaves under a key at the specified index in branch
-   {final int BitsPerKey = 5, BitsPerData = 6, MaxKeysPerLeaf = 4, size = 20, N = 20;
+   {final int BitsPerKey = 8, BitsPerData = 8, MaxKeysPerLeaf = 4, size = 60, N = 64;
+// good to 32
 
     final Mjaf m = new Mjaf(BitsPerKey, BitsPerData, MaxKeysPerLeaf, size);
-    for (int i = 1; i <= N; i++) m.put(m.new Key(i), m.new Data(2*i));
+    for (int i = 1; i <= N; i++) m.put(i, 2*i);
+    m.maxSteps = 99999;
     m.execute();
 
     stop(m.print());
