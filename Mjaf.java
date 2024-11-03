@@ -457,6 +457,11 @@ class Mjaf extends BitMachine                                                   
     return out;
    }
 
+  void leafPop(NN index, KeyData kd)                                            // Pop a key, data pair from the indicated leaf
+   {setIndex(nodes, index);
+    leaf.pop(kd.v);
+   }
+
   void leafPush(NN index, KeyData kd)                                           // Push a key, data pair onto the indicated leaf
    {setIndex(nodes, index);
     leaf.push(kd.v);
@@ -467,9 +472,26 @@ class Mjaf extends BitMachine                                                   
     leaf.shift(kd.v);
    }
 
+  void leafUnshift(NN index, KeyData kd)                                        // Unshift a key, data pair into the indicated leaf
+   {setIndex(nodes, index);
+    leaf.insertElementAt(kd.v, root);
+   }
+
   void leafFindIndexOf (NN index, Key key, Layout.Bit found, LI result)         // Find index of the specified key, data pair in the specified leaf
    {setIndex(nodes, index);
     leaf.indexOf(key.v, bitsPerKey, found, result.v);
+   }
+
+  void leafMoveOneLeft(NN target, NN source)                                    // Move the first key, data pair of the source leaf to the last leaf of the target leaf
+   {final KeyData kd = new KeyData();
+    leafShift(source, kd);
+    leafPush (target, kd);
+   }
+
+  void leafMoveOneRight(NN target, NN source)                                   // Move the last key, data pair of the source leaf to the first leaf of the target leaf
+   {final KeyData kd = new KeyData();
+    leafPop    (source, kd);
+    leafUnshift(target, kd);
    }
 
   void leafSplitRoot(NN F1, NN F2)                                              // Split the root when it is a leaf
@@ -684,7 +706,7 @@ class Mjaf extends BitMachine                                                   
    }
 
   void branchSetCurrentSize(int iBranch, int size)                              // Set branch size
-   {nodes.setIndex(iBranch);                                                         // Select the branch to process
+   {nodes.setIndex(iBranch);                                                    // Select the branch to process
     branchStuck.unary.value.fromUnary(size);
    }
 
@@ -721,9 +743,26 @@ class Mjaf extends BitMachine                                                   
     return kn;
    }
 
+  BI branchLastIndex(NN iBranch)                                                // Return the index of the last key, next pair in a branch if there is one
+   {setIndex(nodes, iBranch);                                                   // Address the branch
+    return new BI(branchStuck.lastIndex());                                     // Return index of last element
+   }
+
   void branchPut(NN iBranch, BI index, KeyNext kn)                              // Put the specified key, next pair from the specified branch
    {setIndex(nodes, iBranch.v);                                                 // Select the branch to process
     branchStuck.setElementAt(kn.v, index.v);                                    // Insert the key, next pair at the specified index in the specified branch
+   }
+
+  void branchPutKey(NN iBranch, BI index, Key key)                              // Put the specified key into the specified branch at the specified index
+   {final KeyNext kn = branchGet(iBranch, index);                               // Get the key, next pair from the branch
+    copy(kn.key().v, key.v);                                                    // Update the key
+    branchPut(iBranch, index, kn);                                              // Put the updated key into the branch
+   }
+
+  void branchPutNext(NN iBranch, BI index, NN next)                             // Put the specified next node reference into the specified branch at the specified index
+   {final KeyNext kn = branchGet(iBranch, index);                               // Get the key, next pair from the branch
+    copy(kn.next().v, next.v);                                                  // Update the next field
+    branchPut(iBranch, index, kn);                                              // Put the updated next field into the branch
    }
 
   void branchInsert                                                             // Place the specified key, next pair at the specified location in the specified branch
@@ -1077,16 +1116,23 @@ class Mjaf extends BitMachine                                                   
        {void code()
          {new If(top)                                                           // Is this the top leaf?
            {void Then()                                                         // Split the top leaf
-             {final Key k = splitLeaf();                                        // Leaf splitting key
+             {new If(greaterThan(size, 0))                                      // There are some key, next pairs in the body of the parent - see if we can merge with the top most one
+               {void Then()                                                     // Try to merge with last key, next pair
+                 {final KeyNext lkn = branchGetLast(parent);                    // Last key, next pair in body of parent
+                  final NN        t = lkn.next();                               // Last leaf in body of parent
+                  new If(leafIsNotFull(t))                                      // Room to move one key, data pair from the child to the last leaf in the boidy of the parent
+                   {void Then()
+                     {leafMoveOneLeft(t, child);
+                      //copy(lkn.key().v, final Key   k = lkn.key();                                // The key being transferred
+                      returnRegardless();
+                     }
+                   };
+                 }
+               };
+              final Key k = splitLeaf();                                        // We will have to split the leaf
               branchPush(parent, new KeyNext(k, splitOut));                     // The split out leaf becomes the last key, next pair in the parent
               returnRegardless();                                               // Finished
              }
-           };
-
-          if (true)                                                             // Unable to shift and not top so split and insert
-           {final Key k = splitLeaf();                                          // Leaf splitting key
-            branchInsert(parent, parentIndex, new KeyNext(k, splitOut));        // Insert key, next pair into body of parent
-            returnRegardless();                                                 // Finished
            };
          }
        };
@@ -4342,7 +4388,28 @@ B    0     1                  0   branchRootIsFull
 """);
    }
 
-  static void test_leaf_fission_split_one()                                     // Split a single leaf under its parent
+  static void test_leaf_fission_shift_top()                                     // Split a single leaf under its parent
+   {final int BitsPerKey = 6, BitsPerData = 6, MaxKeysPerLeaf = 4, size = 4;
+    final Mjaf m = new Mjaf(BitsPerKey, BitsPerData, MaxKeysPerLeaf, size);
+
+    NN r = m.leafMake();
+    NN l = m.leafMake();
+    NN p = m.branchMake();
+
+    m.leafPush(l, m.new KeyData(1, 1));
+
+    m.leafPush(r, m.new KeyData(10, 11));
+    m.leafPush(r, m.new KeyData(20, 22));
+    m.leafPush(r, m.new KeyData(30, 33));
+    m.leafPush(r, m.new KeyData(40, 44));
+
+    m.branchPush(p, m.new KeyNext(m.new Key(2), l));
+    m.stepDown  (p, m.new Key(25)).leafFission();
+    m.execute();
+    //stop(m.layout);
+   }
+
+  static void test_leaf_fission_split_top()                                     // Split a single leaf under its parent
    {final int BitsPerKey = 6, BitsPerData = 6, MaxKeysPerLeaf = 4, size = 4;
     final Mjaf m = new Mjaf(BitsPerKey, BitsPerData, MaxKeysPerLeaf, size);
 
@@ -4357,7 +4424,7 @@ B    0     1                  0   branchRootIsFull
     m.branchPush(p, m.new KeyNext(m.new Key(45), c));
     m.stepDown  (p, m.new Key(25)).leafFission();
     m.execute();
-    stop(m.layout);
+    //stop(m.layout);
    }
 
   static void test_leaf_fission_shift_left()                                    // Split a leaf and combine its split out with a left leaf
@@ -5279,6 +5346,46 @@ V    0     7                 47   lastNotFull
 """);
    }
 
+  static void test_branch_set_key_next()
+   {final int BitsPerKey = 6, BitsPerData = 6, MaxKeysPerLeaf = 4, size = 4;
+    final Mjaf m = new Mjaf(BitsPerKey, BitsPerData, MaxKeysPerLeaf, size);
+
+    NN b = m.branchMake();
+
+    m.branchPush(b, m.new KeyNext(10, 1));
+    m.branchPush(b, m.new KeyNext(20, 2));
+    BI l = m.branchLastIndex(b);
+    KeyNext kn = m.branchGet(b, l);
+    m.execute();
+    m.reset();
+    m.branchPutKey (b, l, m.new Key(33));
+    m.branchPutNext(b, l, m.new NN(1));
+    m.execute();
+    //stop(m.layout);
+    m.ok("""
+A  181   216      3                 nodes     nodes
+S  181    54          201426218       node     nodes.node
+B  181     1                  0         isLeaf     nodes.node.isLeaf
+B  182     1                  1         isBranch     nodes.node.isBranch
+U  183    52           50356554         branchOrLeaf     nodes.node.branchOrLeaf
+S  183    29           50356554           branch     nodes.node.branchOrLeaf.branch
+S  183    27           50356554             branchStuck     nodes.node.branchOrLeaf.branch.branchStuck
+A  183    24      0       24906               array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  183     8                 74                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  183     6                 10                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  189     2                  1                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A  191    24      1       24906               array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  191     8                 97                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  191     6                 33                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  197     2                  1                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+A  199    24      2       24906               array     nodes.node.branchOrLeaf.branch.branchStuck.array
+S  199     8                  0                 branchKeyNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext
+V  199     6                  0                   branchKey     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchKey
+V  205     2                  0                   branchNext     nodes.node.branchOrLeaf.branch.branchStuck.array.branchKeyNext.branchNext
+V  207     3                  3               unary     nodes.node.branchOrLeaf.branch.branchStuck.unary
+""");
+   }
+
 
   static void oldTests()                                                        // Tests thought to be in good shape
    {create_leaf_tree();                 create_branch_tree();
@@ -5322,8 +5429,10 @@ V    0     7                 47   lastNotFull
 
   static void newTests()                                                        // Tests being worked on
    {//oldTests();
-    test_leaf_fission_split_one();
+    //test_leaf_fission_shift_top();
+    //test_leaf_fission_split_top();
     //test_leaf_fission_shift_left();
+    test_branch_set_key_next();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
