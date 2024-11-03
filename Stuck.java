@@ -19,8 +19,7 @@ class Stuck extends BitMachine implements LayoutAble                            
   final Layout.Variable  source;                                                // Source index
   final Layout.Variable  target;                                                // Target index
   final Layout.Variable  buffer;                                                // Temporary buffer for moving data in or out of the stuck
-  final Layout.Structure   temp;                                                // Temporary data structure
-  final Layout          tempLay;                                                // Layout of temporary data
+  final Layout             temp;                                                // Layout of temporary data
 
   final int max;                                                                // The maximum number of entries in the stuck.
   final int width;                                                              // The width of each object in the stuck in bits
@@ -39,13 +38,12 @@ class Stuck extends BitMachine implements LayoutAble                            
     layout.layout(stuck);                                                       // Layout the structure of the stuck
     element  = layout.get("array"+"."+repeat.top.name);                         // Element on stuck
     stuck.zero();
-    tempLay  = new Layout();                                                    // Temporary storage
-    source   = tempLay.variable ("source", max);                                // Source index
-    target   = tempLay.variable ("target", max);                                // Target index
-    buffer   = tempLay.variable ("buffer", width);                              // Buffer for moving data in and out of the stuck
-    temp     = tempLay.structure("structure", source, target, buffer);          // Temporary structure
-    tempLay.layout(temp);                                                       // Layout of temporary storage
-    temp.zero();                                                                // Clear temporary storage
+    temp     = new Layout();                                                    // Temporary storage
+    source   = temp.variable ("source", max);                                   // Source index
+    target   = temp.variable ("target", max);                                   // Target index
+    buffer   = temp.variable ("buffer", width);                                 // Buffer for moving data in and out of the stuck
+    temp.layout("structure", source, target, buffer);                           // Layout of temporary storage
+    temp.asField().zero();                                                      // Clear temporary storage
     bitMachines(unary);
    }
 
@@ -85,23 +83,26 @@ class Stuck extends BitMachine implements LayoutAble                            
       layout.layout(s);                                                         // Layout index
      }
 
-    void inc()         {shiftLeftOneByOne(index);}                              // Increment the index
-    void dec()         {shiftRightOneByZero(index);}                            // Decrement theindex
+    Index() {this("");}                                                         // An unnamed index
 
-    void first()       {zero(index);}                                           // Set the index to index the first element on the stuck
-    void past()        {copy(index, unary.value);}                              // Set the index to index one past the last element on the stuck.
-    void setValid()    {ones(valid);}                                           // Show that the index is valid
-    void setNotValid() {zero(valid);}                                           // Show that the index is not valid
+    Layout.Variable inc()         {shiftLeftOneByOne(index);   return index;}   // Increment the index
+    Layout.Variable dec()         {shiftRightOneByZero(index); return index;}   // Decrement theindex
 
-    void get()         {elementAt   (value, index);}                            // Get the value at this index from the stuck
-    void set()         {setElementAt(value, index);}                            // Set the value at this index in the stuck
+    Layout.Variable first()       {zero(index);                return index;}   // Set the index to index the first element on the stuck if there is one
+    Layout.Variable last()        {past(); shiftRightOneByZero(index); return index;} // Set the index to index the last element on the stuck if there is one.
+    Layout.Variable past()        {copy(index, unary.value);   return index;}   // Set the index to index one past the last element on the stuck.
+    Layout.Variable setValid()    {ones(valid);                return index;}   // Show that the index is valid
+    Layout.Variable setNotValid() {zero(valid);                return index;}   // Show that the index is not valid
 
-    Layout.Bit isFirst() {return Stuck.this.equals(index, 0);}                  // Return a variable indicating whether we are indexing the first element of the stuck
-    Layout.Bit isPast () {return Stuck.this.equals(index, unary.value);}        // Return a variable indicating whether we are indexing one past the last element of the stuck
+    Layout.Variable get()         {elementAt   (value, index); return index;}   // Get the value at this index from the stuck
+    Layout.Variable set()         {setElementAt(value, index); return index;}   // Set the value at this index in the stuck
 
-    void isFirst(Layout.Bit f) {Stuck.this.equals(f, index, 0);}                // Set a variable to indicate whether we are indexing the first element of the stuck
-    void isPast (Layout.Bit p) {Stuck.this.equals(p, index, unary.value);}      // Set a variable to indicate whether we are indexing one past the last element of the stuck
+    Layout.Bit isFirst() {return Equals(index, 0);}                             // Return a variable indicating whether we are indexing the first element of the stuck
+    Layout.Bit isPast () {return Equals(index, unary.value);}                   // Return a variable indicating whether we are indexing one past the last element of the stuck
 
+    void isFirst(Layout.Bit f) {Equals(f, index, 0);}                           // Set a variable to indicate whether we are indexing the first element of the stuck assuming the stuckis not empty
+    void isLast (Layout.Bit l) {Equals(l, index, new Index().last());}          // Set a variable to indicate whether we are indexing one the last element of the stuck assuming the stuck is not empty
+    void isPast (Layout.Bit p) {Equals(p, index, new Index().past());}          // Set a variable to indicate whether we are indexing one past the last element of the stuck
 
     void ok(String expected) {Test.ok(toString(), expected);}                   // Check the index has the expected value
     public String toString() {return layout.toString();}                        // Convert to string
@@ -221,18 +222,21 @@ class Stuck extends BitMachine implements LayoutAble                            
     unary.dec();                                                                // New number of elements on stuck
    }
 
-  void firstElement(LayoutAble FirstElement)                                    // Get the first element
+  void firstElement(LayoutAble FirstElement)                                    // First element
    {zero(source);                                                               // Index of first element
     setIndexFromUnary(array, source);                                           // Set index of first element
     copy(FirstElement.asField(), element);                                      // Copy of first element
    }
 
-  void lastElement(LayoutAble LastElement)                                      // Get the last active element
+  void lastElement(LayoutAble LastElement)                                      // Last active element assuming there is one
    {copy(source, unary.value);                                                  // Index top of stuck
     shiftRightOneByZero(source);                                                // Index of top most active element
     setIndexFromUnary(array, source);                                           // Set index of topmost element
     copy(LastElement.asField(), element);                                       // Copy of top most element
    }
+
+  Layout.Variable firstIndex() {return new Index("first").first();}             // Index of the first active element assuming there is one - which wuill be , of ocurse, the first element located at index 0
+  Layout.Variable  lastIndex() {return new Index("last"). last();}              // Index of the last active element assuming there is one - which wuill be , of ocurse, the first element located at index 0
 
 //D1 Iteration                                                                  // Iterate over a stuck
 
@@ -285,7 +289,7 @@ class Stuck extends BitMachine implements LayoutAble                            
     new Up()                                                                    // Check each valid element in turn for a match
      {void up(Repeat r)
        {copy(foundAtIndex, index);
-        Stuck.this.equals(elementFound, elementToFind.asField(), 0, value, 0, length);// Check for the element to be found
+        Equals(elementFound, elementToFind.asField(), 0, value, 0, length);     // Check for the element to be found
         r.returnIfOne(elementFound);                                            // Found the element being searched for
        }
      };
@@ -1297,7 +1301,7 @@ V   36     6                  7     unary     unary
     s.reset();
     final Stuck.Up u = s.new Up()
      {void up(Repeat r)
-       {s.new If(s.equals(value,  22))
+       {s.new If(s.Equals(value,  22))
          {void Then()
            {setValid();
             r.returnRegardless();
@@ -1408,6 +1412,30 @@ V   25     5                  3     unary
 """);
    }
 
+  static void test_index_of_last_element()
+   {final int M = 6;
+
+    final Layout           l = new Layout();
+    final Layout.Variable  k = l.variable("k",  M);
+    l.layout(k);
+
+    Stuck s = stuck("s", M, l);
+    s.push(11);
+    s.push(22);
+    final Layout.Variable f = s.firstIndex();
+    final Layout.Variable i = s. lastIndex();
+    s.execute();
+    //stop(f, i);
+    f.ok("""
+T   At  Wide  Index       Value   Field name
+V    0     6                  0     first
+""");
+    i.ok("""
+T   At  Wide  Index       Value   Field name
+V    0     6                  1     last
+""");
+   }
+
   static void oldTests()                                                        // Tests thought to be in good shape
    {test_push();
     test_pop();
@@ -1425,6 +1453,7 @@ V   25     5                  3     unary
     test_index_down();
     test_current_size();
     test_set_size();
+    test_index_of_last_element();
    }
 
   static void newTests()                                                        // Tests being worked on
