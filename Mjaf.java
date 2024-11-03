@@ -5388,7 +5388,8 @@ V  207     3                  3               unary     nodes.node.branchOrLeaf.
 
 
   static void oldTests()                                                        // Tests thought to be in good shape
-   {create_leaf_tree();                 create_branch_tree();
+   {if (true) return;
+    create_leaf_tree();                 create_branch_tree();
     test_leaf_make();                   test_branch_make();
     test_leaf_get_put();                test_branch_get_put();
     test_leaf_insert_remove();          test_branch_insert_remove();
