@@ -288,32 +288,32 @@ public class BitMachine extends Test implements LayoutAble                      
        }
      }
    }
-  Equals equals(Layout.Bit Result, Layout.Field F1, int F2)                     // Check a field equals a constant
+  Equals Equals(Layout.Bit Result, Layout.Field F1, int F2)                     // Check a field equals a constant
    {return new Equals(Result, F1, F2);
    }
-  Equals equals(Layout.Bit Result, Layout.Field F1, Layout.Field F2)            // Check two fields are equal
+  Equals Equals(Layout.Bit Result, Layout.Field F1, Layout.Field F2)            // Check two fields are equal
    {return new Equals(Result, F1, F2);
    }
-  Equals equals(Layout.Bit Result,                                              // Check two sets of bits are equal
+  Equals Equals(Layout.Bit Result,                                              // Check two sets of bits are equal
     Layout.Field F1, int Off1,
     Layout.Field F2, int Off2,
     int          Length)
    {return new Equals(Result, F1, Off1,  F2, Off2, Length);
    }
 
-  Layout.Bit equals(Layout.Field F1, int F2)                                    // Return a variable which will hold the result of comparing a field to an integer for equality
+  Layout.Bit Equals(Layout.Field F1, int F2)                                    // Return a variable which will hold the result of comparing a field to an integer for equals
    {final Layout.Bit result = Layout.createBit("equals");
     new Equals(result, F1, F2);
     return result;
    }
 
-  Layout.Bit equals(Layout.Field F1, Layout.Field F2)                           // Return a variable which will hold the result of comparing two fields for equality
+  Layout.Bit Equals(Layout.Field F1, Layout.Field F2)                           // Return a variable which will hold the result of comparing two fields for equals
    {final Layout.Bit result = Layout.createBit("equals");
     new Equals(result, F1, F2);
     return result;
    }
 
-  Layout.Bit equals                                                             // Return a variable which will hold the result of comparing two fields for equality
+  Layout.Bit Equals                                                             // Return a variable which will hold the result of comparing two fields for equals
    (Layout.Field F1, int Off1,
     Layout.Field F2, int Off2,
     int          Length)
@@ -353,19 +353,19 @@ public class BitMachine extends Test implements LayoutAble                      
    {return new NotEquals(Result, F1, Off1,  F2, Off2, Length);
    }
 
-  Layout.Bit notEquals(Layout.Field F1, int F2)                                 // Return a variable which will hold the result of comparing a field to an integer for equality
+  Layout.Bit notEquals(Layout.Field F1, int F2)                                 // Return a variable which will hold the result of comparing a field to an integer for not equals
    {final Layout.Bit result = Layout.createBit("notEquals");
     new NotEquals(result, F1, F2);
     return result;
    }
 
-  Layout.Bit notEquals(Layout.Field F1, Layout.Field F2)                        // Return a variable which will hold the result of comparing two fields for equality
+  Layout.Bit notEquals(Layout.Field F1, Layout.Field F2)                        // Return a variable which will hold the result of comparing two fields for not equals
    {final Layout.Bit result = Layout.createBit("notEquals");
     new NotEquals(result, F1, F2);
     return result;
    }
 
-  Layout.Bit notEquals                                                          // Return a variable which will hold the result of comparing two fields for equality
+  Layout.Bit notEquals                                                          // Return a variable which will hold the result of comparing two fields for not equals
    (Layout.Field F1, int Off1,
     Layout.Field F2, int Off2,
     int          Length)
@@ -433,6 +433,27 @@ public class BitMachine extends Test implements LayoutAble                      
    {return new LessThan(Result, F1, Off1,  F2, Off2, Length);
    }
 
+  Layout.Bit lessThan(Layout.Field F1, int F2)                                  // Return a variable which will hold the result of comparing a field to an integer for less than
+   {final Layout.Bit result = Layout.createBit("LessThan");
+    new LessThan(result, F1, F2);
+    return result;
+   }
+
+  Layout.Bit lessThan(Layout.Field F1, Layout.Field F2)                         // Return a variable which will hold the result of comparing two fields for less than
+   {final Layout.Bit result = Layout.createBit("LessThan");
+    new LessThan(result, F1, F2);
+    return result;
+   }
+
+  Layout.Bit lessThan                                                           // Return a variable which will hold the result of comparing two fields for less than
+   (Layout.Field F1, int Off1,
+    Layout.Field F2, int Off2,
+    int          Length)
+   {final Layout.Bit result = Layout.createBit("LessThan");
+    new LessThan(result, F1, Off1, F2, Off2, Length);
+    return result;
+   }
+
 //D3 Less Than or Equal                                                         // Test whether one field is less than or equal to another or to a constant
 
   class LessThanOrEqual extends Instruction                                     // Check that the first field is less than or equal to the second field
@@ -492,6 +513,27 @@ public class BitMachine extends Test implements LayoutAble                      
    {return new LessThanOrEqual(Result, F1, Off1,  F2, Off2, Length);
    }
 
+  Layout.Bit lessThanOrEqual(Layout.Field F1, int F2)                           // Return a variable which will hold the result of comparing a field to an integer for less than or equal
+   {final Layout.Bit result = Layout.createBit("LessThanOrEqual");
+    new LessThanOrEqual(result, F1, F2);
+    return result;
+   }
+
+  Layout.Bit lessThanOrEqual(Layout.Field F1, Layout.Field F2)                  // Return a variable which will hold the result of comparing two fields for less than or equal
+   {final Layout.Bit result = Layout.createBit("LessThanOrEqual");
+    new LessThanOrEqual(result, F1, F2);
+    return result;
+   }
+
+  Layout.Bit lessThanOrEqual                                                    // Return a variable which will hold the result of comparing two fields for less than or equal
+   (Layout.Field F1, int Off1,
+    Layout.Field F2, int Off2,
+    int          Length)
+   {final Layout.Bit result = Layout.createBit("LessThanOrEqual");
+    new LessThanOrEqual(result, F1, Off1, F2, Off2, Length);
+    return result;
+   }
+
 //D3 Greater than or equal                                                      // Test whether one field is greater than or equal to another or to a constant
 
   class GreaterThanOrEqual extends LessThan                                     // Check that the first field is greater than or equal the second field
@@ -524,6 +566,27 @@ public class BitMachine extends Test implements LayoutAble                      
    {return new GreaterThanOrEqual(Result, F1, Off1,  F2, Off2, Length);
    }
 
+  Layout.Bit greaterThanOrEqual(Layout.Field F1, int F2)                        // Return a variable which will hold the result of comparing a field to an integer for greater than or equal
+   {final Layout.Bit result = Layout.createBit("GreaterThanOrEqual");
+    new GreaterThanOrEqual(result, F1, F2);
+    return result;
+   }
+
+  Layout.Bit greaterThanOrEqual(Layout.Field F1, Layout.Field F2)               // Return a variable which will hold the result of comparing two fields for greater than or equal
+   {final Layout.Bit result = Layout.createBit("GreaterThanOrEqual");
+    new GreaterThanOrEqual(result, F1, F2);
+    return result;
+   }
+
+  Layout.Bit greaterThanOrEqual                                                 // Return a variable which will hold the result of comparing two fields for greater than or equal
+   (Layout.Field F1, int Off1,
+    Layout.Field F2, int Off2,
+    int          Length)
+   {final Layout.Bit result = Layout.createBit("GreaterThanOrEqual");
+    new GreaterThanOrEqual(result, F1, Off1, F2, Off2, Length);
+    return result;
+   }
+
 //D3 Greater than                                                               // Test whether one field is greater than another or to a constant
 
   class GreaterThan extends LessThanOrEqual                                     // Check that the first field is greater than a second field
@@ -554,6 +617,27 @@ public class BitMachine extends Test implements LayoutAble                      
     Layout.Field F2, int Off2,
     int          Length)
    {return new GreaterThan(Result, F1, Off1,  F2, Off2, Length);
+   }
+
+  Layout.Bit greaterThan(Layout.Field F1, int F2)                               // Return a variable which will hold the result of comparing a field to an integer for greater than
+   {final Layout.Bit result = Layout.createBit("GreaterThan");
+    new GreaterThan(result, F1, F2);
+    return result;
+   }
+
+  Layout.Bit greaterThan(Layout.Field F1, Layout.Field F2)                      // Return a variable which will hold the result of comparing two fields for greater than
+   {final Layout.Bit result = Layout.createBit("GreaterThan");
+    new GreaterThan(result, F1, F2);
+    return result;
+   }
+
+  Layout.Bit greaterThan                                                        // Return a variable which will hold the result of comparing two fields for greater than
+   (Layout.Field F1, int Off1,
+    Layout.Field F2, int Off2,
+    int          Length)
+   {final Layout.Bit result = Layout.createBit("GreaterThan");
+    new GreaterThan(result, F1, Off1, F2, Off2, Length);
+    return result;
    }
 
 //D2 Shift                                                                      // Shift left or right filling with zeros, ones or sign bit
@@ -1416,24 +1500,24 @@ V    4     4                 15     b     b
     c.fromInt(1);
 
     BitMachine m = new BitMachine();
-    m.equals(aa, a, a);
-    m.equals(ab, a, b);
-    m.equals(ac, a, c);
-    m.equals(ba, b, a);
-    m.equals(bb, b, b);
-    m.equals(bc, b, c);
-    m.equals(ca, c, a);
-    m.equals(cb, c, b);
-    m.equals(cc, c, c);
-    m.equals(a0, a, 0);
-    m.equals(a1, a, 1);
-    m.equals(b1, b, 1, a, 0, 1);
-    m.equals(b2, b, 2, a, 0, 1);
-    Layout.Bit A0 = m.equals(a, 0);
-    Layout.Bit A1 = m.equals(a, 1);
-    Layout.Bit AA = m.equals(a, a);
-    Layout.Bit AB = m.equals(a, b);
-    Layout.Bit AC = m.equals(a, c);
+    m.Equals(aa, a, a);
+    m.Equals(ab, a, b);
+    m.Equals(ac, a, c);
+    m.Equals(ba, b, a);
+    m.Equals(bb, b, b);
+    m.Equals(bc, b, c);
+    m.Equals(ca, c, a);
+    m.Equals(cb, c, b);
+    m.Equals(cc, c, c);
+    m.Equals(a0, a, 0);
+    m.Equals(a1, a, 1);
+    m.Equals(b1, b, 1, a, 0, 1);
+    m.Equals(b2, b, 2, a, 0, 1);
+    Layout.Bit A0 = m.Equals(a, 0);
+    Layout.Bit A1 = m.Equals(a, 1);
+    Layout.Bit AA = m.Equals(a, a);
+    Layout.Bit AB = m.Equals(a, b);
+    Layout.Bit AC = m.Equals(a, c);
     m.execute();
     //stop(A0, A1);
     A0.ok(0);
