@@ -18,18 +18,40 @@ class MjafPut extends Mjaf                                                      
 //D0 Tests                                                                      // Testing
 
   static void test_split_reduction()                                            // Only split the branches that really have to be split and recombine the iother side of the split if possible to create a denser tree
-   {final int BitsPerKey = 5, BitsPerData = 6, MaxKeysPerLeaf = 4, size = 10,
+   {final int BitsPerKey = 4, BitsPerData = 4, MaxKeysPerLeaf = 4, size = 10,
       N = 9;
 
     final Mjaf m = mjaf(BitsPerKey, BitsPerData, MaxKeysPerLeaf, size);
-    for (int i = 1; i <= N; i++) m.put(m.new Key(i), m.new Data(2*i));
+    for (int i = 1; i <= N; i++) m.put(i, i);
     m.execute();
 
+    //stop(m.layout);
     //stop(m.print());
     ok(m.print(), """
           8(2-0)      7(6-0.1)9        |
 1,2,3,4=8       5,6=7          7,8,9=9 |
 """);
+
+    Layout b = m.branchKeyNext.duplicate();
+    Layout l = m.leafKeyData.duplicate();
+    Stuck  s = new Stuck("unpack", 20, l);
+
+m.debug = true;
+    m.reset();
+    m.setIndex(m.nodes, m.root);
+    m.branchStuck.new Up()
+     {void up(Repeat r)
+       {m.copy(b.top, value);
+        m.setIndex(m.nodes, b.get("branchNext").toVariable());
+        m.leaf.new Up()
+         {void up(Repeat R)
+            {m.copy(l.top, value);
+             m.new Say() {void action() {say("SSSS", index, l);}};
+            }
+         };
+       }
+     };
+    m.execute();
    }
 
   static void oldTests()                                                        // Tests thought to be in good shape
