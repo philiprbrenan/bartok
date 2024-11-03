@@ -93,6 +93,7 @@ public class BitMachine extends Test implements LayoutAble                      
     step = 0;
     for(instructionIndex = 0; instructionIndex < N; ++instructionIndex)         // Instruction sequence
      {final Instruction i = instructions.elementAt(instructionIndex);
+say("AAAA", debug);
       if (debug) say("Debug:", step+1, instructionIndex, i.position, i.name);
       i.action();
       trace();
@@ -1081,7 +1082,7 @@ public class BitMachine extends Test implements LayoutAble                      
    }
 
   abstract class Repeat extends Block                                           // Repeat a block of code until a return is requested
-   {int repeats;                                                                // number of repeats
+   {int repeats;                                                                // Number of repeats
     Repeat()                                                                    // Iterate over an array
      {super(true);
       name = "Repeat";
@@ -2554,7 +2555,8 @@ V   88     8                 18       c     s.c
    }
 
   static void newTests()                                                        // Tests being worked on
-   {oldTests();
+   {//oldTests();
+    test_repeat();
    }
 
   public static void main(String[] args)                                        // Test if called as a program
